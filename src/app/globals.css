@@ -1,0 +1,199 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand Colors */
+  --color-g1: #0a9863;
+  --color-g2: #06d07a;
+  --color-g3: #034f04;
+  --color-brand-g1: #0a9863;
+  --color-brand-g2: #06d07a;
+  --color-brand-g3: #034f04;
+  --color-brand-background: #f8f4f0;
+
+  /* Dark */
+  --color-dark: #110d31;
+
+  /* White Variations */
+  --color-white-100: #ffffff;
+  --color-white-90: #f6f6f6;
+  --color-white-80: #ececec;
+  --color-white-70: #e9e9e9;
+
+  /* State Colors */
+  --color-red-state: #f94c4c;
+  --color-green-state: #57c439;
+  --color-blue-state: #4c94f9;
+  --color-yellow-state: #ffd84a;
+
+  /* Typography */
+  --font-sans: var(--font-open-sans), "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-open-sans: var(--font-open-sans), "Open Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+:root {
+  /* CSS Variables for direct CSS/vanilla use */
+  --g1: #0a9863;
+  --g2: #06d07a;
+  --g3: #034f04;
+  --brand-g1: #0a9863;
+  --brand-g2: #06d07a;
+  --brand-g3: #034f04;
+  --brand-background: #f8f4f0;
+
+  --dark: #110d31;
+
+  --white-100: #ffffff;
+  --white-90: #f6f6f6;
+  --white-80: #ececec;
+  --white-70: #e9e9e9;
+
+  --red-state: #f94c4c;
+  --green-state: #57c439;
+  --blue-state: #4c94f9;
+  --yellow-state: #ffd84a;
+
+  --background: #f8f4f0;
+  --foreground: #110d31;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* ==========================================================================
+   Button Variants & Hover Effects (Pure Color & Opacity Transitions)
+   ========================================================================== */
+
+.btn-custom {
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--font-sans);
+}
+
+.btn-custom:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+/* 1. Fill Button */
+.btn-variant-fill {
+  background-color: var(--g1);
+  color: #ffffff;
+  outline: 1px solid var(--g2);
+  outline-offset: -1px;
+  box-shadow: 0px 4px 4px 0px rgba(6, 208, 122, 0.25);
+  transition: opacity 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-variant-fill:hover:not(:disabled) {
+  opacity: 0.85;
+  box-shadow: 0px 4px 8px 0px rgba(6, 208, 122, 0.35);
+}
+
+/* 2. Glass Button */
+.btn-variant-glass {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  outline: 0.5px solid #ffffff;
+  outline-offset: -0.5px;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+.btn-variant-glass:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.2);
+  opacity: 0.75;
+}
+
+/* 3. Stroke Button (Fills with visible green tint on hover) */
+.btn-variant-stroke {
+  background-color: transparent;
+  color: var(--g1);
+  outline: 1px solid var(--g1);
+  outline-offset: -1px;
+  transition: background-color 0.2s ease;
+}
+.btn-variant-stroke:hover:not(:disabled) {
+  background-color: rgba(10, 152, 99, 0.08); /* 8% green tint for clear visibility */
+}
+
+/* 4. Ghost Green Button */
+.btn-variant-ghost-green {
+  background-color: transparent;
+  color: var(--g1);
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+.btn-variant-ghost-green:hover:not(:disabled) {
+  opacity: 0.65;
+}
+
+/* 5. Ghost White Button */
+.btn-variant-ghost-white {
+  background-color: transparent;
+  color: #ffffff;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+.btn-variant-ghost-white:hover:not(:disabled) {
+  opacity: 0.65;
+}
+
+/* 6. Outline White Button */
+.btn-variant-outline-white {
+  background-color: transparent;
+  color: #ffffff;
+  outline: 1px solid #ffffff;
+  outline-offset: -1px;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+.btn-variant-outline-white:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.12);
+  opacity: 0.8;
+}
+
+/* 7. Unique Green Button (Connected Pills) */
+.btn-variant-unique-green .pill-segment {
+  background-color: var(--g1);
+  color: #ffffff;
+  box-shadow: 0px 2px 4px 0px rgba(6, 137, 81, 0.25);
+  transition: opacity 0.2s ease;
+}
+.btn-variant-unique-green:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+/* 8. Unique Stroke Button (Connected Pills) */
+.btn-variant-unique-stroke .pill-segment {
+  background-color: transparent;
+  color: var(--g1);
+  outline: 1px solid var(--g1);
+  outline-offset: -1px;
+  transition: background-color 0.2s ease;
+}
+.btn-variant-unique-stroke:hover:not(:disabled) .pill-segment {
+  background-color: rgba(10, 152, 99, 0.08);
+}
+
+/* 9. Unique White Button (Connected Pills with #FFFFFF background, No Shadow) */
+.btn-variant-unique-white .pill-segment {
+  background-color: #ffffff;
+  color: var(--g1);
+  box-shadow: none;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+.btn-variant-unique-white:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.btn-variant-unique-white:hover:not(:disabled) .pill-segment {
+  background-color: #f7f7f7;
+}
+
+/* 10. Unique Red Button (Connected Pills for Danger/Logout) */
+.btn-variant-unique-red .pill-segment {
+  background-color: var(--red-state);
+  color: #ffffff;
+  box-shadow: 0px 2px 4px 0px rgba(249, 76, 76, 0.25);
+  transition: opacity 0.2s ease;
+}
+.btn-variant-unique-red:hover:not(:disabled) {
+  opacity: 0.85;
+}
