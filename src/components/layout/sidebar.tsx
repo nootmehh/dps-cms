@@ -1,4 +1,7 @@
+"use client";
+
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import Button from "../ui/button";
 
 export interface SidebarMenuItem {
@@ -22,9 +25,9 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarMenuItem[] = [
   { id: "users", label: "Kelola Pengguna", icon: "User", href: "/kelola-pengguna" },
   { id: "seo", label: "Kelola SEO", icon: "Global", href: "/seo" },
   { id: "content", label: "Kelola Konten", icon: "Document", href: "/content" },
-  { id: "services", label: "Kelola Layanan", icon: "Setting", href: "/services" },
-  { id: "products", label: "Kelola Produk", icon: "Box", href: "/products" },
-  { id: "articles", label: "Kelola Artikel", icon: "Paper", href: "/articles" },
+  { id: "services", label: "Kelola Layanan", icon: "Setting", href: "/kelola-layanan" },
+  { id: "products", label: "Kelola Produk", icon: "Box", href: "/kelola-produk" },
+  { id: "articles", label: "Kelola Artikel", icon: "Paper", href: "/kelola-artikel" },
   { id: "media", label: "Kelola Media", icon: "Image 2", href: "/media" },
 ];
 
@@ -35,7 +38,7 @@ export default function Sidebar({
   onSelect,
   className = "",
 }: SidebarProps) {
-  const [internalActiveId, setInternalActiveId] = useState<string>("users");
+  const [internalActiveId, setInternalActiveId] = useState<string>("services");
   const activeId = controlledActiveId !== undefined ? controlledActiveId : internalActiveId;
 
   const handleItemClick = (item: SidebarMenuItem) => {
@@ -53,10 +56,10 @@ export default function Sidebar({
   return (
     <aside
       aria-label="Sidebar Navigation"
-      className={`w-64 p-6 bg-white rounded-[32px] border border-white-80 shadow-xs inline-flex flex-col justify-start items-center gap-4 ${className}`}
+      className={`w-64 p-6 bg-white rounded-4xl border border-white-80 shadow-xs inline-flex flex-col justify-start items-center gap-4 ${className}`}
     >
       {/* Menu Bar Title */}
-      <div className="self-stretch justify-start text-dark/60 text-sm font-normal font-sans tracking-wider uppercase select-none">
+      <div className="self-stretch justify-start text-dark/40 text-sm font-normal font-sans tracking-wider uppercase select-none">
         {title}
       </div>
 
@@ -64,16 +67,25 @@ export default function Sidebar({
       <nav className="self-stretch flex flex-col justify-start items-start gap-2 w-full">
         {items.map((item) => {
           const isActive = item.id === activeId;
-          return (
+          const btn = (
             <Button
-              key={item.id}
               text={item.label}
               leftIcon={item.icon}
               variant={isActive ? "fill" : "ghost-green"}
               onClick={() => handleItemClick(item)}
-              className="w-full justify-start! text-left pl-4 cursor-pointer"
+              className="w-full justify-start text-left px-4 cursor-pointer"
             />
           );
+
+          if (item.href && !onSelect) {
+            return (
+              <Link key={item.id} href={item.href} className="w-full block">
+                {btn}
+              </Link>
+            );
+          }
+
+          return <div key={item.id} className="w-full">{btn}</div>;
         })}
       </nav>
     </aside>

@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import LordIcon from "../common/lordIcon";
 
 export type ButtonVariant =
   | "stroke"
@@ -51,23 +52,42 @@ export default function Button({
     normalizedVariant === "unique-white" ||
     normalizedVariant === "unique-red";
 
-  // Helper to render icon
+  // Determine icon color based on variant
+  const getIconColor = () => {
+    switch (normalizedVariant) {
+      case "fill":
+      case "unique-green":
+      case "unique-red":
+      case "ghost-white":
+        return "#ffffff";
+      case "stroke":
+      case "unique-stroke":
+      case "unique-white":
+      case "ghost-green":
+      default:
+        return "#0a9863";
+    }
+  };
+
+  const iconColor = getIconColor();
+
+  // Helper to render icon using LordIcon
   const renderIcon = (icon: string | ReactNode) => {
     if (!icon) return null;
     if (typeof icon !== "string") return icon;
 
-    const formattedName = icon.endsWith(".svg") ? icon : `${icon}.svg`;
-    const iconSrc = icon.startsWith("/") ? icon : `/icons/${formattedName}`;
+    // Clean up filename if passed like "Dashboard.svg" or "Dashboard"
+    const cleanName = icon.replace(/\.svg$/i, "").replace(/^\/icons\//i, "");
 
     return (
-      <div className="size-6 relative shrink-0 flex items-center justify-center pointer-events-none">
-        <span
-          style={{
-            maskImage: `url("${iconSrc}")`,
-            WebkitMaskImage: `url("${iconSrc}")`,
-          }}
-          className="size-5 bg-current mask-contain mask-no-repeat mask-center shrink-0 inline-block transition-transform duration-200"
-          aria-hidden="true"
+      <div className="size-6 shrink-0 flex items-center justify-center overflow-hidden">
+        <LordIcon
+          name={cleanName}
+          size={24}
+          trigger="hover"
+          target="button, a, .btn-custom"
+          primaryColor={iconColor}
+          secondaryColor={iconColor}
         />
       </div>
     );
@@ -75,42 +95,46 @@ export default function Button({
 
   // --- Standard Button Variants ---
   if (!isUniqueVariant) {
+    const hasCustomJustify = className.includes("justify-");
+    const defaultJustify = hasCustomJustify ? "" : "justify-center";
+
     return (
       <button
         disabled={disabled}
-        className={`btn-custom btn-variant-${normalizedVariant} h-12 px-4 py-3 rounded-[48px] inline-flex justify-center items-center gap-2.5 text-sm font-semibold font-sans cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed ${className}`}
+        className={`btn-custom btn-variant-${normalizedVariant} h-12 px-4 py-3 rounded-[48px] inline-flex items-center gap-2.5 text-sm font-semibold font-sans cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed ${defaultJustify} ${className}`}
         {...props}
       >
         {renderIcon(leftIcon)}
-        <span className="leading-none text-center">{text}</span>
+        <span className="leading-6 flex-initial font-semibold text-sm">{text}</span>
         {renderIcon(rightIcon)}
       </button>
     );
   }
 
-  // --- Unique Button Variants (Segmented Connected Pill with 0-Gap) ---
+  // --- Unique Button Variants (Connected Multi-Segment Pills with gap-0) ---
   return (
     <button
       disabled={disabled}
-      className={`btn-custom btn-variant-${normalizedVariant} h-12 rounded-[48px] inline-flex justify-center items-center gap-0 cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed ${className}`}
+      className={`group btn-custom btn-variant-${normalizedVariant} inline-flex items-center gap-0 p-0 bg-transparent border-none outline-none cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed transition-all ${className}`}
       {...props}
     >
+      {/* Left Icon Pill Segment */}
       {leftIcon && (
-        <div className="pill-segment size-12 p-3 rounded-[100px] flex justify-center items-center shrink-0">
+        <span className="pill-segment size-12 rounded-full flex items-center justify-center shrink-0">
           {renderIcon(leftIcon)}
-        </div>
+        </span>
       )}
 
-      <div className="pill-segment h-12 px-4 py-3 rounded-[100px] flex justify-center items-center gap-2.5 overflow-hidden">
-        <span className="justify-start text-sm font-semibold font-sans leading-none">
-          {text}
-        </span>
-      </div>
+      {/* Center Label Pill Segment */}
+      <span className="pill-segment h-12 px-5 py-3 rounded-[100px] flex items-center justify-center text-sm font-semibold font-sans text-center leading-normal">
+        {text}
+      </span>
 
+      {/* Right Icon Pill Segment */}
       {rightIcon && (
-        <div className="pill-segment size-12 p-3 rounded-[100px] flex justify-center items-center shrink-0">
+        <span className="pill-segment size-12 rounded-full flex items-center justify-center shrink-0">
           {renderIcon(rightIcon)}
-        </div>
+        </span>
       )}
     </button>
   );

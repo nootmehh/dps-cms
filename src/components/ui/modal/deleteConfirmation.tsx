@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Button from "../button";
+import LordIcon from "../../common/lordIcon";
 
 interface DeleteConfirmationModalProps {
     isOpen: boolean;
@@ -50,27 +51,20 @@ export default function DeleteConfirmationModal({
                 {/* Title Bar */}
                 <div className="self-stretch inline-flex justify-between items-start">
                     <div className="flex-1 inline-flex flex-col justify-start items-start gap-2">
-                        <div className="self-stretch justify-start text-[#9EB7DA] text-sm font-normal font-sans tracking-wider uppercase">
+                        <div className="self-stretch justify-start text-dark/50 text-xs font-semibold font-sans tracking-wider uppercase">
                             DELETE CONFIRMATION
                         </div>
-                        <div className="self-stretch justify-start text-black text-xl font-medium font-sans">
+                        <div className="self-stretch justify-start text-dark text-xl font-bold font-sans">
                             {title}
                         </div>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-1 rounded-lg text-[#9EB7DA] hover:bg-slate-100 hover:text-slate-700 transition-all cursor-pointer flex items-center justify-center"
+                        className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all cursor-pointer flex items-center justify-center"
                         title="Close"
                     >
-                        <span
-                            style={{
-                                maskImage: 'url("/icons/Close.svg")',
-                                WebkitMaskImage: 'url("/icons/Close.svg")',
-                            }}
-                            className="size-6 bg-slate-500 mask-contain mask-no-repeat mask-center shrink-0"
-                            aria-hidden="true"
-                        />
+                        <LordIcon name="Delete" size={20} primaryColor="#666666" />
                     </button>
                 </div>
 
@@ -91,17 +85,15 @@ export default function DeleteConfirmationModal({
                         type="button"
                         onClick={onClose}
                         disabled={submitting}
-                        text="No"
-                        variant="primary"
-                        className="w-full px-6 py-2.5 h-11 text-sm rounded-full cursor-pointer active:scale-95"
+                        text="Batal"
+                        variant="ghost-green"
                     />
                     <Button
                         type="button"
                         onClick={handleConfirm}
                         disabled={submitting}
-                        text={submitting ? "Confirming..." : "Yes, Continue"}
-                        variant="outline-primary"
-                        className="w-full px-6 py-2.5 h-11 text-sm rounded-full cursor-pointer active:scale-95"
+                        text={submitting ? "Menghapus..." : "Ya, Hapus"}
+                        variant="fill"
                     />
                 </div>
             </div>

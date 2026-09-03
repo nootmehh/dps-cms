@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import LordIcon from "../common/lordIcon";
 
 export interface DropdownOption {
   value: string;
@@ -29,23 +30,6 @@ interface MultipleDropdownProps extends BaseDropdownProps {
 }
 
 export type DropdownProps = SingleDropdownProps | MultipleDropdownProps;
-
-const Icon = ({
-  name,
-  className = "size-5 bg-current",
-}: {
-  name: string;
-  className?: string;
-}) => (
-  <span
-    style={{
-      maskImage: `url("/icons/${name}.svg")`,
-      WebkitMaskImage: `url("/icons/${name}.svg")`,
-    }}
-    className={`mask-contain mask-no-repeat mask-center shrink-0 inline-block ${className}`}
-    aria-hidden="true"
-  />
-);
 
 export default function Dropdown({
   label,
@@ -152,7 +136,7 @@ export default function Dropdown({
   return (
     <div
       ref={containerRef}
-      className={`w-full max-w-[466px] inline-flex flex-col justify-start items-start gap-1 relative ${containerClassName}`}
+      className={`w-full max-w-116.5 inline-flex flex-col justify-start items-start gap-1 relative ${containerClassName}`}
     >
       {label && (
         <label className="self-stretch justify-start text-dark text-sm font-semibold font-sans">
@@ -183,7 +167,7 @@ export default function Dropdown({
                     onClick={(e) => handleRemoveItem(e, opt.value)}
                     className="size-4.5 hover:bg-red-state/15 hover:text-red-state text-dark/60 rounded-full flex items-center justify-center transition-all cursor-pointer"
                   >
-                    <Icon name="Close" className="size-3 bg-current" />
+                    <LordIcon name="Delete" size={12} primaryColor="#f94c4c" />
                   </button>
                 </div>
               ))
@@ -204,20 +188,20 @@ export default function Dropdown({
                   if (!isOpen) setIsOpen(true);
                 }}
                 placeholder={selectedOptions.length > 0 ? "" : placeholder}
-                className="flex-1 bg-transparent text-dark text-sm font-normal font-sans placeholder:text-dark/40 outline-none border-none min-w-[60px]"
+                className="flex-1 bg-transparent text-dark text-sm font-normal font-sans placeholder:text-dark/40 outline-none border-none min-w-15"
               />
             )}
           </div>
         </div>
 
         {/* Right Icon Connected Pill Segment with Green Border */}
-        <div className="size-12 p-3 bg-brand-background rounded-[100px] outline outline-1 outline-offset-[-1px] outline-g1 flex justify-center items-center gap-2.5 shrink-0 transition-colors duration-200">
+        <div className="size-12 p-2 bg-brand-background rounded-[100px] outline-1 -outline-offset-1 outline-g1 flex justify-center items-center shrink-0 transition-colors duration-200">
           <div
-            className={`size-6 relative flex items-center justify-center text-g1 transition-transform duration-200 ${
+            className={`size-6 relative flex items-center justify-center transition-transform duration-200 ${
               isOpen ? "rotate-180" : ""
             }`}
           >
-            <Icon name="Down 2" className="size-4 bg-g1" />
+            <LordIcon name="Down 2" size={18} primaryColor="#0A9863" />
           </div>
         </div>
       </div>
@@ -244,7 +228,7 @@ export default function Dropdown({
                 >
                   <span>{option.label}</span>
                   {active && (
-                    <Icon name="Tick" className="size-4 bg-g1 shrink-0" />
+                    <LordIcon name="Right 1" size={16} primaryColor="#0A9863" />
                   )}
                 </div>
               );
@@ -257,7 +241,7 @@ export default function Dropdown({
               className="px-4 py-2.5 rounded-xl flex items-center justify-between text-sm font-medium font-sans text-g1 hover:bg-g1/5 cursor-pointer border-t border-white-80"
             >
               <span>Add "{searchQuery.trim()}"</span>
-              <Icon name="Add" className="size-4 bg-g1 shrink-0" />
+              <LordIcon name="Add" size={16} primaryColor="#0A9863" />
             </div>
           )}
         </div>

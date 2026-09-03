@@ -52,7 +52,7 @@
   --blue-state: #4c94f9;
   --yellow-state: #ffd84a;
 
-  --background: #f8f4f0;
+  --background: #f6f6f6;
   --foreground: #110d31;
 }
 
@@ -60,6 +60,11 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+}
+
+lord-icon {
+  display: block !important;
+  margin: auto;
 }
 
 /* ==========================================================================

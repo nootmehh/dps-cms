@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import Button from "../ui/button";
+import LordIcon from "../common/lordIcon";
 
 export interface NavbarProps {
   brandTitle?: string;
@@ -17,7 +18,6 @@ export default function Navbar({
   logoSrc,
   userName = "Username",
   userRole = "Super Admin",
-  avatarIcon = "User",
   onLogout,
   logoutText = "Logout Sistem",
   className = "",
@@ -57,23 +57,16 @@ export default function Navbar({
             </div>
           </div>
 
-          {/* Avatar Icon Pill */}
-          <div className="size-11 md:size-12 p-3 bg-stone-100 rounded-full flex justify-center items-center shrink-0">
-            <span
-              style={{
-                maskImage: `url("/icons/User.svg")`,
-                WebkitMaskImage: `url("/icons/User.svg")`,
-              }}
-              className="size-5 md:size-6 bg-g1 mask-contain mask-no-repeat mask-center shrink-0"
-              aria-hidden="true"
-            />
+          {/* Avatar Icon Pill with LordIcon */}
+          <div className="size-11 md:size-12 p-2 bg-white-90 rounded-full flex justify-center items-center shrink-0">
+            <LordIcon name="User" size={24} primaryColor="#0A9863" />
           </div>
         </div>
 
         {/* Vertical Divider */}
         <div className="w-px h-8 bg-g1/15 mx-1 hidden sm:block" aria-hidden="true" />
 
-        {/* Logout Button (Using Unique Red Button Component) */}
+        {/* Logout Button (Using Unique Red Button Component with LordIcon) */}
         <Button
           type="button"
           text={logoutText}

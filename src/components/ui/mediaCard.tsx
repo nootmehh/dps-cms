@@ -1,15 +1,5 @@
 import { useState } from "react";
-
-const Icon = ({ name, className = "size-5 bg-current" }: { name: string; className?: string }) => (
-    <span
-        style={{
-            maskImage: `url("/icons/${name}.svg")`,
-            WebkitMaskImage: `url("/icons/${name}.svg")`,
-        }}
-        className={`mask-contain mask-no-repeat mask-center shrink-0 inline-block ${className}`}
-        aria-hidden="true"
-    />
-);
+import LordIcon from "../common/lordIcon";
 
 export interface MediaCardProps {
     imageUrl: string;
@@ -49,12 +39,12 @@ export default function MediaCard({
                                 className="w-full h-full object-cover"
                             />
                         ) : (
-                            <Icon name="Image 2" className="size-6 text-slate-400" />
+                            <LordIcon name="Image 2" size={24} primaryColor="#94a3b8" />
                         )}
                     </div>
                     <div className="flex flex-col overflow-hidden min-w-0 flex-1">
                         <span
-                            className="text-sm font-medium text-slate-800 truncate font-['Poppins']"
+                            className="text-sm font-medium text-slate-800 truncate font-sans"
                             title={fileName}
                         >
                             {fileName}
@@ -74,10 +64,10 @@ export default function MediaCard({
                             e.stopPropagation();
                             onDelete();
                         }}
-                        className="size-9 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-lg flex justify-center items-center transition-all cursor-pointer shrink-0"
+                        className="size-9 bg-red-state hover:opacity-90 text-white rounded-lg flex justify-center items-center transition-all cursor-pointer shrink-0"
                         title="Delete Media"
                     >
-                        <Icon name="Delete 2" className="size-5 bg-current" />
+                        <LordIcon name="Delete" size={18} primaryColor="#FFFFFF" />
                     </button>
                 )}
             </div>
@@ -101,7 +91,7 @@ export default function MediaCard({
                         className="w-full h-full object-cover"
                     />
                 ) : (
-                    <Icon name="Image 2" className="size-10 text-slate-300" />
+                    <LordIcon name="Image 2" size={36} primaryColor="#cbd5e1" />
                 )}
 
                 {/* Floating Delete button overlay */}
@@ -112,10 +102,10 @@ export default function MediaCard({
                             e.stopPropagation();
                             onDelete();
                         }}
-                        className="absolute top-2 right-2 size-9 bg-red-600 hover:bg-red-700 text-white rounded-lg flex justify-center items-center shadow-md opacity-0 group-hover:opacity-100 transition-all cursor-pointer active:scale-95 z-10"
+                        className="absolute top-2 right-2 size-9 bg-red-state hover:opacity-90 text-white rounded-lg flex justify-center items-center shadow-md opacity-0 group-hover:opacity-100 transition-all cursor-pointer active:scale-95 z-10"
                         title="Delete Media"
                     >
-                        <Icon name="Delete 2" className="size-5 bg-current" />
+                        <LordIcon name="Delete" size={18} primaryColor="#FFFFFF" />
                     </button>
                 )}
             </div>
@@ -124,7 +114,7 @@ export default function MediaCard({
             <div className="flex items-center justify-between gap-2 min-w-0">
                 <div className="flex flex-col min-w-0 flex-1">
                     <span
-                        className="text-xs sm:text-sm font-medium text-slate-800 truncate font-['Poppins']"
+                        className="text-xs sm:text-sm font-medium text-slate-800 truncate font-sans"
                         title={fileName}
                     >
                         {fileName}
@@ -143,10 +133,10 @@ export default function MediaCard({
                             e.stopPropagation();
                             onDelete();
                         }}
-                        className="size-8 bg-red-600 hover:bg-red-700 text-white rounded-lg flex justify-center items-center transition-all cursor-pointer shrink-0 active:scale-95 sm:hidden"
+                        className="size-8 bg-red-state hover:opacity-90 text-white rounded-lg flex justify-center items-center transition-all cursor-pointer shrink-0 active:scale-95 sm:hidden"
                         title="Delete Media"
                     >
-                        <Icon name="Delete 2" className="size-4 bg-current" />
+                        <LordIcon name="Delete" size={16} primaryColor="#FFFFFF" />
                     </button>
                 )}
             </div>

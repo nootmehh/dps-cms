@@ -8,6 +8,7 @@ import Pagination from "@/components/ui/pagination";
 import InputBox from "@/components/ui/inputBox";
 import Notification, { type NotificationType } from "@/components/ui/notification";
 import DeleteConfirmationModal from "@/components/ui/modal/deleteConfirmation";
+import LordIcon from "@/components/common/lordIcon";
 
 interface UserItem {
   id: number;
@@ -21,17 +22,6 @@ const INITIAL_USERS: UserItem[] = [
   { id: 2, username: "Dora D", email: "dora@duaputra.id", role: "Admin Konten" },
   { id: 3, username: "Budi Santoso", email: "budi@duaputra.id", role: "Admin Media" },
 ];
-
-const Icon = ({ name, className = "size-4 bg-current" }: { name: string; className?: string }) => (
-  <span
-    style={{
-      maskImage: `url("/icons/${name}.svg")`,
-      WebkitMaskImage: `url("/icons/${name}.svg")`,
-    }}
-    className={`mask-contain mask-no-repeat mask-center shrink-0 inline-block ${className}`}
-    aria-hidden="true"
-  />
-);
 
 export default function KelolaPenggunaPage() {
   const [users, setUsers] = useState<UserItem[]>(INITIAL_USERS);
@@ -97,7 +87,7 @@ export default function KelolaPenggunaPage() {
   };
 
   return (
-    <div className="min-h-screen bg-brand-background flex flex-col items-center">
+    <div className="min-h-screen bg-white-90 flex flex-col items-center">
       {/* Top Navbar */}
       <Navbar
         brandTitle="Dua Putra Srikandi"
@@ -107,12 +97,12 @@ export default function KelolaPenggunaPage() {
       />
 
       {/* Main Body */}
-      <main className="w-full max-w-[1440px] px-6 lg:px-12 py-8 flex flex-col md:flex-row justify-center items-start gap-6">
+      <main className="w-full max-w-360 px-6 lg:px-12 py-8 flex flex-col md:flex-row justify-center items-start gap-6">
         {/* Sidebar Component */}
         <Sidebar activeId="users" />
 
         {/* Content Card */}
-        <div className="flex-1 p-6 md:p-8 bg-white rounded-[32px] border border-white-80 shadow-xs flex flex-col justify-start items-start gap-6 w-full overflow-hidden">
+        <div className="flex-1 p-6 md:p-8 bg-white rounded-4xl border border-white-80 shadow-xs flex flex-col justify-start items-start gap-6 w-full overflow-hidden">
           {/* Header Row */}
           <div className="self-stretch flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex-1 flex flex-col justify-start items-start gap-1">
@@ -152,11 +142,11 @@ export default function KelolaPenggunaPage() {
           {/* Table Container */}
           <div className="self-stretch bg-white flex flex-col justify-start items-start gap-2 overflow-x-auto w-full">
             {/* Table Header */}
-            <div className="self-stretch min-w-[640px] h-11 bg-brand-background rounded-xl flex items-center px-4 overflow-hidden select-none">
+            <div className="self-stretch min-w-160 h-11 bg-white-90 rounded-xl flex items-center px-4 overflow-hidden select-none">
               <div className="w-16 text-g1 text-sm font-semibold font-sans">No.</div>
               <div className="flex-1 text-g1 text-sm font-semibold font-sans">Username</div>
               <div className="w-80 text-g1 text-sm font-semibold font-sans">Email</div>
-              <div className="w-28 text-center text-g1 text-sm font-semibold font-sans">Action</div>
+              <div className="w-24 text-left text-g1 text-sm font-semibold font-sans">Action</div>
             </div>
 
             {/* Table Rows */}
@@ -168,7 +158,7 @@ export default function KelolaPenggunaPage() {
               filteredUsers.map((user, idx) => (
                 <div
                   key={user.id}
-                  className="self-stretch min-w-[640px] h-14 border-b border-brand-background hover:bg-brand-background/40 transition-colors flex items-center px-4"
+                  className="self-stretch min-w-160 h-14 border-b border-white-90 hover:bg-white-90/60 transition-colors flex items-center px-4"
                 >
                   <div className="w-16 text-dark/90 text-sm font-normal font-sans">
                     {idx + 1}.
@@ -179,7 +169,7 @@ export default function KelolaPenggunaPage() {
                   <div className="w-80 text-dark/80 text-sm font-normal font-sans">
                     {user.email}
                   </div>
-                  <div className="w-28 flex justify-center items-center gap-2.5">
+                  <div className="w-24 flex justify-start items-center gap-2.5">
                     {/* Edit Action Button */}
                     <button
                       type="button"
@@ -187,9 +177,9 @@ export default function KelolaPenggunaPage() {
                       onClick={() =>
                         triggerNotif(`Edit fitur untuk ${user.username} sedang diproses`, "default")
                       }
-                      className="size-9 p-2 bg-brand-background hover:bg-g1/15 rounded-full flex justify-center items-center text-g1 transition-colors cursor-pointer"
+                      className="size-9 p-1 bg-brand-background hover:bg-g1/15 rounded-full flex justify-center items-center text-g1 transition-colors cursor-pointer"
                     >
-                      <Icon name="Edit" className="size-4 bg-g1" />
+                      <LordIcon name="Edit" size={18} primaryColor="#0A9863" />
                     </button>
 
                     {/* Delete Action Button */}
@@ -197,9 +187,9 @@ export default function KelolaPenggunaPage() {
                       type="button"
                       title="Hapus Pengguna"
                       onClick={() => setDeleteModal({ isOpen: true, user })}
-                      className="size-9 p-2 bg-red-state hover:opacity-90 rounded-full flex justify-center items-center text-white transition-opacity cursor-pointer shadow-xs"
+                      className="size-9 p-1 bg-red-state hover:opacity-90 rounded-full flex justify-center items-center text-white transition-opacity cursor-pointer shadow-xs"
                     >
-                      <Icon name="Delete" className="size-4 bg-white" />
+                      <LordIcon name="Delete" size={18} primaryColor="#FFFFFF" />
                     </button>
                   </div>
                 </div>

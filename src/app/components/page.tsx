@@ -68,7 +68,7 @@ export default function ComponentsShowcasePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-brand-background text-dark px-4 py-8 md:px-12 md:py-12">
+    <div className="min-h-screen bg-white-90 text-dark px-4 py-8 md:px-12 md:py-12">
       {/* Toast Notification */}
       <Notification
         isOpen={notification.isOpen}

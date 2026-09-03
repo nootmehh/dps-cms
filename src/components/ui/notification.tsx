@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import LordIcon from "../common/lordIcon";
 
 export type NotificationType = "error" | "default" | "success";
 
@@ -15,28 +16,28 @@ const variantConfig: Record<
     NotificationType,
     {
         container: string;
-        icon: string;
+        iconName: string;
         iconColor: string;
         textColor: string;
     }
 > = {
     success: {
         container: "bg-green-50/95 border-green-200/60 shadow-green-100/40 text-green-800",
-        icon: "Tick Circle",
-        iconColor: "bg-green-600",
+        iconName: "Right 1",
+        iconColor: "#0A9863",
         textColor: "text-green-800",
     },
     error: {
         container: "bg-red-50/95 border-red-200/60 shadow-red-100/40 text-red-800",
-        icon: "Danger Circle",
-        iconColor: "bg-[#E02828]",
-        textColor: "text-[#E02828]",
+        iconName: "Delete",
+        iconColor: "#F94C4C",
+        textColor: "text-red-800",
     },
     default: {
         container: "bg-blue-50/95 border-blue-200/60 shadow-blue-100/40 text-blue-800",
-        icon: "Information Circle",
-        iconColor: "bg-[#3F71B7]",
-        textColor: "text-[#3F71B7]",
+        iconName: "Global",
+        iconColor: "#4C94F9",
+        textColor: "text-blue-800",
     },
 };
 
@@ -54,7 +55,6 @@ export default function Notification({
     useEffect(() => {
         if (isOpen) {
             setShouldRender(true);
-            // Wait for the render frame before animating in
             const frame = requestAnimationFrame(() => {
                 setAnimateState("enter");
             });
@@ -63,7 +63,7 @@ export default function Notification({
             setAnimateState("exit");
             const timer = setTimeout(() => {
                 setShouldRender(false);
-            }, 300); // match duration-300
+            }, 300);
             return () => clearTimeout(timer);
         }
     }, [isOpen]);
@@ -91,14 +91,14 @@ export default function Notification({
             {/* Content wrapper */}
             <div className="flex items-start gap-3 flex-1">
                 {/* State Icon */}
-                <span
-                    style={{
-                        maskImage: `url("/icons/${currentVariant.icon}.svg")`,
-                        WebkitMaskImage: `url("/icons/${currentVariant.icon}.svg")`,
-                    }}
-                    className={`size-5 ${currentVariant.iconColor} mask-contain mask-no-repeat mask-center shrink-0 mt-0.5`}
-                    aria-hidden="true"
-                />
+                <div className="shrink-0 mt-0.5">
+                    <LordIcon
+                        name={currentVariant.iconName}
+                        size={20}
+                        primaryColor={currentVariant.iconColor}
+                        secondaryColor={currentVariant.iconColor}
+                    />
+                </div>
 
                 {/* Text-sm Message */}
                 <div className={`text-sm font-medium leading-relaxed wrap-break-word ${currentVariant.textColor}`}>
@@ -112,14 +112,7 @@ export default function Notification({
                 className="p-1 rounded-lg text-black hover:text-black/70 hover:bg-slate-100/50 transition-all cursor-pointer flex items-center justify-center shrink-0"
                 title="Close"
             >
-                <span
-                    style={{
-                        maskImage: 'url("/icons/Close.svg")',
-                        WebkitMaskImage: 'url("/icons/Close.svg")',
-                    }}
-                    className="size-4 bg-current mask-contain mask-no-repeat mask-center"
-                    aria-hidden="true"
-                />
+                <LordIcon name="Delete" size={16} primaryColor="#666666" />
             </button>
         </div>
     );

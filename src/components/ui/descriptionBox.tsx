@@ -17,7 +17,7 @@ export default function DescriptionBox({
 }: DescriptionBoxProps) {
   return (
     <div
-      className={`w-full max-w-[466px] inline-flex flex-col justify-start items-start gap-1 ${containerClassName}`}
+      className={`w-full max-w-116.5 inline-flex flex-col justify-start items-start gap-1 ${containerClassName}`}
     >
       {label && (
         <label className="self-stretch justify-start text-dark text-sm font-semibold font-sans">
@@ -28,7 +28,7 @@ export default function DescriptionBox({
         <textarea
           placeholder={placeholder}
           rows={rows}
-          className={`w-full bg-transparent text-dark text-sm font-normal font-sans placeholder:text-dark/40 outline-none border-none resize-y min-h-[80px] ${className}`}
+          className={`w-full bg-transparent text-dark text-sm font-normal font-sans placeholder:text-dark/40 outline-none border-none resize-y min-h-20 ${className}`}
           {...props}
         />
       </div>
