@@ -19,6 +19,7 @@ export interface UploadFileProps {
     mediaLibraryCategory?: string;
     descriptionPrefix?: string;
     descriptionValue?: string;
+    previewLayout?: "compact" | "large";
     className?: string;
 }
 
@@ -37,6 +38,7 @@ export default function UploadFile({
     defaultImageLabel = "Saved Image",
     onRemoveDefaultImage,
     enableMediaLibrary = true,
+    previewLayout = "compact",
     className = "",
 }: UploadFileProps) {
     const [dragActive, setDragActive] = useState(false);
@@ -167,13 +169,38 @@ export default function UploadFile({
         }
     };
 
-    const canUploadMore = multiple ? selectedFiles.length < maxFiles : selectedFiles.length === 0;
+    const hasActiveImage = selectedFiles.length > 0 || !!defaultImageUrl || existingImageUrls.length > 0;
+    const canUploadMore = multiple ? selectedFiles.length < maxFiles : selectedFiles.length === 0 && !defaultImageUrl;
+
+    const activeLargeUrl =
+        selectedFiles.length > 0 && previews[0]
+            ? previews[0]
+            : defaultImageUrl || (existingImageUrls.length > 0 ? existingImageUrls[0] : null);
+
+    const activeLargeName =
+        selectedFiles.length > 0
+            ? selectedFiles[0].name
+            : defaultImageUrl
+            ? defaultImageLabel || getFileNameFromUrl(defaultImageUrl)
+            : existingImageUrls.length > 0
+            ? getFileNameFromUrl(existingImageUrls[0])
+            : "";
+
+    const activeLargeSize =
+        selectedFiles.length > 0 ? formatBytes(selectedFiles[0].size) : "";
 
     return (
-        <div className={`w-full max-w-116.5 inline-flex flex-col justify-start items-start gap-1 relative ${className}`}>
+        <div className={`w-full ${className.includes("max-w-") ? "" : "max-w-116.5"} inline-flex flex-col justify-start items-start gap-1 relative ${className}`}>
             {/* Label header */}
             <div className="self-stretch flex justify-between items-center">
-                <label className="text-dark text-sm font-semibold font-sans">{label}</label>
+                <div className="flex items-center gap-2">
+                    <label className="text-dark text-sm font-semibold font-sans">{label}</label>
+                    {descriptionPrefix && descriptionValue && (
+                        <span className="text-xs text-dark/40 font-normal font-sans">
+                            {descriptionPrefix}: <strong className="text-dark/60">{descriptionValue}</strong>
+                        </span>
+                    )}
+                </div>
                 {enableMediaLibrary && (
                     <button
                         type="button"
@@ -197,6 +224,65 @@ export default function UploadFile({
                     className="hidden"
                 />
 
+                {/* LARGE PREVIEW LAYOUT */}
+                {previewLayout === "large" && hasActiveImage && activeLargeUrl && (
+                    <div className="self-stretch flex flex-col gap-3 w-full">
+                        <div className="relative w-full h-64 sm:h-80 md:h-96 rounded-3xl overflow-hidden border border-white-80 shadow-xs bg-slate-900/5 group flex items-center justify-center">
+                            <img
+                                src={activeLargeUrl}
+                                alt={activeLargeName}
+                                className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                            />
+
+                            {/* Gradient Overlay for controls */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 opacity-90 transition-opacity" />
+
+                            {/* Top info & action buttons */}
+                            <div className="absolute top-4 right-4 flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={triggerBrowse}
+                                    className="px-3 py-1.5 bg-white/90 hover:bg-white text-dark text-xs font-semibold rounded-full shadow-md backdrop-blur-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                                >
+                                    <LordIcon name="Edit" size={14} primaryColor="#0A9863" />
+                                    Ganti Foto
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (selectedFiles.length > 0) {
+                                            removeFile(0);
+                                        } else if (onRemoveDefaultImage) {
+                                            onRemoveDefaultImage();
+                                        }
+                                    }}
+                                    className="size-8 bg-red-500/90 hover:bg-red-500 text-white rounded-full shadow-md backdrop-blur-xs flex items-center justify-center transition-all cursor-pointer"
+                                    title="Hapus gambar"
+                                >
+                                    <LordIcon name="Delete" size={16} primaryColor="#FFFFFF" />
+                                </button>
+                            </div>
+
+                            {/* Bottom meta info */}
+                            <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end text-white select-none">
+                                <div className="flex flex-col gap-0.5 max-w-[70%]">
+                                    <span className="text-xs uppercase tracking-wider font-semibold text-white/70">
+                                        Gambar Produk Aktif
+                                    </span>
+                                    <span className="text-sm font-semibold truncate">
+                                        {activeLargeName}
+                                    </span>
+                                </div>
+                                {activeLargeSize && (
+                                    <span className="px-2.5 py-1 bg-black/40 backdrop-blur-xs rounded-lg text-xs font-mono text-white/80">
+                                        {activeLargeSize}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Dropzone Box */}
                 {canUploadMore && (
                     <div
@@ -205,27 +291,31 @@ export default function UploadFile({
                         onDragLeave={handleDrag}
                         onDrop={handleDrop}
                         onClick={triggerBrowse}
-                        className={`self-stretch py-10 px-4 rounded-3xl outline-1 -outline-offset-1 transition-all cursor-pointer flex flex-col justify-start items-center gap-2.5 overflow-hidden ${dragActive
-                            ? "outline-g1 bg-g1/5 scale-[0.99] outline-dashed"
-                            : "outline-white-80 hover:bg-white-90 bg-white"
-                            }`}
+                        className={`self-stretch ${previewLayout === "large" ? "py-14" : "py-10"} px-4 rounded-3xl outline-1 -outline-offset-1 transition-all cursor-pointer flex flex-col justify-start items-center gap-2.5 overflow-hidden ${
+                            dragActive
+                                ? "outline-g1 bg-g1/5 scale-[0.99] outline-dashed"
+                                : "outline-white-80 hover:bg-white-90 bg-white"
+                        }`}
                     >
                         <div className="flex flex-col justify-start items-center gap-3">
-                            <div className="size-12 rounded-full bg-brand-background flex items-center justify-center">
-                                <LordIcon name="Image 2" size={28} primaryColor="#0A9863" />
+                            <div className="size-14 rounded-full bg-brand-background flex items-center justify-center">
+                                <LordIcon name="Image 2" size={32} primaryColor="#0A9863" />
                             </div>
 
                             <div className="flex flex-col justify-start items-center gap-1">
                                 <div className="text-center justify-start text-dark text-sm font-medium font-sans">
-                                    Tarik & Letakkan di sini <br />atau <span className="text-g1 hover:underline font-semibold cursor-pointer">Pilih Berkas</span>
+                                    Tarik & Letakkan berkas foto di sini <br />atau{" "}
+                                    <span className="text-g1 hover:underline font-semibold cursor-pointer">
+                                        Pilih Berkas dari Komputer
+                                    </span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* File list preview */}
-                {(selectedFiles.length > 0 || defaultImageUrl || existingImageUrls.length > 0) && (
+                {/* COMPACT File list preview (default) */}
+                {previewLayout === "compact" && (selectedFiles.length > 0 || defaultImageUrl || existingImageUrls.length > 0) && (
                     <div className="self-stretch flex flex-col gap-2 bg-brand-background/60 p-4 rounded-2xl border border-white-80">
                         <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 font-sans">
                             Berkas Terpilih ({multiple

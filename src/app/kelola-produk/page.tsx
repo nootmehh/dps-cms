@@ -1,127 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import Navbar from "@/components/layout/navbar";
 import Sidebar from "@/components/layout/sidebar";
 import Button from "@/components/ui/button";
 import Pagination from "@/components/ui/pagination";
 import InputBox from "@/components/ui/inputBox";
 import Dropdown, { type DropdownOption } from "@/components/ui/dropdown";
-import DescriptionBox from "@/components/ui/descriptionBox";
 import Badge, { type BadgeVariant } from "@/components/ui/badge";
 import Notification, { type NotificationType } from "@/components/ui/notification";
 import DeleteConfirmationModal from "@/components/ui/modal/deleteConfirmation";
+import LordIcon from "@/components/common/lordIcon";
+import {
+  getStoredProducts,
+  deleteProduct,
+  CATEGORY_VARIANT_MAP,
+  type ProductPayload,
+} from "@/shared/api/product";
 
-interface ProductItem {
-  id: number;
+export interface ProductItem {
+  id: string | number;
   name: string;
   category: string;
   categoryVariant: BadgeVariant;
   createdAt: string;
   description?: string;
-  sku?: string;
+  imageUrl?: string | null;
 }
 
-const INITIAL_PRODUCTS: ProductItem[] = [
-  {
-    id: 1,
-    name: "Rambu Lalu Lintas Standar Dishub",
-    category: "Rambu & Marka",
-    categoryVariant: "blue",
-    createdAt: "26 Agu 2024, 09:30",
-    description: "Plat alumunium dengan stiker reflective sheet prismatic standar keselamatan Dishub.",
-    sku: "RMB-001",
-  },
-  {
-    id: 2,
-    name: "Guardrail Beam Flex-Beam Tipe A",
-    category: "Guardrail & Pagar",
-    categoryVariant: "purple",
-    createdAt: "22 Agu 2024, 15:10",
-    description: "Pagar pengaman baja galvanis ketebalan 2.67mm lengkap dengan post dan blocking.",
-    sku: "GDR-002",
-  },
-  {
-    id: 3,
-    name: "Lampu PJU All-in-One Solar 100W",
-    category: "PJU Solar Cell",
-    categoryVariant: "yellow",
-    createdAt: "19 Agu 2024, 11:45",
-    description: "Lampu penerangan jalan tenaga surya terintegrasi baterai LiFePO4 dan sensor gerak.",
-    sku: "PJU-003",
-  },
-  {
-    id: 4,
-    name: "Cat Marka Termoplastik Putih / Kuning",
-    category: "Cat Marka Jalan",
-    categoryVariant: "green",
-    createdAt: "16 Agu 2024, 14:00",
-    description: "Bahan cat marka panas berkualitas tinggi daya rekat kuat dan visibilitas malam tinggi.",
-    sku: "MRK-004",
-  },
-  {
-    id: 5,
-    name: "Traffic Cone Rubber 75cm Reflektif",
-    category: "Aksesoris Jalan",
-    categoryVariant: "orange",
-    createdAt: "12 Agu 2024, 08:20",
-    description: "Kerucut lalu lintas karet elastis tahan benturan kendaraan dengan stiker scotchlite.",
-    sku: "TFC-005",
-  },
-];
-
-const CATEGORY_OPTIONS: DropdownOption[] = [
-  { value: "all", label: "Semua Kategori" },
-  { value: "Rambu & Marka", label: "Rambu & Marka" },
-  { value: "Guardrail & Pagar", label: "Guardrail & Pagar" },
-  { value: "PJU Solar Cell", label: "PJU Solar Cell" },
-  { value: "Cat Marka Jalan", label: "Cat Marka Jalan" },
-  { value: "Aksesoris Jalan", label: "Aksesoris Jalan" },
-];
-
-const CATEGORY_FORM_OPTIONS: DropdownOption[] = [
-  { value: "Rambu & Marka", label: "Rambu & Marka" },
-  { value: "Guardrail & Pagar", label: "Guardrail & Pagar" },
-  { value: "PJU Solar Cell", label: "PJU Solar Cell" },
-  { value: "Cat Marka Jalan", label: "Cat Marka Jalan" },
-  { value: "Aksesoris Jalan", label: "Aksesoris Jalan" },
-];
-
-const CATEGORY_VARIANT_MAP: Record<string, BadgeVariant> = {
-  "Rambu & Marka": "blue",
-  "Guardrail & Pagar": "purple",
-  "PJU Solar Cell": "yellow",
-  "Cat Marka Jalan": "green",
-  "Aksesoris Jalan": "orange",
-};
-
-import LordIcon from "@/components/common/lordIcon";
-
 export default function KelolaProdukPage() {
-  const [products, setProducts] = useState<ProductItem[]>(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState<ProductItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
+  const [categoryOptions, setCategoryOptions] = useState<DropdownOption[]>([
+    { value: "all", label: "Semua Kategori" },
+  ]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   // Modals state
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; product?: ProductItem }>({
     isOpen: false,
-  });
-
-  const [formModal, setFormModal] = useState<{
-    isOpen: boolean;
-    mode: "add" | "edit";
-    productId?: number;
-  }>({
-    isOpen: false,
-    mode: "add",
-  });
-
-  const [formData, setFormData] = useState({
-    name: "",
-    category: "Rambu & Marka",
-    description: "",
   });
 
   // Notification state
@@ -139,72 +59,47 @@ export default function KelolaProdukPage() {
     setNotification({ isOpen: true, message, type });
   };
 
-  // Open Add Modal
-  const handleOpenAdd = () => {
-    setFormData({ name: "", category: "Rambu & Marka", description: "" });
-    setFormModal({ isOpen: true, mode: "add" });
-  };
+  // Load products from storage on mount
+  useEffect(() => {
+    const loadProducts = () => {
+      try {
+        const stored = getStoredProducts();
+        const mapped: ProductItem[] = stored.map((item) => {
+          const cat = item.category || "Umum";
+          return {
+            id: item.id || Date.now(),
+            name: item.title,
+            category: cat,
+            categoryVariant: (item.categoryVariant || CATEGORY_VARIANT_MAP[cat] || "green") as BadgeVariant,
+            createdAt: item.createdAt || "Baru saja",
+            description: item.description || "",
+            imageUrl: item.imageUrl,
+          };
+        });
+        setProducts(mapped);
 
-  // Open Edit Modal
-  const handleOpenEdit = (product: ProductItem) => {
-    setFormData({
-      name: product.name,
-      category: product.category,
-      description: product.description || "",
-    });
-    setFormModal({ isOpen: true, mode: "edit", productId: product.id });
-  };
+        // Build unique category options
+        const uniqueCategories = Array.from(new Set(stored.map((p) => p.category).filter(Boolean)));
+        const opts: DropdownOption[] = [
+          { value: "all", label: "Semua Kategori" },
+          ...uniqueCategories.map((c) => ({ value: c, label: c })),
+        ];
+        setCategoryOptions(opts);
+      } catch (err) {
+        console.error("Error loading products", err);
+      }
+    };
 
-  // Save Add / Edit
-  const handleSaveProduct = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim()) return;
-
-    const categoryVariant = CATEGORY_VARIANT_MAP[formData.category] || "green";
-
-    if (formModal.mode === "add") {
-      const now = new Date();
-      const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-      const formattedDate = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${String(
-        now.getHours()
-      ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-
-      const newProduct: ProductItem = {
-        id: Date.now(),
-        name: formData.name.trim(),
-        category: formData.category,
-        categoryVariant,
-        createdAt: formattedDate,
-        description: formData.description.trim(),
-      };
-
-      setProducts((prev) => [newProduct, ...prev]);
-      triggerNotif(`Produk "${newProduct.name}" berhasil ditambahkan!`, "success");
-    } else if (formModal.mode === "edit" && formModal.productId) {
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === formModal.productId
-            ? {
-                ...p,
-                name: formData.name.trim(),
-                category: formData.category,
-                categoryVariant,
-                description: formData.description.trim(),
-              }
-            : p
-        )
-      );
-      triggerNotif(`Produk berhasil diperbarui!`, "success");
-    }
-
-    setFormModal({ isOpen: false, mode: "add" });
-  };
+    loadProducts();
+  }, []);
 
   // Confirm Delete
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteModal.product) {
-      setProducts((prev) => prev.filter((p) => p.id !== deleteModal.product?.id));
-      triggerNotif(`Produk "${deleteModal.product.name}" berhasil dihapus`, "error");
+      const target = deleteModal.product;
+      await deleteProduct(target.id);
+      setProducts((prev) => prev.filter((p) => p.id !== target.id));
+      triggerNotif(`Produk "${target.name}" berhasil dihapus`, "error");
       setDeleteModal({ isOpen: false });
     }
   };
@@ -213,11 +108,17 @@ export default function KelolaProdukPage() {
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchQuery.toLowerCase());
+      p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCategory =
       selectedCategoryFilter === "all" || p.category === selectedCategoryFilter;
     return matchesSearch && matchesCategory;
   });
+
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="min-h-screen bg-white-90 flex flex-col items-center">
@@ -248,15 +149,16 @@ export default function KelolaProdukPage() {
               </p>
             </div>
 
-            {/* Add Product Button */}
-            <Button
-              type="button"
-              text="Tambah Produk"
-              variant="fill"
-              rightIcon="Add"
-              onClick={handleOpenAdd}
-              className="shrink-0 cursor-pointer"
-            />
+            {/* Add Product Button (Navigates to /kelola-produk/tambah) */}
+            <Link href="/kelola-produk/tambah">
+              <Button
+                type="button"
+                text="Tambah Produk"
+                variant="fill"
+                rightIcon="Add"
+                className="shrink-0 cursor-pointer"
+              />
+            </Link>
           </div>
 
           {/* Top Divider */}
@@ -268,15 +170,21 @@ export default function KelolaProdukPage() {
               <InputBox
                 placeholder="Cari nama produk..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
                 leftIcon="Global"
               />
             </div>
-            <div className="w-full sm:w-64">
+            <div className="w-full sm:w-80">
               <Dropdown
-                options={CATEGORY_OPTIONS}
+                options={categoryOptions}
                 value={selectedCategoryFilter}
-                onChange={(val) => setSelectedCategoryFilter(val)}
+                onChange={(val) => {
+                  setSelectedCategoryFilter(val);
+                  setCurrentPage(1);
+                }}
                 placeholder="Filter Kategori"
               />
             </div>
@@ -288,8 +196,8 @@ export default function KelolaProdukPage() {
             <div className="self-stretch min-w-[720px] h-11 bg-white-90 rounded-xl flex items-center px-4 overflow-hidden select-none">
               <div className="w-14 text-g1 text-sm font-semibold font-sans">No.</div>
               <div className="flex-1 text-g1 text-sm font-semibold font-sans">Nama Produk</div>
-              <div className="w-48 text-g1 text-sm font-semibold font-sans">Kategori</div>
-              <div className="w-48 text-g1 text-sm font-semibold font-sans">Waktu Dibuat</div>
+              <div className="w-64 text-g1 text-sm font-semibold font-sans">Kategori</div>
+              <div className="w-40 text-g1 text-sm font-semibold font-sans">Waktu Dibuat</div>
               <div className="w-24 text-left text-g1 text-sm font-semibold font-sans">Action</div>
             </div>
 
@@ -299,14 +207,14 @@ export default function KelolaProdukPage() {
                 Tidak ada produk yang sesuai dengan pencarian atau filter.
               </div>
             ) : (
-              filteredProducts.map((product, idx) => (
+              paginatedProducts.map((product, idx) => (
                 <div
                   key={product.id}
                   className="self-stretch min-w-[720px] min-h-[58px] border-b border-white-90 hover:bg-white-90/60 transition-colors flex items-center px-4 py-2"
                 >
                   {/* No. */}
                   <div className="w-14 text-dark/90 text-sm font-normal font-sans">
-                    {idx + 1}.
+                    {(currentPage - 1) * itemsPerPage + idx + 1}.
                   </div>
 
                   {/* Nama Produk */}
@@ -322,7 +230,7 @@ export default function KelolaProdukPage() {
                   </div>
 
                   {/* Kategori Badge */}
-                  <div className="w-48 flex items-center">
+                  <div className="w-64 flex items-center pr-2">
                     <Badge
                       text={product.category}
                       variant={product.categoryVariant}
@@ -331,21 +239,20 @@ export default function KelolaProdukPage() {
                   </div>
 
                   {/* Waktu Dibuat */}
-                  <div className="w-48 text-dark/75 text-sm font-normal font-sans">
+                  <div className="w-40 text-dark/75 text-sm font-normal font-sans">
                     {product.createdAt}
                   </div>
 
                   {/* Action Buttons */}
                   <div className="w-24 flex justify-start items-center gap-2.5">
-                    {/* Edit Action Button */}
-                    <button
-                      type="button"
+                    {/* Edit Action Button (Navigates to /kelola-produk/[id]) */}
+                    <Link
+                      href={`/kelola-produk/${product.id}`}
                       title="Edit Produk"
-                      onClick={() => handleOpenEdit(product)}
                       className="size-9 p-1 bg-brand-background hover:bg-g1/15 rounded-full flex justify-center items-center text-g1 transition-colors cursor-pointer"
                     >
                       <LordIcon name="Edit" size={18} primaryColor="#0A9863" />
-                    </button>
+                    </Link>
 
                     {/* Delete Action Button */}
                     <button
@@ -384,66 +291,6 @@ export default function KelolaProdukPage() {
         title="Hapus Produk"
         message={`Apakah Anda yakin ingin menghapus produk "${deleteModal.product?.name}"? Tindakan ini tidak dapat dibatalkan.`}
       />
-
-      {/* Add / Edit Product Modal */}
-      {formModal.isOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark/40 backdrop-blur-xs animate-fade-in"
-        >
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full border border-white-80 shadow-2xl flex flex-col gap-5 animate-scale-in">
-            <div>
-              <h2 className="text-xl font-bold text-dark">
-                {formModal.mode === "add" ? "Tambah Produk Baru" : "Edit Produk"}
-              </h2>
-              <p className="text-xs text-slate-500">
-                Lengkapi nama produk, kategori perlengkapan, dan spesifikasi produk.
-              </p>
-            </div>
-
-            <form onSubmit={handleSaveProduct} className="flex flex-col gap-4">
-              <InputBox
-                label="Nama Produk"
-                placeholder="cth. Guardrail Beam Flex-Beam Tipe A"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-
-              <Dropdown
-                label="Kategori"
-                options={CATEGORY_FORM_OPTIONS}
-                value={formData.category}
-                onChange={(val) => setFormData({ ...formData, category: val })}
-                placeholder="Pilih Kategori Produk"
-              />
-
-              <DescriptionBox
-                label="Spesifikasi & Deskripsi Produk (Opsional)"
-                placeholder="Masukkan spesifikasi material, ketebalan, atau sertifikasi..."
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-              />
-
-              <div className="flex justify-end items-center gap-3 pt-2">
-                <Button
-                  type="button"
-                  text="Batal"
-                  variant="ghost-green"
-                  onClick={() => setFormModal({ isOpen: false, mode: "add" })}
-                />
-                <Button
-                  type="submit"
-                  text={formModal.mode === "add" ? "Simpan Produk" : "Perbarui Produk"}
-                  variant="fill"
-                />
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Toast Notification */}
       <Notification

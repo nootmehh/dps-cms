@@ -272,7 +272,7 @@ export default function DashboardPage() {
               <Button
                 type="button"
                 text="Perbarui Data"
-                variant="outline-green"
+                variant="ghost-green"
                 onClick={() => triggerNotif("Statistik dashboard berhasil diperbarui!", "success")}
                 className="cursor-pointer text-xs md:text-sm"
               />
@@ -580,7 +580,7 @@ export default function DashboardPage() {
                 <Button
                   type="button"
                   text="Kelola Semua Artikel"
-                  variant="outline-green"
+                  variant="ghost-green"
                   rightIcon="Right 1"
                   className="cursor-pointer text-xs md:text-sm"
                 />

@@ -1,120 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import Navbar from "@/components/layout/navbar";
 import Sidebar from "@/components/layout/sidebar";
 import Button from "@/components/ui/button";
 import Pagination from "@/components/ui/pagination";
 import InputBox from "@/components/ui/inputBox";
 import Dropdown, { type DropdownOption } from "@/components/ui/dropdown";
-import DescriptionBox from "@/components/ui/descriptionBox";
 import Badge, { type BadgeVariant } from "@/components/ui/badge";
 import Notification, { type NotificationType } from "@/components/ui/notification";
 import DeleteConfirmationModal from "@/components/ui/modal/deleteConfirmation";
 import LordIcon from "@/components/common/lordIcon";
+import {
+  getStoredServices,
+  deleteService,
+  SERVICE_CATEGORY_VARIANT_MAP,
+  type ServicePayload,
+} from "@/shared/api/service";
 
-interface ServiceItem {
-  id: number;
+export interface ServiceItem {
+  id: string | number;
   name: string;
   category: string;
   categoryVariant: BadgeVariant;
   createdAt: string;
   description?: string;
+  imageUrl?: string | null;
 }
 
-const INITIAL_SERVICES: ServiceItem[] = [
-  {
-    id: 1,
-    name: "Konstruksi & Pengaspalan Jalan",
-    category: "Konstruksi",
-    categoryVariant: "green",
-    createdAt: "24 Agu 2024, 10:15",
-    description: "Layanan pengerjaan proyek jalan aspal hotmix dan perbaikan jalan raya standar nasional.",
-  },
-  {
-    id: 2,
-    name: "Pemasangan Rambu & Marka Jalan",
-    category: "Perlengkapan Jalan",
-    categoryVariant: "blue",
-    createdAt: "20 Agu 2024, 14:30",
-    description: "Instalasi rambu petunjuk jalan, marka thermoplastic, dan paku jalan reflektif.",
-  },
-  {
-    id: 3,
-    name: "Fabrikasi Guardrail & Pagar Pengaman",
-    category: "Fabrikasi",
-    categoryVariant: "purple",
-    createdAt: "18 Agu 2024, 09:00",
-    description: "Produksi dan instalasi pagar pengaman jalan (guardrail) galvanis tahan korosi.",
-  },
-  {
-    id: 4,
-    name: "Penerangan Jalan Umum (PJU) Solar Cell",
-    category: "Penerangan",
-    categoryVariant: "yellow",
-    createdAt: "15 Agu 2024, 16:45",
-    description: "Pemasangan tiang dan lampu PJU tenaga surya hemat energi untuk jalan protokol dan desa.",
-  },
-  {
-    id: 5,
-    name: "Penyewaan Alat Berat Konstruksi",
-    category: "Rental Alat",
-    categoryVariant: "orange",
-    createdAt: "10 Agu 2024, 11:20",
-    description: "Penyewaan vibro roller, excavator, asphalt finisher, dan dump truck beserta operator.",
-  },
-];
-
-const CATEGORY_OPTIONS: DropdownOption[] = [
-  { value: "all", label: "Semua Kategori" },
-  { value: "Konstruksi", label: "Konstruksi" },
-  { value: "Perlengkapan Jalan", label: "Perlengkapan Jalan" },
-  { value: "Fabrikasi", label: "Fabrikasi" },
-  { value: "Penerangan", label: "Penerangan" },
-  { value: "Rental Alat", label: "Rental Alat" },
-];
-
-const CATEGORY_FORM_OPTIONS: DropdownOption[] = [
-  { value: "Konstruksi", label: "Konstruksi" },
-  { value: "Perlengkapan Jalan", label: "Perlengkapan Jalan" },
-  { value: "Fabrikasi", label: "Fabrikasi" },
-  { value: "Penerangan", label: "Penerangan" },
-  { value: "Rental Alat", label: "Rental Alat" },
-];
-
-const CATEGORY_VARIANT_MAP: Record<string, BadgeVariant> = {
-  Konstruksi: "green",
-  "Perlengkapan Jalan": "blue",
-  Fabrikasi: "purple",
-  Penerangan: "yellow",
-  "Rental Alat": "orange",
-};
-
 export default function KelolaLayananPage() {
-  const [services, setServices] = useState<ServiceItem[]>(INITIAL_SERVICES);
+  const [services, setServices] = useState<ServiceItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
+  const [categoryOptions, setCategoryOptions] = useState<DropdownOption[]>([
+    { value: "all", label: "Semua Kategori" },
+  ]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   // Modals state
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; service?: ServiceItem }>({
     isOpen: false,
-  });
-
-  const [formModal, setFormModal] = useState<{
-    isOpen: boolean;
-    mode: "add" | "edit";
-    serviceId?: number;
-  }>({
-    isOpen: false,
-    mode: "add",
-  });
-
-  const [formData, setFormData] = useState({
-    name: "",
-    category: "Konstruksi",
-    description: "",
   });
 
   // Notification state
@@ -132,85 +59,66 @@ export default function KelolaLayananPage() {
     setNotification({ isOpen: true, message, type });
   };
 
-  // Open Add Modal
-  const handleOpenAdd = () => {
-    setFormData({ name: "", category: "Konstruksi", description: "" });
-    setFormModal({ isOpen: true, mode: "add" });
-  };
+  // Load services from storage
+  useEffect(() => {
+    const loadServices = () => {
+      try {
+        const stored = getStoredServices();
+        const mapped: ServiceItem[] = stored.map((item) => {
+          const cat = item.category || "Umum";
+          return {
+            id: item.id || Date.now(),
+            name: item.title,
+            category: cat,
+            categoryVariant: (item.categoryVariant || SERVICE_CATEGORY_VARIANT_MAP[cat] || "green") as BadgeVariant,
+            createdAt: item.createdAt || "Baru saja",
+            description: item.description || "",
+            imageUrl: item.imageUrl,
+          };
+        });
+        setServices(mapped);
 
-  // Open Edit Modal
-  const handleOpenEdit = (service: ServiceItem) => {
-    setFormData({
-      name: service.name,
-      category: service.category,
-      description: service.description || "",
-    });
-    setFormModal({ isOpen: true, mode: "edit", serviceId: service.id });
-  };
+        // Build unique category options
+        const uniqueCategories = Array.from(new Set(stored.map((s) => s.category).filter(Boolean)));
+        const opts: DropdownOption[] = [
+          { value: "all", label: "Semua Kategori" },
+          ...uniqueCategories.map((c) => ({ value: c, label: c })),
+        ];
+        setCategoryOptions(opts);
+      } catch (err) {
+        console.error("Error loading services", err);
+      }
+    };
 
-  // Save Add or Edit Service
-  const handleSaveService = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim()) return;
+    loadServices();
+  }, []);
 
-    const categoryVariant = CATEGORY_VARIANT_MAP[formData.category] || "green";
-
-    if (formModal.mode === "add") {
-      const now = new Date();
-      const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-      const formattedDate = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}, ${String(
-        now.getHours()
-      ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-
-      const newService: ServiceItem = {
-        id: Date.now(),
-        name: formData.name.trim(),
-        category: formData.category,
-        categoryVariant,
-        createdAt: formattedDate,
-        description: formData.description.trim(),
-      };
-
-      setServices((prev) => [newService, ...prev]);
-      triggerNotif(`Layanan "${newService.name}" berhasil ditambahkan!`, "success");
-    } else if (formModal.mode === "edit" && formModal.serviceId) {
-      setServices((prev) =>
-        prev.map((s) =>
-          s.id === formModal.serviceId
-            ? {
-                ...s,
-                name: formData.name.trim(),
-                category: formData.category,
-                categoryVariant,
-                description: formData.description.trim(),
-              }
-            : s
-        )
-      );
-      triggerNotif(`Layanan berhasil diperbarui!`, "success");
-    }
-
-    setFormModal({ isOpen: false, mode: "add" });
-  };
-
-  // Handle Delete Confirmation
-  const confirmDelete = () => {
+  // Confirm Delete
+  const confirmDelete = async () => {
     if (deleteModal.service) {
-      setServices((prev) => prev.filter((s) => s.id !== deleteModal.service?.id));
-      triggerNotif(`Layanan "${deleteModal.service.name}" berhasil dihapus`, "error");
+      const target = deleteModal.service;
+      await deleteService(target.id);
+      setServices((prev) => prev.filter((s) => String(s.id) !== String(target.id)));
+      triggerNotif(`Layanan "${target.name}" berhasil dihapus`, "error");
       setDeleteModal({ isOpen: false });
     }
   };
 
-  // Filter Services
+  // Filter services
   const filteredServices = services.filter((s) => {
     const matchesSearch =
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.category.toLowerCase().includes(searchQuery.toLowerCase());
+      s.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.description && s.description.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCategory =
       selectedCategoryFilter === "all" || s.category === selectedCategoryFilter;
     return matchesSearch && matchesCategory;
   });
+
+  const paginatedServices = filteredServices.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="min-h-screen bg-white-90 flex flex-col items-center">
@@ -236,20 +144,21 @@ export default function KelolaLayananPage() {
                 Kelola Layanan
               </h1>
               <p className="text-dark text-sm font-normal font-sans">
-                Kelola daftar layanan dan jasa konstruksi yang ditawarkan oleh{" "}
+                Kelola katalog jasa dan layanan konstruksi serta keselamatan jalan oleh{" "}
                 <span className="text-g1 font-semibold">Dua Putra Srikandi</span>.
               </p>
             </div>
 
-            {/* Add Service Button */}
-            <Button
-              type="button"
-              text="Tambah Layanan"
-              variant="fill"
-              rightIcon="Add"
-              onClick={handleOpenAdd}
-              className="shrink-0 cursor-pointer"
-            />
+            {/* Add Service Button (Navigates to /kelola-layanan/tambah) */}
+            <Link href="/kelola-layanan/tambah">
+              <Button
+                type="button"
+                text="Tambah Layanan"
+                variant="fill"
+                rightIcon="Add"
+                className="shrink-0 cursor-pointer"
+              />
+            </Link>
           </div>
 
           {/* Top Divider */}
@@ -261,15 +170,21 @@ export default function KelolaLayananPage() {
               <InputBox
                 placeholder="Cari nama layanan..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
                 leftIcon="Global"
               />
             </div>
             <div className="w-full sm:w-64">
               <Dropdown
-                options={CATEGORY_OPTIONS}
+                options={categoryOptions}
                 value={selectedCategoryFilter}
-                onChange={(val) => setSelectedCategoryFilter(val)}
+                onChange={(val) => {
+                  setSelectedCategoryFilter(val);
+                  setCurrentPage(1);
+                }}
                 placeholder="Filter Kategori"
               />
             </div>
@@ -282,7 +197,7 @@ export default function KelolaLayananPage() {
               <div className="w-14 text-g1 text-sm font-semibold font-sans">No.</div>
               <div className="flex-1 text-g1 text-sm font-semibold font-sans">Nama Layanan</div>
               <div className="w-48 text-g1 text-sm font-semibold font-sans">Kategori</div>
-              <div className="w-48 text-g1 text-sm font-semibold font-sans">Waktu Dibuat</div>
+              <div className="w-40 text-g1 text-sm font-semibold font-sans">Waktu Dibuat</div>
               <div className="w-24 text-left text-g1 text-sm font-semibold font-sans">Action</div>
             </div>
 
@@ -292,14 +207,14 @@ export default function KelolaLayananPage() {
                 Tidak ada layanan yang sesuai dengan pencarian atau filter.
               </div>
             ) : (
-              filteredServices.map((service, idx) => (
+              paginatedServices.map((service, idx) => (
                 <div
                   key={service.id}
                   className="self-stretch min-w-[720px] min-h-[58px] border-b border-white-90 hover:bg-white-90/60 transition-colors flex items-center px-4 py-2"
                 >
                   {/* No. */}
                   <div className="w-14 text-dark/90 text-sm font-normal font-sans">
-                    {idx + 1}.
+                    {(currentPage - 1) * itemsPerPage + idx + 1}.
                   </div>
 
                   {/* Nama Layanan */}
@@ -324,21 +239,20 @@ export default function KelolaLayananPage() {
                   </div>
 
                   {/* Waktu Dibuat */}
-                  <div className="w-48 text-dark/75 text-sm font-normal font-sans">
+                  <div className="w-40 text-dark/75 text-sm font-normal font-sans">
                     {service.createdAt}
                   </div>
 
                   {/* Action Buttons */}
                   <div className="w-24 flex justify-start items-center gap-2.5">
-                    {/* Edit Action Button */}
-                    <button
-                      type="button"
+                    {/* Edit Action Button (Navigates to /kelola-layanan/[id]) */}
+                    <Link
+                      href={`/kelola-layanan/${service.id}`}
                       title="Edit Layanan"
-                      onClick={() => handleOpenEdit(service)}
                       className="size-9 p-1 bg-brand-background hover:bg-g1/15 rounded-full flex justify-center items-center text-g1 transition-colors cursor-pointer"
                     >
                       <LordIcon name="Edit" size={18} primaryColor="#0A9863" />
-                    </button>
+                    </Link>
 
                     {/* Delete Action Button */}
                     <button
@@ -377,66 +291,6 @@ export default function KelolaLayananPage() {
         title="Hapus Layanan"
         message={`Apakah Anda yakin ingin menghapus layanan "${deleteModal.service?.name}"? Tindakan ini tidak dapat dibatalkan.`}
       />
-
-      {/* Add / Edit Service Modal */}
-      {formModal.isOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark/40 backdrop-blur-xs animate-fade-in"
-        >
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full border border-white-80 shadow-2xl flex flex-col gap-5 animate-scale-in">
-            <div>
-              <h2 className="text-xl font-bold text-dark">
-                {formModal.mode === "add" ? "Tambah Layanan Baru" : "Edit Layanan"}
-              </h2>
-              <p className="text-xs text-slate-500">
-                Lengkapi rincian nama layanan, kategori, dan deskripsi untuk dipublikasikan pada sistem CMS.
-              </p>
-            </div>
-
-            <form onSubmit={handleSaveService} className="flex flex-col gap-4">
-              <InputBox
-                label="Nama Layanan"
-                placeholder="cth. Konstruksi & Pengaspalan Jalan"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-              />
-
-              <Dropdown
-                label="Kategori"
-                options={CATEGORY_FORM_OPTIONS}
-                value={formData.category}
-                onChange={(val) => setFormData({ ...formData, category: val })}
-                placeholder="Pilih Kategori Layanan"
-              />
-
-              <DescriptionBox
-                label="Deskripsi Layanan (Opsional)"
-                placeholder="Masukkan deskripsi ringkas tentang layanan..."
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-              />
-
-              <div className="flex justify-end items-center gap-3 pt-2">
-                <Button
-                  type="button"
-                  text="Batal"
-                  variant="ghost-green"
-                  onClick={() => setFormModal({ isOpen: false, mode: "add" })}
-                />
-                <Button
-                  type="submit"
-                  text={formModal.mode === "add" ? "Simpan Layanan" : "Perbarui Layanan"}
-                  variant="fill"
-                />
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Toast Notification */}
       <Notification
