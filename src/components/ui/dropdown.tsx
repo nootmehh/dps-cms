@@ -139,7 +139,7 @@ export default function Dropdown({
       className={`w-full max-w-116.5 inline-flex flex-col justify-start items-start gap-1 relative ${containerClassName}`}
     >
       {label && (
-        <label className="self-stretch justify-start text-dark text-sm font-semibold font-sans">
+        <label className="self-stretch justify-start text-g1 text-sm font-semibold font-sans">
           {label}
         </label>
       )}
@@ -147,17 +147,15 @@ export default function Dropdown({
       {/* Segmented Connected Dropdown Bar (Compro Accordion Style) */}
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`group self-stretch flex items-center gap-0 w-full cursor-pointer select-none transition-all duration-300 ${
-          disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : ""
-        } ${selectClassName}`}
+        className={`group self-stretch flex items-center gap-0 w-full cursor-pointer select-none transition-all duration-300 ${disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : ""
+          } ${selectClassName}`}
       >
         {/* Left Main Pill */}
         <div
-          className={`flex-1 min-w-0 h-12 px-5 py-2.5 flex justify-between items-center gap-2.5 overflow-hidden transition-all duration-300 ease-in-out ${
-            isOpen
+          className={`flex-1 min-w-0 h-12 px-5 py-2.5 flex justify-between items-center gap-2.5 overflow-hidden transition-all duration-300 ease-in-out ${isOpen
               ? "bg-brand-background rounded-2xl sm:rounded-3xl border border-g1 shadow-[0px_2px_6px_0px_rgba(6,137,81,0.2)]"
               : "bg-brand-background rounded-[28px] border border-transparent group-hover:border-g1 group-hover:opacity-95"
-          }`}
+            }`}
         >
           <div className="flex-1 flex flex-wrap gap-1.5 items-center overflow-hidden">
             {/* Chips for Multiple Select */}
@@ -201,8 +199,8 @@ export default function Dropdown({
                   searchQuery
                     ? ""
                     : selectedOptions.length > 0 && typeof selectedOptions[0]?.label === "string"
-                    ? selectedOptions[0].label
-                    : placeholder
+                      ? selectedOptions[0].label
+                      : placeholder
                 }
                 className="flex-1 bg-transparent text-dark text-sm font-normal font-sans placeholder:text-dark/40 outline-none border-none min-w-15"
               />
@@ -212,11 +210,10 @@ export default function Dropdown({
 
         {/* Right Segment: Circle Chevron Button (Connected with gap-0) */}
         <div
-          className={`size-12 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
-            isOpen
+          className={`size-12 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${isOpen
               ? "bg-g1 text-white shadow-[0px_2px_4px_0px_rgba(6,137,81,0.25)] border border-transparent"
               : "bg-brand-background text-g1 border border-transparent group-hover:border-g1 group-hover:opacity-95"
-          }`}
+            }`}
         >
           <LordIcon
             name={isOpen ? "ChevronUp" : "ChevronDown"}
@@ -240,11 +237,10 @@ export default function Dropdown({
                 <div
                   key={option.value}
                   onClick={() => handleSelect(option.value)}
-                  className={`px-4 py-2.5 rounded-xl flex items-center justify-between text-sm font-sans cursor-pointer transition-colors ${
-                    active
+                  className={`px-4 py-2.5 rounded-lg flex items-center justify-between text-sm font-sans cursor-pointer transition-colors ${active
                       ? "bg-g1/10 text-g1 font-semibold"
-                      : "text-dark hover:bg-brand-background font-normal"
-                  }`}
+                      : "text-dark hover:bg-g1/[0.06] font-normal"
+                    }`}
                 >
                   <span>{option.label}</span>
                   {active && (
@@ -258,7 +254,7 @@ export default function Dropdown({
           {showCustomAddOption && (
             <div
               onClick={() => handleSelect(searchQuery.trim())}
-              className="px-4 py-2.5 rounded-xl flex items-center justify-between text-sm font-medium font-sans text-g1 hover:bg-g1/5 cursor-pointer border-t border-white-80"
+              className="px-4 py-2.5 rounded-lg flex items-center justify-between text-sm font-medium font-sans text-g1 hover:bg-g1/5 cursor-pointer border-t border-g1/10"
             >
               <span>Add "{searchQuery.trim()}"</span>
               <LordIcon name="Add" size={16} primaryColor="#0A9863" />

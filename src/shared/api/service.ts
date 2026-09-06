@@ -4,8 +4,10 @@ export interface ServiceKeunggulanItem {
 }
 
 export interface ServiceMaterialItem {
+  productId?: string | number;
   category: string;
   name: string;
+  imageUrl?: string | null;
 }
 
 export interface ServiceFAQItem {
@@ -29,13 +31,18 @@ export interface ServicePayload {
 const STORAGE_KEY = "dps_services_data";
 
 export const DEFAULT_SERVICE_CATEGORIES = [
-  "Marka Jalan",
-  "Perlengkapan Jalan",
-  "Elektrikal Jalan",
-  "Perlengkapan Parkir",
+  "Jasa Marka Jalan",
+  "Jasa Perlengkapan Jalan",
+  "Jasa Elektrikal Jalan",
+  "Jasa Perlengkapan Area Parkir",
 ];
 
 export const SERVICE_CATEGORY_VARIANT_MAP: Record<string, string> = {
+  "Jasa Marka Jalan": "green",
+  "Jasa Perlengkapan Jalan": "blue",
+  "Jasa Elektrikal Jalan": "yellow",
+  "Jasa Perlengkapan Area Parkir": "purple",
+  // Backwards compatibility for older categories
   "Marka Jalan": "green",
   "Perlengkapan Jalan": "blue",
   "Elektrikal Jalan": "yellow",
@@ -46,7 +53,7 @@ export const INITIAL_SERVICES_DATA: ServicePayload[] = [
   {
     id: "1",
     title: "Pengecatan Marka Jalan",
-    category: "Marka Jalan",
+    category: "Jasa Marka Jalan",
     categoryVariant: "green",
     imageUrl: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
     description:
@@ -70,24 +77,34 @@ export const INITIAL_SERVICES_DATA: ServicePayload[] = [
     ],
     materialPeralatan: [
       {
+        productId: "12",
         category: "Material Marka Jalan – Cat Marka Jalan (Solvent Based)",
         name: "Cat Coldplastic Merk DPS",
+        imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=800&auto=format&fit=crop&q=80",
       },
       {
+        productId: "1",
         category: "Material Marka Jalan – Bahan Campuran Cat",
-        name: "Glass Beads",
+        name: "Glass Beads (Butiran Kaca Reflektif Marka Jalan)",
+        imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=800&auto=format&fit=crop&q=80",
       },
       {
+        productId: "4",
         category: "Perlengkapan Pengaturan Lalu Lintas Sementara",
         name: "Traffic Cone",
+        imageUrl: "https://images.unsplash.com/photo-1578885136359-16c8bd4d3a8e?w=800&auto=format&fit=crop&q=80",
       },
       {
+        productId: "8",
         category: "Perlengkapan Pengaturan Lalu Lintas Sementara/Fleksibel",
-        name: "Stick Cone",
+        name: "Stick Cone (Flexible Delineator/Traffic Stick Cone)",
+        imageUrl: "https://images.unsplash.com/photo-1578885136359-16c8bd4d3a8e?w=800&auto=format&fit=crop&q=80",
       },
       {
+        productId: "10",
         category: "Perlengkapan Pembatas Jalan/Pengaman Area Kerja",
         name: "Water Barrier",
+        imageUrl: "https://images.unsplash.com/photo-1509391365360-2e959784a276?w=800&auto=format&fit=crop&q=80",
       },
     ],
     faq: [
@@ -112,7 +129,7 @@ export const INITIAL_SERVICES_DATA: ServicePayload[] = [
   {
     id: "2",
     title: "Penghapusan Marka Jalan",
-    category: "Marka Jalan",
+    category: "Jasa Marka Jalan",
     categoryVariant: "green",
     imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=800&auto=format&fit=crop&q=80",
     description:
@@ -136,16 +153,22 @@ export const INITIAL_SERVICES_DATA: ServicePayload[] = [
     ],
     materialPeralatan: [
       {
+        productId: "4",
         category: "Perlengkapan Pengaturan Lalu Lintas Sementara",
         name: "Traffic Cone",
+        imageUrl: "https://images.unsplash.com/photo-1578885136359-16c8bd4d3a8e?w=800&auto=format&fit=crop&q=80",
       },
       {
+        productId: "8",
         category: "Perlengkapan Pengaturan Lalu Lintas Sementara/Fleksibel",
-        name: "Stick Cone",
+        name: "Stick Cone (Flexible Delineator/Traffic Stick Cone)",
+        imageUrl: "https://images.unsplash.com/photo-1578885136359-16c8bd4d3a8e?w=800&auto=format&fit=crop&q=80",
       },
       {
+        productId: "10",
         category: "Perlengkapan Pembatas Jalan/Pengaman Area Kerja",
         name: "Water Barrier",
+        imageUrl: "https://images.unsplash.com/photo-1509391365360-2e959784a276?w=800&auto=format&fit=crop&q=80",
       },
     ],
     faq: [
@@ -170,7 +193,7 @@ export const INITIAL_SERVICES_DATA: ServicePayload[] = [
   {
     id: "3",
     title: "Pemasangan Deliniator",
-    category: "Perlengkapan Jalan",
+    category: "Jasa Perlengkapan Jalan",
     categoryVariant: "blue",
     imageUrl: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
     description:
@@ -194,16 +217,22 @@ export const INITIAL_SERVICES_DATA: ServicePayload[] = [
     ],
     materialPeralatan: [
       {
+        productId: "2",
         category: "Perlengkapan Keselamatan Jalan – Rambu Petunjuk Arah",
         name: "Deliniator Besi",
+        imageUrl: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
       },
       {
+        productId: "9",
         category: "Perlengkapan Keselamatan Jalan – Rambu Petunjuk Arah",
         name: "Deliniator Plastik",
+        imageUrl: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
       },
       {
+        productId: "3",
         category: "Perlengkapan Keselamatan Jalan – Alat Bantu Pandang Pengemudi",
-        name: "Cermin Tikung",
+        name: "Cermin Tikung (Convex Mirror)",
+        imageUrl: "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80",
       },
     ],
     faq: [
@@ -228,7 +257,7 @@ export const INITIAL_SERVICES_DATA: ServicePayload[] = [
   {
     id: "4",
     title: "Pemasangan Penerangan Jalan Umum",
-    category: "Elektrikal Jalan",
+    category: "Jasa Elektrikal Jalan",
     categoryVariant: "yellow",
     imageUrl: "https://images.unsplash.com/photo-1509391365360-2e959784a276?w=800&auto=format&fit=crop&q=80",
     description:
@@ -252,8 +281,10 @@ export const INITIAL_SERVICES_DATA: ServicePayload[] = [
     ],
     materialPeralatan: [
       {
+        productId: "13",
         category: "Perlengkapan Elektrikal Jalan – Pencahayaan",
         name: "Penerangan Jalan Umum (PJU)",
+        imageUrl: "https://images.unsplash.com/photo-1509391365360-2e959784a276?w=800&auto=format&fit=crop&q=80",
       },
     ],
     faq: [
@@ -278,7 +309,7 @@ export const INITIAL_SERVICES_DATA: ServicePayload[] = [
   {
     id: "5",
     title: "Pemasangan Paku Marka Jalan",
-    category: "Marka Jalan",
+    category: "Jasa Marka Jalan",
     categoryVariant: "green",
     imageUrl: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
     description:
@@ -302,8 +333,10 @@ export const INITIAL_SERVICES_DATA: ServicePayload[] = [
     ],
     materialPeralatan: [
       {
+        productId: "5",
         category: "Material Marka Jalan – Reflektor Jalan",
         name: "Paku Marka Jalan (Road Stud)",
+        imageUrl: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
       },
     ],
     faq: [
@@ -328,7 +361,7 @@ export const INITIAL_SERVICES_DATA: ServicePayload[] = [
   {
     id: "6",
     title: "Pemasangan Rambu Lalu Lintas",
-    category: "Perlengkapan Jalan",
+    category: "Jasa Perlengkapan Jalan",
     categoryVariant: "blue",
     imageUrl: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
     description:
@@ -352,8 +385,10 @@ export const INITIAL_SERVICES_DATA: ServicePayload[] = [
     ],
     materialPeralatan: [
       {
+        productId: "7",
         category: "Perlengkapan Jalan – Signage/Papan Informasi",
         name: "Rambu Lalu Lintas",
+        imageUrl: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
       },
     ],
     faq: [
@@ -378,7 +413,7 @@ export const INITIAL_SERVICES_DATA: ServicePayload[] = [
   {
     id: "7",
     title: "Pemasangan Wheel Stopper",
-    category: "Perlengkapan Parkir",
+    category: "Jasa Perlengkapan Area Parkir",
     categoryVariant: "purple",
     imageUrl: "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80",
     description:
@@ -402,8 +437,10 @@ export const INITIAL_SERVICES_DATA: ServicePayload[] = [
     ],
     materialPeralatan: [
       {
-        category: "Perlengkapan Parkir",
-        name: "Wheel Stopper (karet/beton) — tersedia sebagai item tambahan sesuai permintaan proyek",
+        productId: "15",
+        category: "Perlengkapan Area Parkir",
+        name: "Wheel Stopper (Rubber / Beton)",
+        imageUrl: "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80",
       },
     ],
     faq: [
@@ -445,14 +482,26 @@ function normalizeServiceItem(item: any): ServicePayload {
         };
       }
       return {
+        productId: m.productId ? String(m.productId) : undefined,
         category: m.category || "Material & Peralatan",
         name: m.name || "",
+        imageUrl: m.imageUrl || null,
       };
     });
   }
 
+  // Migrate old categories to new "Jasa ..." prefix
+  let category = item.category || "Jasa Marka Jalan";
+  if (category === "Marka Jalan") category = "Jasa Marka Jalan";
+  if (category === "Perlengkapan Jalan") category = "Jasa Perlengkapan Jalan";
+  if (category === "Elektrikal Jalan") category = "Jasa Elektrikal Jalan";
+  if (category === "Perlengkapan Parkir") category = "Jasa Perlengkapan Area Parkir";
+
   return {
     ...item,
+    category,
+    categoryVariant:
+      item.categoryVariant || SERVICE_CATEGORY_VARIANT_MAP[category] || "green",
     materialPeralatan: normalizedMaterial,
   };
 }
@@ -467,7 +516,63 @@ export function getStoredServices(): ServicePayload[] {
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed.map(normalizeServiceItem);
+      const normalized = parsed.map(normalizeServiceItem);
+      let updated = false;
+
+      // Migrate existing cached services with new CSV data and product links if needed
+      normalized.forEach((service) => {
+        const initMatch = INITIAL_SERVICES_DATA.find((init) => String(init.id) === String(service.id));
+        if (initMatch) {
+          // If category changed from old name
+          if (service.category !== initMatch.category && (
+            service.category === "Marka Jalan" ||
+            service.category === "Perlengkapan Jalan" ||
+            service.category === "Elektrikal Jalan" ||
+            service.category === "Perlengkapan Parkir"
+          )) {
+            service.category = initMatch.category;
+            service.categoryVariant = initMatch.categoryVariant;
+            updated = true;
+          }
+
+          // Backfill keunggulan or faq if missing or empty
+          if (!service.keunggulan || service.keunggulan.length === 0) {
+            service.keunggulan = initMatch.keunggulan;
+            updated = true;
+          }
+          if (!service.faq || service.faq.length === 0) {
+            service.faq = initMatch.faq;
+            updated = true;
+          }
+
+          // Backfill materialPeralatan productId links from initMatch if not present
+          if (service.materialPeralatan && service.materialPeralatan.length > 0) {
+            service.materialPeralatan.forEach((mat) => {
+              if (!mat.productId) {
+                const matchedInit = initMatch.materialPeralatan.find(
+                  (im) =>
+                    im.name.toLowerCase() === mat.name.toLowerCase() ||
+                    mat.name.toLowerCase().includes(im.name.toLowerCase()) ||
+                    im.name.toLowerCase().includes(mat.name.toLowerCase())
+                );
+                if (matchedInit && matchedInit.productId) {
+                  mat.productId = matchedInit.productId;
+                  if (!mat.imageUrl) mat.imageUrl = matchedInit.imageUrl;
+                  updated = true;
+                }
+              }
+            });
+          } else if (initMatch.materialPeralatan && initMatch.materialPeralatan.length > 0) {
+            service.materialPeralatan = initMatch.materialPeralatan;
+            updated = true;
+          }
+        }
+      });
+
+      if (updated) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+      }
+      return normalized;
     }
     return INITIAL_SERVICES_DATA;
   } catch {

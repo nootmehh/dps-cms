@@ -38,6 +38,7 @@ export const DEFAULT_PRODUCT_CATEGORIES = [
   "Material Marka Jalan – Cat Marka Jalan (Solvent Based)",
   "Perlengkapan Elektrikal Jalan – Pencahayaan",
   "Material Perawatan & Perbaikan Jalan",
+  "Perlengkapan Area Parkir",
 ];
 
 export const CATEGORY_VARIANT_MAP: Record<string, string> = {
@@ -54,6 +55,7 @@ export const CATEGORY_VARIANT_MAP: Record<string, string> = {
   "Material Marka Jalan – Cat Marka Jalan (Solvent Based)": "green",
   "Perlengkapan Elektrikal Jalan – Pencahayaan": "yellow",
   "Material Perawatan & Perbaikan Jalan": "blue",
+  "Perlengkapan Area Parkir": "purple",
 };
 
 export const INITIAL_PRODUCTS_DATA: ProductPayload[] = [
@@ -624,6 +626,42 @@ export const INITIAL_PRODUCTS_DATA: ProductPayload[] = [
     ],
     createdAt: "20 Jul 2024, 11:10",
   },
+  {
+    id: "15",
+    title: "Wheel Stopper (Rubber / Beton)",
+    category: "Perlengkapan Area Parkir",
+    categoryVariant: "purple",
+    imageUrl: "https://images.unsplash.com/photo-1590674899484-d5640e854abe?w=800&auto=format&fit=crop&q=80",
+    description:
+      "Wheel stopper atau pengganjal roda kendaraan berbahan karet fleksibel maupun beton kokoh untuk penataan slot parkir rapi, aman, dan melindungi dinding serta pembatas area parkir dari benturan kendaraan.",
+    detailProduct: [
+      { title: "Kisaran Harga", value: "Rp120.000 – Rp350.000/unit (rubber/beton)" },
+      { title: "Kemasan/Satuan", value: "Per unit, lengkap dynabolt angkur" },
+      { title: "Aplikasi/Pemasangan", value: "Dipasang menggunakan dynabolt pada permukaan lantai aspal atau beton" },
+      { title: "Spesifikasi", value: "Bahan heavy duty rubber / beton bertulang, panjang 50–180 cm, stiker reflektif kuning" },
+    ],
+    suitableFor: [
+      "Area Parkir Gedung & Mall: Membatasi posisi parkir mobil secara presisi dan teratur.",
+      "Kawasan Perkantoran & Industri: Mengurangi risiko tabrakan kendaraan ke struktur bangunan.",
+    ],
+    kelebihan: [
+      {
+        title: "Pemasangan Cepat & Kokoh",
+        value: "Sistem dynabolt membuat wheel stopper terpasang stabil dan tidak mudah bergeser meski sering terkena ban kendaraan.",
+      },
+      {
+        title: "Visibilitas Jelas & Reflektif",
+        value: "Dilengkapi elemen reflektif cerah sehingga tetap terlihat jelas di area parkir basement maupun luar ruangan minim pencahayaan.",
+      },
+    ],
+    kekurangan: [
+      {
+        title: "Perlu Pengeboran Presisi",
+        value: "Pemasangan membutuhkan titik pengeboran yang tepat agar dynabolt mengikat kuat pada lantai beton.",
+      },
+    ],
+    createdAt: "18 Jul 2024, 10:00",
+  },
 ];
 
 export function getStoredProducts(): ProductPayload[] {
@@ -635,7 +673,22 @@ export function getStoredProducts(): ProductPayload[] {
       return INITIAL_PRODUCTS_DATA;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : INITIAL_PRODUCTS_DATA;
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // Ensure any newly added initial products (like ID 15) are also available
+      const existingIds = new Set(parsed.map((p: ProductPayload) => String(p.id)));
+      let updated = false;
+      INITIAL_PRODUCTS_DATA.forEach((initProd) => {
+        if (!existingIds.has(String(initProd.id))) {
+          parsed.push(initProd);
+          updated = true;
+        }
+      });
+      if (updated) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      }
+      return parsed;
+    }
+    return INITIAL_PRODUCTS_DATA;
   } catch {
     return INITIAL_PRODUCTS_DATA;
   }
