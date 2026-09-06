@@ -20,15 +20,15 @@ export default function DescriptionBox({
       className={`w-full max-w-116.5 inline-flex flex-col justify-start items-start gap-1 ${containerClassName}`}
     >
       {label && (
-        <label className="self-stretch justify-start text-dark text-sm font-semibold font-sans">
+        <label className="self-stretch justify-start text-g1 text-sm font-semibold font-sans">
           {label}
         </label>
       )}
-      <div className="self-stretch px-4 py-3 bg-brand-background rounded-2xl border border-transparent focus-within:border-g1/40 focus-within:ring-2 focus-within:ring-g1/20 inline-flex justify-between items-start transition-all gap-2">
+      <div className="self-stretch px-4 py-3 bg-white rounded-xl border border-g1/30 focus-within:border-g1 focus-within:ring-2 focus-within:ring-g1/15 inline-flex justify-between items-start transition-all gap-2">
         <textarea
           placeholder={placeholder}
           rows={rows}
-          className={`w-full bg-transparent text-dark text-sm font-normal font-sans placeholder:text-dark/40 outline-none border-none resize-y min-h-20 ${className}`}
+          className={`w-full bg-transparent text-dark text-sm font-normal font-sans placeholder:text-dark/35 outline-none border-none resize-y min-h-20 ${className}`}
           {...props}
         />
       </div>

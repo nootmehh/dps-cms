@@ -23,6 +23,7 @@ import {
   type ServiceMaterialItem,
   type ServiceFAQItem,
 } from "../../shared/api/service";
+import { getStoredProducts, type ProductPayload } from "../../shared/api/product";
 
 export interface ManageServiceFormProps {
   id?: string;
@@ -45,10 +46,13 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
     { title: "", description: "" },
   ]);
 
-  // Dynamic Material & Peralatan (Separated Category and Name)
+  // Dynamic Material & Peralatan (Linked with Product Catalog)
   const [materialPeralatan, setMaterialPeralatan] = useState<ServiceMaterialItem[]>([
     { category: "", name: "" },
   ]);
+
+  // Products from catalog
+  const [catalogProducts, setCatalogProducts] = useState<ProductPayload[]>([]);
 
   // Dynamic FAQ
   const [faq, setFaq] = useState<ServiceFAQItem[]>([
@@ -76,6 +80,16 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
       type,
     });
   };
+
+  // Load catalog products
+  useEffect(() => {
+    try {
+      const prods = getStoredProducts();
+      setCatalogProducts(prods);
+    } catch (err) {
+      console.error("Error loading products from catalog", err);
+    }
+  }, []);
 
   // Load existing categories
   useEffect(() => {
@@ -150,10 +164,58 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
     setKeunggulan((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Material & Peralatan handlers (Separated Category and Name)
-  const handleAddMaterial = () => {
-    setMaterialPeralatan((prev) => [...prev, { category: "", name: "" }]);
+  // Material & Peralatan handlers (Linked to Katalog Produk)
+  const handleAddMaterial = (productId?: string) => {
+    if (productId) {
+      const found = catalogProducts.find((p) => String(p.id) === String(productId));
+      if (found) {
+        setMaterialPeralatan((prev) => [
+          ...prev,
+          {
+            productId: String(found.id),
+            category: found.category,
+            name: found.title,
+            imageUrl: found.imageUrl || null,
+          },
+        ]);
+        return;
+      }
+    }
+    setMaterialPeralatan((prev) => [
+      ...prev,
+      { productId: undefined, category: "", name: "", imageUrl: null },
+    ]);
   };
+
+  const handleSelectProductForMaterial = (index: number, selectedId: string) => {
+    if (!selectedId || selectedId === "manual") {
+      setMaterialPeralatan((prev) => {
+        const next = [...prev];
+        next[index] = {
+          ...next[index],
+          productId: undefined,
+        };
+        return next;
+      });
+      return;
+    }
+
+    const found = catalogProducts.find((p) => String(p.id) === String(selectedId));
+    if (found) {
+      setMaterialPeralatan((prev) => {
+        const next = [...prev];
+        next[index] = {
+          ...next[index],
+          productId: String(found.id),
+          category: found.category,
+          name: found.title,
+          imageUrl: found.imageUrl || null,
+        };
+        return next;
+      });
+    }
+  };
+
   const handleUpdateMaterial = (index: number, field: "category" | "name", val: string) => {
     setMaterialPeralatan((prev) => {
       const next = [...prev];
@@ -161,6 +223,7 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
       return next;
     });
   };
+
   const handleRemoveMaterial = (index: number) => {
     setMaterialPeralatan((prev) => prev.filter((_, i) => i !== index));
   };
@@ -195,7 +258,14 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
 
     // Clean data
     const cleanedKeunggulan = keunggulan.filter((k) => k.title.trim() || k.description.trim());
-    const cleanedMaterial = materialPeralatan.filter((m) => m.category.trim() || m.name.trim());
+    const cleanedMaterial = materialPeralatan
+      .filter((m) => m.category.trim() || m.name.trim() || m.productId)
+      .map((m) => ({
+        productId: m.productId ? String(m.productId) : undefined,
+        category: m.category.trim(),
+        name: m.name.trim(),
+        imageUrl: m.imageUrl || null,
+      }));
     const cleanedFaq = faq.filter((f) => f.question.trim() || f.answer.trim());
 
     setSubmitting(true);
@@ -390,228 +460,250 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
                 {/* Section Divider */}
                 <div className="self-stretch h-px bg-g1/10" aria-hidden="true" />
 
-                {/* 2. KEUNGGULAN LAYANAN (KEUNGGULAN) */}
-                <div className="flex flex-col gap-4 w-full">
-                  <div className="self-stretch px-4 py-3 bg-g1/10 rounded-2xl flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-6">
-                    <div className="flex items-center gap-2.5">
-                      <div className="size-6 text-g1 flex items-center justify-center">
-                        <LordIcon name="Check" size={20} primaryColor="#0A9863" />
-                      </div>
-                      <div>
-                        <span className="text-g1 text-sm md:text-base font-semibold font-sans">
-                          Keunggulan Layanan
-                        </span>
-                        <span className="text-dark/50 text-xs md:text-sm font-normal font-sans">
-                          {" "}
-                          (Poin-poin nilai plus dan profesionalitas pengerjaan)
-                        </span>
-                      </div>
+                {/* 2. KEUNGGULAN LAYANAN */}
+                <div className="flex flex-col gap-3 w-full">
+                  {/* Header — standalone rounded bar */}
+                  <div className="px-4 py-3 bg-g1/10 rounded-2xl flex justify-between items-center gap-4">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <LordIcon name="Check" size={20} primaryColor="#0A9863" />
+                      <span className="text-g1 text-sm md:text-base font-semibold font-sans">Keunggulan Layanan</span>
+                      <span className="text-dark/50 text-xs md:text-sm font-normal font-sans hidden sm:inline">(Nilai plus & profesionalitas)</span>
                     </div>
-
                     <button
                       type="button"
                       onClick={handleAddKeunggulan}
-                      className="h-9 px-3 bg-white hover:bg-g1/15 text-g1 rounded-full border border-g1/20 flex items-center justify-center gap-1.5 text-xs font-semibold font-sans transition-all cursor-pointer shadow-xs shrink-0"
+                      className="size-9 bg-white hover:bg-g1/10 text-g1 rounded-xl border border-g1/20 flex items-center justify-center transition-all cursor-pointer shrink-0"
                       title="Tambah Keunggulan"
                     >
-                      <LordIcon name="Add" size={16} primaryColor="#0A9863" />
-                      <span>Tambah Keunggulan</span>
+                      <LordIcon name="Add" size={18} primaryColor="#0A9863" />
                     </button>
                   </div>
-
+                  {/* Items — wrapped inside rounded cards */}
                   {keunggulan.length === 0 ? (
-                    <div className="text-dark/40 text-sm font-normal font-sans pl-2 py-2">
-                      Belum ada poin keunggulan. Klik tombol <span className="text-g1 font-semibold">+ Tambah Keunggulan</span> untuk menambahkan.
-                    </div>
+                    <p className="text-dark/40 text-sm font-sans pl-1">
+                      Klik <span className="text-g1 font-semibold">+</span> untuk menambah poin keunggulan.
+                    </p>
                   ) : (
-                    <div className="flex flex-col gap-3 w-full">
-                      {keunggulan.map((item, index) => (
-                        <div
-                          key={index}
-                          className="flex flex-col md:flex-row items-stretch md:items-start gap-3 w-full p-4 bg-brand-background/40 rounded-2xl border border-white-80"
+                    keunggulan.map((item, index) => (
+                      <div key={index} className="p-4 bg-g1/[0.03] border border-g1/20 rounded-2xl flex flex-col md:flex-row items-stretch md:items-start gap-3 w-full">
+                        <InputBox
+                          label={`Judul Keunggulan #${index + 1}`}
+                          placeholder="cth. Material Bersertifikat TKDN"
+                          value={item.title}
+                          onChange={(e) => handleUpdateKeunggulan(index, "title", e.target.value)}
+                          containerClassName="w-full md:w-64 shrink-0 max-w-none"
+                        />
+                        <DescriptionBox
+                          label={`Penjelasan #${index + 1}`}
+                          placeholder="cth. Menggunakan cat coldplastic bersertifikat TKDN..."
+                          value={item.description}
+                          onChange={(e) => handleUpdateKeunggulan(index, "description", e.target.value)}
+                          rows={2}
+                          containerClassName="flex-1 max-w-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveKeunggulan(index)}
+                          className="size-10 shrink-0 bg-red-state hover:opacity-80 text-white rounded-xl flex justify-center items-center transition-all cursor-pointer shadow-sm mt-7"
+                          title="Hapus"
                         >
-                          <InputBox
-                            label={`Judul Keunggulan #${index + 1}`}
-                            placeholder="cth. Material Bersertifikat TKDN / Aplikator Berpengalaman"
-                            value={item.title}
-                            onChange={(e) => handleUpdateKeunggulan(index, "title", e.target.value)}
-                            containerClassName="w-full md:w-64 shrink-0 max-w-none"
-                          />
-
-                          <DescriptionBox
-                            label={`Penjelasan Keunggulan #${index + 1}`}
-                            placeholder="cth. Menggunakan cat coldplastic bersertifikat Tingkat Komponen Dalam Negeri (TKDN)..."
-                            value={item.description}
-                            onChange={(e) => handleUpdateKeunggulan(index, "description", e.target.value)}
-                            rows={2}
-                            containerClassName="flex-1 max-w-none"
-                          />
-
-                          <div className="h-11 md:mt-7 flex items-center shrink-0 justify-end">
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveKeunggulan(index)}
-                              className="size-11 bg-red-state/10 hover:bg-red-state text-red-state hover:text-white rounded-full flex justify-center items-center transition-all cursor-pointer"
-                              title="Hapus Keunggulan"
-                            >
-                              <LordIcon name="Delete" size={18} primaryColor="currentColor" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                          <LordIcon name="Delete" size={18} primaryColor="#ffffff" />
+                        </button>
+                      </div>
+                    ))
                   )}
                 </div>
 
                 {/* Section Divider */}
                 <div className="self-stretch h-px bg-g1/10" aria-hidden="true" />
 
-                {/* 3. MATERIAL & PERALATAN YANG DIGUNAKAN (SEPARATED CATEGORY AND MATERIAL) */}
-                <div className="flex flex-col gap-4 w-full">
-                  <div className="self-stretch px-4 py-3 bg-blue-500/10 rounded-2xl flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-6">
-                    <div className="flex items-center gap-2.5">
-                      <div className="size-6 text-blue-600 flex items-center justify-center">
-                        <LordIcon name="Setting" size={20} primaryColor="#2563EB" />
-                      </div>
-                      <div>
-                        <span className="text-blue-700 text-sm md:text-base font-semibold font-sans">
-                          Material & Peralatan yang Digunakan
-                        </span>
-                        <span className="text-dark/50 text-xs md:text-sm font-normal font-sans">
-                          {" "}
-                          (Kategori Material & Nama Material/Item Terpisah)
-                        </span>
-                      </div>
+                {/* 3. MATERIAL & PERALATAN */}
+                <div className="flex flex-col gap-3 w-full">
+                  {/* Header — standalone rounded bar */}
+                  <div className="px-4 py-3 bg-g1/10 rounded-2xl flex justify-between items-center gap-4">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <LordIcon name="Setting" size={20} primaryColor="#0A9863" />
+                      <span className="text-g1 text-sm md:text-base font-semibold font-sans">Material & Peralatan</span>
+                      <span className="text-dark/50 text-xs md:text-sm font-normal font-sans hidden sm:inline">(Tautkan ID Katalog Produk atau manual)</span>
                     </div>
-
                     <button
                       type="button"
-                      onClick={handleAddMaterial}
-                      className="h-9 px-3 bg-white hover:bg-blue-50 text-blue-600 rounded-full border border-blue-200 flex items-center justify-center gap-1.5 text-xs font-semibold font-sans transition-all cursor-pointer shadow-xs shrink-0"
-                      title="Tambah Material / Peralatan"
+                      onClick={() => handleAddMaterial()}
+                      className="size-9 bg-white hover:bg-g1/10 text-g1 rounded-xl border border-g1/20 flex items-center justify-center transition-all cursor-pointer shrink-0"
+                      title="Tambah Material"
                     >
-                      <LordIcon name="Add" size={16} primaryColor="#2563EB" />
-                      <span>Tambah Material</span>
+                      <LordIcon name="Add" size={18} primaryColor="#0A9863" />
                     </button>
                   </div>
 
+                  {/* Items — wrapped inside rounded cards */}
                   {materialPeralatan.length === 0 ? (
-                    <div className="text-dark/40 text-sm font-normal font-sans pl-2 py-2">
-                      Belum ada material/peralatan. Klik tombol <span className="text-blue-600 font-semibold">+ Tambah Material</span> untuk menambahkan.
-                    </div>
+                    <p className="text-dark/40 text-sm font-sans pl-1">
+                      Klik <span className="text-g1 font-semibold">+</span> untuk menambah material/peralatan.
+                    </p>
                   ) : (
-                    <div className="flex flex-col gap-3 w-full">
-                      {materialPeralatan.map((item, index) => (
-                        <div
-                          key={index}
-                          className="flex flex-col md:flex-row items-stretch md:items-start gap-3 w-full p-4 bg-brand-background/40 rounded-2xl border border-white-80"
-                        >
-                          <InputBox
-                            label={`Kategori Material #${index + 1}`}
-                            placeholder="cth. Material Marka Jalan – Cat Marka Jalan / Perlengkapan Jalan"
-                            value={item.category}
-                            onChange={(e) => handleUpdateMaterial(index, "category", e.target.value)}
-                            containerClassName="w-full md:w-72 shrink-0 max-w-none"
-                          />
-
-                          <DescriptionBox
-                            label={`Nama Material / Peralatan #${index + 1}`}
-                            placeholder="cth. Cat Coldplastic Merk DPS / Glass Beads / Traffic Cone"
-                            value={item.name}
-                            onChange={(e) => handleUpdateMaterial(index, "name", e.target.value)}
-                            rows={2}
-                            containerClassName="flex-1 max-w-none"
-                          />
-
-                          <div className="h-11 md:mt-7 flex items-center shrink-0 justify-end">
+                    materialPeralatan.map((item, index) => {
+                      const linkedProduct = item.productId
+                        ? catalogProducts.find((p) => String(p.id) === String(item.productId))
+                        : undefined;
+                      return (
+                        <div key={index} className="p-4 bg-g1/[0.03] border border-g1/20 rounded-2xl flex flex-col gap-3 w-full">
+                          {/* Badge row + delete */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-g1/50 font-mono">#{index + 1}</span>
+                              {item.productId ? (
+                                <Badge text={`ID Produk: #${item.productId}`} variant="green" showDot={true} />
+                              ) : (
+                                <Badge text="Input Manual" variant="gray" showDot={false} />
+                              )}
+                            </div>
                             <button
                               type="button"
                               onClick={() => handleRemoveMaterial(index)}
-                              className="size-11 bg-red-state/10 hover:bg-red-state text-red-state hover:text-white rounded-full flex justify-center items-center transition-all cursor-pointer"
-                              title="Hapus Material"
+                              className="size-10 bg-red-state hover:opacity-80 text-white rounded-xl flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                              title="Hapus"
                             >
-                              <LordIcon name="Delete" size={18} primaryColor="currentColor" />
+                              <LordIcon name="Delete" size={16} primaryColor="#ffffff" />
                             </button>
                           </div>
+
+                          {/* Catalog Picker */}
+                          <Dropdown
+                            label={
+                              <span className="flex items-center gap-1.5">
+                                <span>Ambil dari Katalog Produk</span>
+                                <span className="text-xs font-normal text-dark/50">(pilih ID → nama & kategori otomatis terisi)</span>
+                              </span>
+                            }
+                            placeholder="Pilih atau cari produk dari katalog..."
+                            options={[
+                              {
+                                value: "manual",
+                                label: (
+                                  <div className="flex items-center gap-2 py-1 text-dark/70">
+                                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-700">Manual</span>
+                                    <span>Input Manual (Tanpa Tautan Katalog)</span>
+                                  </div>
+                                ),
+                                searchLabel: "Input Manual Kustom Tanpa Tautan Katalog",
+                              },
+                              ...catalogProducts.map((p) => ({
+                                value: String(p.id),
+                                label: (
+                                  <div className="flex items-center gap-2.5 py-1">
+                                    <span className="px-2 py-0.5 rounded-full bg-g1/10 text-g1 text-xs font-bold font-mono shrink-0">
+                                      ID: #{p.id}
+                                    </span>
+                                    <span className="text-dark font-medium truncate">{p.title}</span>
+                                    <span className="text-dark/40 text-xs truncate">({p.category})</span>
+                                  </div>
+                                ),
+                                searchLabel: `[ID #${p.id}] ${p.title} ${p.category}`,
+                              })),
+                            ]}
+                            value={item.productId ? String(item.productId) : "manual"}
+                            onChange={(val) => handleSelectProductForMaterial(index, val)}
+                            multiple={false}
+                            containerClassName="w-full max-w-none"
+                          />
+
+                          {/* Linked Product Preview */}
+                          {linkedProduct && (
+                            <div className="flex items-center gap-3 p-2.5 bg-g1/10 rounded-xl border border-g1/20">
+                              {linkedProduct.imageUrl ? (
+                                <img src={linkedProduct.imageUrl} alt={linkedProduct.title} className="size-10 rounded-lg object-cover border border-g1/20 shrink-0" />
+                              ) : (
+                                <div className="size-10 rounded-lg bg-g1/15 text-g1 flex items-center justify-center text-xs font-bold shrink-0">#{linkedProduct.id}</div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-semibold text-dark truncate">{linkedProduct.title}</div>
+                                <div className="text-xs text-dark/50 truncate">{linkedProduct.category}</div>
+                              </div>
+                              <span className="text-[11px] text-g1 bg-white px-2 py-0.5 rounded-full border border-g1/20 font-medium shrink-0">
+                                Tersinkron ✓
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Category + Name fields */}
+                          <div className="flex flex-col md:flex-row items-stretch md:items-end gap-3 w-full">
+                            <InputBox
+                              label="Kategori Material"
+                              placeholder="cth. Cat Marka Jalan"
+                              value={item.category}
+                              onChange={(e) => handleUpdateMaterial(index, "category", e.target.value)}
+                              containerClassName="w-full md:w-80 shrink-0 max-w-none"
+                            />
+                            <InputBox
+                              label="Nama Material / Peralatan"
+                              placeholder="cth. Cat Coldplastic Merk DPS"
+                              value={item.name}
+                              onChange={(e) => handleUpdateMaterial(index, "name", e.target.value)}
+                              containerClassName="flex-1 max-w-none"
+                            />
+                          </div>
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })
                   )}
                 </div>
 
                 {/* Section Divider */}
                 <div className="self-stretch h-px bg-g1/10" aria-hidden="true" />
 
-                {/* 4. FAQ / PERTANYAAN UMUM (FAQ) */}
-                <div className="flex flex-col gap-4 w-full">
-                  <div className="self-stretch px-4 py-3 bg-purple-500/10 rounded-2xl flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-6">
-                    <div className="flex items-center gap-2.5">
-                      <div className="size-6 text-purple-600 flex items-center justify-center">
-                        <LordIcon name="Global" size={20} primaryColor="#9333EA" />
-                      </div>
-                      <div>
-                        <span className="text-purple-700 text-sm md:text-base font-semibold font-sans">
-                          FAQ (Pertanyaan yang Sering Diajukan)
-                        </span>
-                        <span className="text-dark/50 text-xs md:text-sm font-normal font-sans">
-                          {" "}
-                          (Tanya Jawab seputar layanan)
-                        </span>
-                      </div>
+                {/* 4. FAQ */}
+                <div className="flex flex-col gap-3 w-full">
+                  {/* Header — standalone rounded bar */}
+                  <div className="px-4 py-3 bg-g1/10 rounded-2xl flex justify-between items-center gap-4">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <LordIcon name="Global" size={20} primaryColor="#0A9863" />
+                      <span className="text-g1 text-sm md:text-base font-semibold font-sans">FAQ</span>
+                      <span className="text-dark/50 text-xs md:text-sm font-normal font-sans hidden sm:inline">(Pertanyaan yang Sering Diajukan)</span>
                     </div>
-
                     <button
                       type="button"
                       onClick={handleAddFaq}
-                      className="h-9 px-3 bg-white hover:bg-purple-50 text-purple-600 rounded-full border border-purple-200 flex items-center justify-center gap-1.5 text-xs font-semibold font-sans transition-all cursor-pointer shadow-xs shrink-0"
+                      className="size-9 bg-white hover:bg-g1/10 text-g1 rounded-xl border border-g1/20 flex items-center justify-center transition-all cursor-pointer shrink-0"
                       title="Tambah FAQ"
                     >
-                      <LordIcon name="Add" size={16} primaryColor="#9333EA" />
-                      <span>Tambah FAQ</span>
+                      <LordIcon name="Add" size={18} primaryColor="#0A9863" />
                     </button>
                   </div>
 
+                  {/* Items — wrapped inside rounded cards */}
                   {faq.length === 0 ? (
-                    <div className="text-dark/40 text-sm font-normal font-sans pl-2 py-2">
-                      Belum ada FAQ. Klik tombol <span className="text-purple-600 font-semibold">+ Tambah FAQ</span> untuk menambahkan.
-                    </div>
+                    <p className="text-dark/40 text-sm font-sans pl-1">
+                      Klik <span className="text-g1 font-semibold">+</span> untuk menambah FAQ.
+                    </p>
                   ) : (
-                    <div className="flex flex-col gap-3 w-full">
-                      {faq.map((item, index) => (
-                        <div
-                          key={index}
-                          className="flex flex-col md:flex-row items-stretch md:items-start gap-3 w-full p-4 bg-brand-background/40 rounded-2xl border border-white-80"
+                    faq.map((item, index) => (
+                      <div key={index} className="p-4 bg-g1/[0.03] border border-g1/20 rounded-2xl flex flex-col md:flex-row items-stretch md:items-start gap-3 w-full">
+                        <InputBox
+                          label={`Pertanyaan (Q) #${index + 1}`}
+                          placeholder="cth. Berapa lama cat marka jalan kering?"
+                          value={item.question}
+                          onChange={(e) => handleUpdateFaq(index, "question", e.target.value)}
+                          containerClassName="w-full md:w-72 shrink-0 max-w-none"
+                        />
+                        <DescriptionBox
+                          label={`Jawaban (A) #${index + 1}`}
+                          placeholder="cth. Tergantung jenis cat; coldplastic umumnya kering dalam waktu singkat..."
+                          value={item.answer}
+                          onChange={(e) => handleUpdateFaq(index, "answer", e.target.value)}
+                          rows={2}
+                          containerClassName="flex-1 max-w-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFaq(index)}
+                          className="size-10 shrink-0 bg-red-state hover:opacity-80 text-white rounded-xl flex justify-center items-center transition-all cursor-pointer shadow-sm mt-7"
+                          title="Hapus"
                         >
-                          <InputBox
-                            label={`Pertanyaan (Tanya / Q) #${index + 1}`}
-                            placeholder="cth. Berapa lama cat marka jalan kering setelah diaplikasikan?"
-                            value={item.question}
-                            onChange={(e) => handleUpdateFaq(index, "question", e.target.value)}
-                            containerClassName="w-full md:w-72 shrink-0 max-w-none"
-                          />
-
-                          <DescriptionBox
-                            label={`Jawaban (Jawab / A) #${index + 1}`}
-                            placeholder="cth. Tergantung jenis cat yang digunakan; cat coldplastic umumnya kering dalam waktu singkat..."
-                            value={item.answer}
-                            onChange={(e) => handleUpdateFaq(index, "answer", e.target.value)}
-                            rows={2}
-                            containerClassName="flex-1 max-w-none"
-                          />
-
-                          <div className="h-11 md:mt-7 flex items-center shrink-0 justify-end">
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveFaq(index)}
-                              className="size-11 bg-red-state/10 hover:bg-red-state text-red-state hover:text-white rounded-full flex justify-center items-center transition-all cursor-pointer"
-                              title="Hapus FAQ"
-                            >
-                              <LordIcon name="Delete" size={18} primaryColor="currentColor" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                          <LordIcon name="Delete" size={18} primaryColor="#ffffff" />
+                        </button>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
