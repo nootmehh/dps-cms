@@ -43,7 +43,9 @@ export const LORD_ICON_MAP: Record<string, string> = {
   Left: "/lord-icons/system-outline-2753-arrow-left-hover-slide.json",
   "Down 2": "/lord-icons/system-outline-33-chevron-down-hover-pinch.json",
   Down: "/lord-icons/system-outline-33-chevron-down-hover-pinch.json",
+  ChevronDown: "/lord-icons/system-outline-33-chevron-down-hover-pinch.json",
   Up: "/lord-icons/system-outline-34-chevron-up-hover-pinch.json",
+  ChevronUp: "/lord-icons/system-outline-34-chevron-up-hover-pinch.json",
 };
 
 export interface LordIconProps {

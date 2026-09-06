@@ -144,35 +144,41 @@ export default function Dropdown({
         </label>
       )}
 
-      {/* Segmented Connected Dropdown Bar (Figma Unique Button 2-Pill Design) */}
+      {/* Segmented Connected Dropdown Bar (Compro Accordion Style) */}
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`group self-stretch h-12 rounded-[48px] inline-flex justify-center items-center gap-0 w-full cursor-pointer transition-opacity duration-200 ${
-          disabled ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"
+        className={`group self-stretch flex items-center gap-0 w-full cursor-pointer select-none transition-all duration-300 ${
+          disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : ""
         } ${selectClassName}`}
       >
         {/* Left Main Pill */}
-        <div className="flex-1 h-12 px-4 py-2.5 bg-brand-background rounded-[100px] flex justify-between items-center gap-2.5 overflow-hidden transition-colors duration-200">
+        <div
+          className={`flex-1 min-w-0 h-12 px-5 py-2.5 flex justify-between items-center gap-2.5 overflow-hidden transition-all duration-300 ease-in-out ${
+            isOpen
+              ? "bg-brand-background rounded-2xl sm:rounded-3xl border border-g1 shadow-[0px_2px_6px_0px_rgba(6,137,81,0.2)]"
+              : "bg-brand-background rounded-[28px] border border-transparent group-hover:border-g1 group-hover:opacity-95"
+          }`}
+        >
           <div className="flex-1 flex flex-wrap gap-1.5 items-center overflow-hidden">
             {/* Chips for Multiple Select */}
             {multiple && selectedOptions.length > 0 ? (
               selectedOptions.map((opt) => (
                 <div
                   key={opt.value}
-                  className="h-8 px-3.5 py-1 bg-white text-dark text-xs font-semibold font-sans rounded-full flex items-center gap-2 shadow-xs border border-white-80 transition-colors shrink-0"
+                  className="h-7 px-3 py-0.5 bg-white text-dark text-xs font-semibold font-sans rounded-full flex items-center gap-1.5 shadow-xs border border-white-80 transition-colors shrink-0"
                 >
                   <span>{opt.label}</span>
                   <button
                     type="button"
                     onClick={(e) => handleRemoveItem(e, opt.value)}
-                    className="size-4.5 hover:bg-red-state/15 hover:text-red-state text-dark/60 rounded-full flex items-center justify-center transition-all cursor-pointer"
+                    className="size-4 hover:bg-red-state/15 hover:text-red-state text-dark/60 rounded-full flex items-center justify-center transition-all cursor-pointer"
                   >
                     <LordIcon name="Delete" size={12} primaryColor="#f94c4c" />
                   </button>
                 </div>
               ))
             ) : !multiple && selectedOptions.length > 0 && !isOpen ? (
-              <span className="text-dark text-sm font-medium font-sans truncate">
+              <span className="text-dark text-sm font-semibold font-sans truncate">
                 {selectedOptions[0].label}
               </span>
             ) : null}
@@ -183,32 +189,46 @@ export default function Dropdown({
                 type="text"
                 disabled={disabled}
                 value={searchQuery}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isOpen) setIsOpen(true);
+                }}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
                   if (!isOpen) setIsOpen(true);
                 }}
-                placeholder={selectedOptions.length > 0 ? "" : placeholder}
+                placeholder={
+                  searchQuery
+                    ? ""
+                    : selectedOptions.length > 0 && typeof selectedOptions[0]?.label === "string"
+                    ? selectedOptions[0].label
+                    : placeholder
+                }
                 className="flex-1 bg-transparent text-dark text-sm font-normal font-sans placeholder:text-dark/40 outline-none border-none min-w-15"
               />
             )}
           </div>
         </div>
 
-        {/* Right Icon Connected Pill Segment with Green Border */}
-        <div className="size-12 p-2 bg-brand-background rounded-[100px] outline-1 -outline-offset-1 outline-g1 flex justify-center items-center shrink-0 transition-colors duration-200">
-          <div
-            className={`size-6 relative flex items-center justify-center transition-transform duration-200 ${
-              isOpen ? "rotate-180" : ""
-            }`}
-          >
-            <LordIcon name="Down 2" size={18} primaryColor="#0A9863" />
-          </div>
+        {/* Right Segment: Circle Chevron Button (Connected with gap-0) */}
+        <div
+          className={`size-12 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
+            isOpen
+              ? "bg-g1 text-white shadow-[0px_2px_4px_0px_rgba(6,137,81,0.25)] border border-transparent"
+              : "bg-brand-background text-g1 border border-transparent group-hover:border-g1 group-hover:opacity-95"
+          }`}
+        >
+          <LordIcon
+            name={isOpen ? "ChevronUp" : "ChevronDown"}
+            size={20}
+            primaryColor={isOpen ? "#FFFFFF" : "#0A9863"}
+          />
         </div>
       </div>
 
       {/* Options Dropdown Panel */}
       {isOpen && (
-        <div className="absolute top-[calc(100%+6px)] left-0 w-full bg-white border border-white-80 rounded-2xl shadow-xl z-50 max-h-60 overflow-y-auto p-1.5 flex flex-col gap-0.5 animate-fade-in">
+        <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white border border-white-80 rounded-2xl shadow-[0px_8px_24px_0px_rgba(0,0,0,0.08)] z-50 max-h-60 overflow-y-auto p-1.5 flex flex-col gap-0.5 animate-fade-in">
           {filteredOptions.length === 0 && !showCustomAddOption ? (
             <div className="py-3 px-4 text-center text-slate-400 text-sm font-sans">
               No options found
