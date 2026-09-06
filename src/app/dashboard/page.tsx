@@ -222,7 +222,7 @@ export default function DashboardPage() {
       {/* Main Body */}
       <main className="w-full max-w-360 px-6 lg:px-12 py-8 flex flex-col md:flex-row justify-center items-start gap-6">
         {/* Sidebar Navigation */}
-        <Sidebar activeId="dashboard" />
+        <Sidebar activeId="dashboard" className="shrink-0 h-fit" />
 
         {/* Content Card Container */}
         <div className="flex-1 p-6 md:p-8 bg-white rounded-4xl border border-white-80 shadow-xs flex flex-col justify-start items-start gap-6 w-full overflow-hidden">

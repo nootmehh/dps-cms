@@ -162,7 +162,7 @@ export default function KelolaArtikelPage() {
   );
 
   return (
-    <div className="min-h-screen bg-white-90 flex flex-col items-center">
+    <div className="h-screen max-h-screen bg-white-90 flex flex-col items-center overflow-hidden">
       {/* Top Navbar */}
       <Navbar
         brandTitle="Dua Putra Srikandi"
@@ -172,14 +172,14 @@ export default function KelolaArtikelPage() {
       />
 
       {/* Main Body */}
-      <main className="w-full max-w-360 px-6 lg:px-12 py-8 flex flex-col md:flex-row justify-center items-start gap-6">
+      <main className="w-full max-w-360 px-6 lg:px-12 py-6 flex-1 flex flex-col md:flex-row justify-center items-start gap-6 overflow-hidden min-h-0 h-full">
         {/* Sidebar Component */}
-        <Sidebar activeId="articles" />
+        <Sidebar activeId="articles" className="shrink-0 h-fit" />
 
         {/* Content Card */}
-        <div className="flex-1 p-6 md:p-8 bg-white rounded-4xl border border-white-80 shadow-xs flex flex-col justify-start items-start gap-6 w-full overflow-hidden">
+        <div className="flex-1 h-full p-6 md:p-8 bg-white rounded-4xl border border-white-80 shadow-xs flex flex-col justify-start items-start gap-5 w-full overflow-hidden min-h-0">
           {/* Header Row */}
-          <div className="self-stretch flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="self-stretch flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
             <div className="flex-1 flex flex-col justify-start items-start gap-1">
               <h1 className="self-stretch justify-start text-g1 text-2xl md:text-3xl font-bold font-sans">
                 Kelola Artikel
@@ -203,10 +203,10 @@ export default function KelolaArtikelPage() {
           </div>
 
           {/* Top Divider */}
-          <div className="w-full h-px bg-g1/10" aria-hidden="true" />
+          <div className="w-full h-px bg-g1/10 shrink-0" aria-hidden="true" />
 
           {/* Filter and Search Row */}
-          <div className="self-stretch flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 w-full">
+          <div className="self-stretch flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 w-full shrink-0">
             <div className="w-full sm:max-w-xs">
               <InputBox
                 placeholder="Cari judul artikel..."
@@ -232,9 +232,9 @@ export default function KelolaArtikelPage() {
           </div>
 
           {/* Table Container */}
-          <div className="self-stretch bg-white flex flex-col justify-start items-start gap-2 overflow-x-auto w-full">
+          <div className="self-stretch flex-1 bg-white flex flex-col justify-start items-start gap-2 overflow-x-auto overflow-y-auto min-h-0 w-full pr-1">
             {/* Table Header */}
-            <div className="self-stretch min-w-[720px] h-11 bg-white-90 rounded-xl flex items-center px-4 overflow-hidden select-none">
+            <div className="self-stretch min-w-[720px] h-11 bg-white-90 rounded-xl flex items-center px-4 overflow-hidden select-none sticky top-0 z-10 shrink-0">
               <div className="w-14 text-g1 text-sm font-semibold font-sans">No.</div>
               <div className="flex-1 text-g1 text-sm font-semibold font-sans">Nama Artikel</div>
               <div className="w-48 text-g1 text-sm font-semibold font-sans">Kategori</div>
@@ -311,7 +311,7 @@ export default function KelolaArtikelPage() {
           </div>
 
           {/* Table Footer / Pagination */}
-          <div className="self-stretch flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-white-80">
+          <div className="self-stretch flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-white-80 shrink-0">
             <div className="text-dark/60 text-xs font-normal font-sans">
               Menampilkan{" "}
               <strong className="text-dark font-semibold">

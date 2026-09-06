@@ -149,7 +149,7 @@ export default function KelolaSeoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white-90 flex flex-col items-center">
+    <div className="h-screen max-h-screen bg-white-90 flex flex-col items-center overflow-hidden">
       {/* Top Navbar */}
       <Navbar
         brandTitle="Dua Putra Srikandi"
@@ -159,14 +159,14 @@ export default function KelolaSeoPage() {
       />
 
       {/* Main Body */}
-      <main className="w-full max-w-360 px-6 lg:px-12 py-8 flex flex-col md:flex-row justify-center items-start gap-6">
+      <main className="w-full max-w-360 px-6 lg:px-12 py-6 flex-1 flex flex-col md:flex-row justify-center items-start gap-6 overflow-hidden min-h-0 h-full">
         {/* Sidebar Component */}
-        <Sidebar activeId="seo" />
+        <Sidebar activeId="seo" className="shrink-0 h-fit" />
 
         {/* Content Card */}
-        <div className="flex-1 p-6 md:p-8 bg-white rounded-4xl border border-white-80 shadow-xs flex flex-col justify-start items-start gap-6 w-full overflow-hidden">
+        <div className="flex-1 h-full p-6 md:p-8 bg-white rounded-4xl border border-white-80 shadow-xs flex flex-col justify-start items-start gap-5 w-full overflow-hidden min-h-0">
           {/* Header Row */}
-          <div className="self-stretch flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="self-stretch flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
             <div className="flex-1 flex flex-col justify-start items-start gap-1">
               <h1 className="self-stretch justify-start text-g1 text-2xl md:text-3xl font-bold font-sans">
                 Kelola SEO
@@ -189,7 +189,10 @@ export default function KelolaSeoPage() {
           </div>
 
           {/* Top Divider */}
-          <div className="w-full h-px bg-g1/10" aria-hidden="true" />
+          <div className="w-full h-px bg-g1/10 shrink-0" aria-hidden="true" />
+
+          {/* Scrollable Content Container */}
+          <div className="self-stretch flex-1 flex flex-col gap-6 overflow-y-auto min-h-0 pr-1">
 
           {/* Section 1: Pengaturan Umum */}
           <div className="self-stretch flex flex-col gap-4">
@@ -351,7 +354,8 @@ export default function KelolaSeoPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
+    </main>
 
       {/* Edit Page Meta Modal */}
       <EditPageMetaModal

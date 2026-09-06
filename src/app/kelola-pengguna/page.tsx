@@ -237,7 +237,7 @@ export default function KelolaPenggunaPage() {
   );
 
   return (
-    <div className="min-h-screen bg-white-90 flex flex-col items-center">
+    <div className="h-screen max-h-screen bg-white-90 flex flex-col items-center overflow-hidden">
       {/* Top Navbar */}
       <Navbar
         brandTitle="Dua Putra Srikandi"
@@ -247,14 +247,14 @@ export default function KelolaPenggunaPage() {
       />
 
       {/* Main Body */}
-      <main className="w-full max-w-360 px-6 lg:px-12 py-8 flex flex-col md:flex-row justify-center items-start gap-6">
+      <main className="w-full max-w-360 px-6 lg:px-12 py-6 flex-1 flex flex-col md:flex-row justify-center items-start gap-6 overflow-hidden min-h-0 h-full">
         {/* Sidebar Component */}
-        <Sidebar activeId="users" />
+        <Sidebar activeId="users" className="shrink-0 h-fit" />
 
         {/* Content Card */}
-        <div className="flex-1 p-6 md:p-8 bg-white rounded-4xl border border-white-80 shadow-xs flex flex-col justify-start items-start gap-6 w-full overflow-hidden">
+        <div className="flex-1 h-full p-6 md:p-8 bg-white rounded-4xl border border-white-80 shadow-xs flex flex-col justify-start items-start gap-5 w-full overflow-hidden min-h-0">
           {/* Header Row */}
-          <div className="self-stretch flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="self-stretch flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
             <div className="flex-1 flex flex-col justify-start items-start gap-1">
               <h1 className="self-stretch justify-start text-g1 text-2xl md:text-3xl font-bold font-sans">
                 Kelola Pengguna
@@ -277,10 +277,10 @@ export default function KelolaPenggunaPage() {
           </div>
 
           {/* Top Divider */}
-          <div className="w-full h-px bg-g1/10" aria-hidden="true" />
+          <div className="w-full h-px bg-g1/10 shrink-0" aria-hidden="true" />
 
           {/* Search & Filter Row */}
-          <div className="self-stretch flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 w-full">
+          <div className="self-stretch flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 w-full shrink-0">
             <div className="w-full sm:max-w-xs">
               <InputBox
                 placeholder="Cari nama atau email pengguna..."
@@ -306,9 +306,9 @@ export default function KelolaPenggunaPage() {
           </div>
 
           {/* Table Container */}
-          <div className="self-stretch bg-white flex flex-col justify-start items-start gap-2 overflow-x-auto w-full">
+          <div className="self-stretch flex-1 bg-white flex flex-col justify-start items-start gap-2 overflow-x-auto overflow-y-auto min-h-0 w-full pr-1">
             {/* Table Header */}
-            <div className="self-stretch min-w-[720px] h-11 bg-white-90 rounded-xl flex items-center px-4 overflow-hidden select-none">
+            <div className="self-stretch min-w-[720px] h-11 bg-white-90 rounded-xl flex items-center px-4 overflow-hidden select-none sticky top-0 z-10 shrink-0">
               <div className="w-14 text-g1 text-sm font-semibold font-sans">No.</div>
               <div className="flex-1 text-g1 text-sm font-semibold font-sans">Username</div>
               <div className="w-64 text-g1 text-sm font-semibold font-sans">Email</div>
@@ -400,16 +400,18 @@ export default function KelolaPenggunaPage() {
           </div>
 
           {/* Bottom Divider */}
-          <div className="w-full h-px bg-g1/10" aria-hidden="true" />
+          <div className="w-full h-px bg-g1/10 shrink-0" aria-hidden="true" />
 
           {/* Pagination Component */}
-          <Pagination
-            currentPage={currentPage}
-            totalItems={filteredUsers.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-            itemLabel="Pengguna"
-          />
+          <div className="self-stretch shrink-0">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredUsers.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              itemLabel="Pengguna"
+            />
+          </div>
         </div>
       </main>
 
