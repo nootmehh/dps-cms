@@ -18,6 +18,7 @@ import {
   CATEGORY_VARIANT_MAP,
   type ProductPayload,
 } from "@/shared/api/product";
+import { getProducts } from "@/services/productApi";
 
 export interface ProductItem {
   id: string | number;
@@ -59,35 +60,59 @@ export default function KelolaProdukPage() {
     setNotification({ isOpen: true, message, type });
   };
 
-  // Load products from storage on mount
+  // Load products from Supabase / storage on mount
   useEffect(() => {
-    const loadProducts = () => {
+    const loadProducts = async () => {
       try {
-        const stored = getStoredProducts();
-        const mapped: ProductItem[] = stored.map((item) => {
-          const cat = item.category || "Umum";
-          return {
-            id: item.id || Date.now(),
-            name: item.title,
-            category: cat,
-            categoryVariant: (item.categoryVariant || CATEGORY_VARIANT_MAP[cat] || "green") as BadgeVariant,
-            createdAt: item.createdAt || "Baru saja",
-            description: item.description || "",
-            imageUrl: item.imageUrl,
-          };
-        });
-        setProducts(mapped);
-
-        // Build unique category options
-        const uniqueCategories = Array.from(new Set(stored.map((p) => p.category).filter(Boolean)));
-        const opts: DropdownOption[] = [
-          { value: "all", label: "Semua Kategori" },
-          ...uniqueCategories.map((c) => ({ value: c, label: c })),
-        ];
-        setCategoryOptions(opts);
+        const rows = await getProducts();
+        if (rows && rows.length > 0) {
+          const mapped: ProductItem[] = rows.map((item) => {
+            const cat = item.category || "Umum";
+            return {
+              id: item.id,
+              name: item.title,
+              category: cat,
+              categoryVariant: (CATEGORY_VARIANT_MAP[cat] || "green") as BadgeVariant,
+              createdAt: item.created_at
+                ? new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                : "Baru saja",
+              description: item.description || "",
+              imageUrl: item.product_image_url?.[0] || item.highlight_img_url || null,
+            };
+          });
+          setProducts(mapped);
+          const uniqueCategories = Array.from(new Set(rows.map((p) => p.category).filter(Boolean))) as string[];
+          setCategoryOptions([
+            { value: "all", label: "Semua Kategori" },
+            ...uniqueCategories.map((c) => ({ value: c, label: c })),
+          ]);
+          return;
+        }
       } catch (err) {
-        console.error("Error loading products", err);
+        console.error("Error loading products from Supabase", err);
       }
+
+      const stored = getStoredProducts();
+      const mapped: ProductItem[] = stored.map((item) => {
+        const cat = item.category || "Umum";
+        return {
+          id: item.id || Date.now(),
+          name: item.title,
+          category: cat,
+          categoryVariant: (item.categoryVariant || CATEGORY_VARIANT_MAP[cat] || "green") as BadgeVariant,
+          createdAt: item.createdAt || "Baru saja",
+          description: item.description || "",
+          imageUrl: item.imageUrl,
+        };
+      });
+      setProducts(mapped);
+
+      const uniqueCategories = Array.from(new Set(stored.map((p) => p.category).filter(Boolean)));
+      const opts: DropdownOption[] = [
+        { value: "all", label: "Semua Kategori" },
+        ...uniqueCategories.map((c) => ({ value: c, label: c })),
+      ];
+      setCategoryOptions(opts);
     };
 
     loadProducts();
@@ -97,10 +122,17 @@ export default function KelolaProdukPage() {
   const confirmDelete = async () => {
     if (deleteModal.product) {
       const target = deleteModal.product;
-      await deleteProduct(target.id);
-      setProducts((prev) => prev.filter((p) => p.id !== target.id));
-      triggerNotif(`Produk "${target.name}" berhasil dihapus`, "error");
-      setDeleteModal({ isOpen: false });
+      try {
+        await deleteProduct(target.id);
+        setProducts((prev) => prev.filter((p) => String(p.id) !== String(target.id)));
+        triggerNotif(`Produk "${target.name}" berhasil dihapus`, "default");
+      } catch (err: any) {
+        const msg = err?.message || err?.details || "Gagal menghapus produk dari Supabase";
+        console.error("Error deleting product from Supabase:", err);
+        triggerNotif(`Gagal menghapus produk: ${msg}`, "error");
+      } finally {
+        setDeleteModal({ isOpen: false });
+      }
     }
   };
 

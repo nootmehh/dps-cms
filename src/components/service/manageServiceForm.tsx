@@ -24,6 +24,7 @@ import {
   type ServiceFAQItem,
 } from "../../shared/api/service";
 import { getStoredProducts, type ProductPayload } from "../../shared/api/product";
+import { getProducts } from "@/services/productApi";
 
 export interface ManageServiceFormProps {
   id?: string;
@@ -81,14 +82,38 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
     });
   };
 
-  // Load catalog products
+  // Load catalog products from Supabase
   useEffect(() => {
-    try {
-      const prods = getStoredProducts();
-      setCatalogProducts(prods);
-    } catch (err) {
-      console.error("Error loading products from catalog", err);
-    }
+    const loadCatalog = async () => {
+      try {
+        const rows = await getProducts();
+        if (rows && rows.length > 0) {
+          const mapped: ProductPayload[] = rows.map((r) => ({
+            id: r.id,
+            title: r.title,
+            category: r.category || "Umum",
+            imageUrl: r.product_image_url?.[0] || r.highlight_img_url || null,
+            description: r.description || "",
+            detailProduct: r.detail_product || [],
+            suitableFor: r.suitable_for || [],
+            kelebihan: r.kelebihan || [],
+            kekurangan: r.kekurangan || [],
+            createdAt: r.created_at,
+          }));
+          setCatalogProducts(mapped);
+          return;
+        }
+      } catch (err) {
+        console.error("Error loading products from Supabase catalog:", err);
+      }
+      try {
+        const prods = getStoredProducts();
+        setCatalogProducts(prods);
+      } catch (err) {
+        console.error("Error loading products from catalog", err);
+      }
+    };
+    loadCatalog();
   }, []);
 
   // Load existing categories
@@ -553,7 +578,11 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-bold text-g1/50 font-mono">#{index + 1}</span>
                               {item.productId ? (
-                                <Badge text={`ID Produk: #${item.productId}`} variant="green" showDot={true} />
+                                <Badge
+                                  text={`ID Produk: #${String(item.productId).length > 12 ? String(item.productId).slice(0, 8) + '...' : item.productId}`}
+                                  variant="green"
+                                  showDot={true}
+                                />
                               ) : (
                                 <Badge text="Input Manual" variant="gray" showDot={false} />
                               )}
@@ -593,7 +622,7 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
                                 label: (
                                   <div className="flex items-center gap-2.5 py-1">
                                     <span className="px-2 py-0.5 rounded-full bg-g1/10 text-g1 text-xs font-bold font-mono shrink-0">
-                                      ID: #{p.id}
+                                      ID: #{String(p.id).length > 12 ? String(p.id).slice(0, 8) + "..." : p.id}
                                     </span>
                                     <span className="text-dark font-medium truncate">{p.title}</span>
                                     <span className="text-dark/40 text-xs truncate">({p.category})</span>

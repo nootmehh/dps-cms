@@ -22,12 +22,7 @@ export interface UserItem {
 
 const STORAGE_KEY = "dps_users_data";
 
-const INITIAL_USERS: UserItem[] = [
-  { id: 1, username: "Abraham A", email: "abraham@duaputra.id", role: "Super Admin", createdAt: "10 Agu 2024" },
-  { id: 2, username: "Dora D", email: "dora@duaputra.id", role: "Admin", createdAt: "15 Agu 2024" },
-  { id: 3, username: "Budi Santoso", email: "budi@duaputra.id", role: "Admin", createdAt: "20 Agu 2024" },
-  { id: 4, username: "Siti Rahmawati", email: "siti@duaputra.id", role: "Admin", createdAt: "22 Agu 2024" },
-];
+const INITIAL_USERS: UserItem[] = [];
 
 const ROLE_OPTIONS: DropdownOption[] = [
   { value: "Super Admin", label: "Super Admin" },
@@ -96,15 +91,14 @@ export default function KelolaPenggunaPage() {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             setUsers(parsed);
             return;
           }
         }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_USERS));
-        setUsers(INITIAL_USERS);
+        setUsers([]);
       } catch {
-        setUsers(INITIAL_USERS);
+        setUsers([]);
       }
     };
     loadUsers();

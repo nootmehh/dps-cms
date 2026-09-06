@@ -11,6 +11,7 @@ import Badge, { type BadgeVariant } from "@/components/ui/badge";
 import Notification, { type NotificationType } from "@/components/ui/notification";
 import DeleteConfirmationModal from "@/components/ui/modal/deleteConfirmation";
 import LordIcon from "@/components/common/lordIcon";
+import { getArticles } from "@/services/articleApi";
 import { type ArticlePayload } from "@/shared/api/article";
 
 export interface DashboardArticleItem {
@@ -107,9 +108,34 @@ export default function DashboardPage() {
     setNotification({ isOpen: true, message, type });
   };
 
-  // Load articles from localStorage on mount (sync with Kelola Artikel)
+  // Load articles from Supabase / localStorage on mount
   useEffect(() => {
-    const loadFromStorage = () => {
+    const loadArticles = async () => {
+      try {
+        const rows = await getArticles();
+        if (rows && rows.length > 0) {
+          const mapped: DashboardArticleItem[] = rows.map((item, idx) => {
+            const mainCat = item.category || "Umum";
+            const dummyViews = [3420, 2890, 2150, 1780, 1420, 980][idx % 6] || 1200;
+            return {
+              id: item.id,
+              title: item.title,
+              category: mainCat,
+              categoryVariant: CATEGORY_VARIANT_MAP[mainCat] || "green",
+              createdAt: item.created_at
+                ? new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                : "Baru saja",
+              views: dummyViews,
+              excerpt: item.content ? item.content.replace(/<[^>]*>?/gm, "").slice(0, 80) : "",
+            };
+          });
+          setArticles(mapped);
+          return;
+        }
+      } catch (e) {
+        console.error("Error loading articles for dashboard from Supabase:", e);
+      }
+
       try {
         const raw = localStorage.getItem("dps_articles_data");
         if (raw) {
@@ -136,62 +162,10 @@ export default function DashboardPage() {
         console.error(e);
       }
 
-      // Default fallback dummy articles
-      setArticles([
-        {
-          id: "1",
-          title: "Standar Keselamatan Pemasangan Guardrail di Jalan Tol Indonesia",
-          category: "Keselamatan Jalan",
-          categoryVariant: "green",
-          createdAt: "25 Agu 2024, 08:30",
-          views: 3420,
-          excerpt:
-            "Analisis regulasi teknis pemasangan pagar pengaman jalan tol sesuai spesifikasi Bina Marga.",
-        },
-        {
-          id: "2",
-          title: "Pentingnya Marka Termoplastik untuk Visibilitas Malam Hari",
-          category: "Inovasi Marka",
-          categoryVariant: "blue",
-          createdAt: "21 Agu 2024, 13:15",
-          views: 2890,
-          excerpt:
-            "Kelebihan kandungan glass beads reflektif pada cat marka jalan panas terhadap keselamatan berkendara.",
-        },
-        {
-          id: "3",
-          title: "Efisiensi PJU Tenaga Surya untuk Pengurangan Emisi Karbon",
-          category: "Teknologi Hijau",
-          categoryVariant: "yellow",
-          createdAt: "17 Agu 2024, 10:00",
-          views: 2150,
-          excerpt:
-            "Pemanfaatan lampu PJU solar cell dalam proyek infrastruktur jalan ramah lingkungan.",
-        },
-        {
-          id: "4",
-          title: "Inovasi Pengaspalan Ramah Lingkungan dengan Aspal Karet",
-          category: "Konstruksi",
-          categoryVariant: "blue",
-          createdAt: "14 Agu 2024, 11:20",
-          views: 1780,
-          excerpt:
-            "Pemanfaatan lateks alam sebagai bahan tambah campuran aspal panas berdaya tahan tinggi.",
-        },
-        {
-          id: "5",
-          title: "Spesifikasi Rambu Petunjuk Arah Standar Kementerian Perhubungan",
-          category: "Perlengkapan Jalan",
-          categoryVariant: "orange",
-          createdAt: "09 Agu 2024, 15:45",
-          views: 1420,
-          excerpt:
-            "Panduan teknis ukuran, warna, dan jenis lembaran reflektif untuk rambu jalan nasional.",
-        },
-      ]);
+      setArticles([]);
     };
 
-    loadFromStorage();
+    loadArticles();
   }, []);
 
   // Delete Action

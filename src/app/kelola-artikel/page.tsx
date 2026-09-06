@@ -12,7 +12,8 @@ import Badge, { type BadgeVariant } from "@/components/ui/badge";
 import Notification, { type NotificationType } from "@/components/ui/notification";
 import DeleteConfirmationModal from "@/components/ui/modal/deleteConfirmation";
 import LordIcon from "@/components/common/lordIcon";
-import { type ArticlePayload } from "@/shared/api/article";
+import { getArticles } from "@/services/articleApi";
+import { deleteArticle, type ArticlePayload } from "@/shared/api/article";
 
 export interface ArticleItem {
   id: string | number;
@@ -70,9 +71,32 @@ export default function KelolaArtikelPage() {
     setNotification({ isOpen: true, message, type });
   };
 
-  // Load articles from localStorage on mount
+  // Load articles from Supabase / localStorage on mount
   useEffect(() => {
-    const loadFromStorage = () => {
+    const loadArticles = async () => {
+      try {
+        const rows = await getArticles();
+        if (rows && rows.length > 0) {
+          const mapped: ArticleItem[] = rows.map((item) => {
+            const mainCat = item.category || "Umum";
+            return {
+              id: item.id,
+              title: item.title,
+              category: mainCat,
+              categoryVariant: CATEGORY_VARIANT_MAP[mainCat] || "green",
+              createdAt: item.created_at
+                ? new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                : "Baru saja",
+              excerpt: item.content ? item.content.replace(/<[^>]*>?/gm, "").slice(0, 80) : "",
+            };
+          });
+          setArticles(mapped);
+          return;
+        }
+      } catch (e) {
+        console.error("Error loading articles from Supabase:", e);
+      }
+
       try {
         const raw = localStorage.getItem("dps_articles_data");
         if (raw) {
@@ -97,59 +121,28 @@ export default function KelolaArtikelPage() {
         console.error(e);
       }
 
-      // Default fallback
-      setArticles([
-        {
-          id: "1",
-          title: "Standar Keselamatan Pemasangan Guardrail di Jalan Tol Indonesia",
-          category: "Keselamatan Jalan",
-          categoryVariant: "green",
-          createdAt: "25 Agu 2024, 08:30",
-          excerpt: "Analisis regulasi teknis pemasangan pagar pengaman jalan tol sesuai spesifikasi Bina Marga.",
-        },
-        {
-          id: "2",
-          title: "Pentingnya Marka Termoplastik untuk Visibilitas Malam Hari",
-          category: "Inovasi Marka",
-          categoryVariant: "blue",
-          createdAt: "21 Agu 2024, 13:15",
-          excerpt: "Kelebihan kandungan glass beads reflektif pada cat marka jalan panas terhadap keselamatan berkendara.",
-        },
-        {
-          id: "3",
-          title: "Efisiensi PJU Tenaga Surya untuk Pengurangan Emisi Karbon",
-          category: "Teknologi Hijau",
-          categoryVariant: "yellow",
-          createdAt: "17 Agu 2024, 10:00",
-          excerpt: "Pemanfaatan lampu PJU solar cell dalam proyek infrastruktur jalan ramah lingkungan.",
-        },
-      ]);
+      setArticles([]);
     };
 
-    loadFromStorage();
+    loadArticles();
   }, []);
 
   // Delete Action
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteModal.article) return;
     const target = deleteModal.article;
-    const nextList = articles.filter((a) => a.id !== target.id);
-    setArticles(nextList);
 
-    // Sync with storage
     try {
-      const raw = localStorage.getItem("dps_articles_data");
-      if (raw) {
-        const parsed: ArticlePayload[] = JSON.parse(raw);
-        const filtered = parsed.filter((p) => String(p.id) !== String(target.id));
-        localStorage.setItem("dps_articles_data", JSON.stringify(filtered));
-      }
-    } catch (e) {
-      console.error(e);
+      await deleteArticle(target.id);
+      setArticles((prev) => prev.filter((a) => String(a.id) !== String(target.id)));
+      triggerNotif(`Artikel "${target.title}" berhasil dihapus!`, "default");
+    } catch (err: any) {
+      const msg = err?.message || err?.details || "Gagal menghapus artikel dari Supabase";
+      console.error("Error deleting article from Supabase:", err);
+      triggerNotif(`Gagal menghapus artikel: ${msg}`, "error");
+    } finally {
+      setDeleteModal({ isOpen: false });
     }
-
-    setDeleteModal({ isOpen: false });
-    triggerNotif(`Artikel "${target.title}" berhasil dihapus!`, "error");
   };
 
   // Filter & Search Logic

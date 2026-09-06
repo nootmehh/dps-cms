@@ -18,6 +18,7 @@ import {
   SERVICE_CATEGORY_VARIANT_MAP,
   type ServicePayload,
 } from "@/shared/api/service";
+import { getServices } from "@/services/serviceApi";
 
 export interface ServiceItem {
   id: string | number;
@@ -59,35 +60,59 @@ export default function KelolaLayananPage() {
     setNotification({ isOpen: true, message, type });
   };
 
-  // Load services from storage
+  // Load services from storage/Supabase
   useEffect(() => {
-    const loadServices = () => {
+    const loadServices = async () => {
       try {
-        const stored = getStoredServices();
-        const mapped: ServiceItem[] = stored.map((item) => {
-          const cat = item.category || "Umum";
-          return {
-            id: item.id || Date.now(),
-            name: item.title,
-            category: cat,
-            categoryVariant: (item.categoryVariant || SERVICE_CATEGORY_VARIANT_MAP[cat] || "green") as BadgeVariant,
-            createdAt: item.createdAt || "Baru saja",
-            description: item.description || "",
-            imageUrl: item.imageUrl,
-          };
-        });
-        setServices(mapped);
-
-        // Build unique category options
-        const uniqueCategories = Array.from(new Set(stored.map((s) => s.category).filter(Boolean)));
-        const opts: DropdownOption[] = [
-          { value: "all", label: "Semua Kategori" },
-          ...uniqueCategories.map((c) => ({ value: c, label: c })),
-        ];
-        setCategoryOptions(opts);
+        const rows = await getServices();
+        if (rows && rows.length > 0) {
+          const mapped: ServiceItem[] = rows.map((item) => {
+            const cat = item.category || "Umum";
+            return {
+              id: item.id,
+              name: item.title,
+              category: cat,
+              categoryVariant: (SERVICE_CATEGORY_VARIANT_MAP[cat] || "green") as BadgeVariant,
+              createdAt: item.created_at
+                ? new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                : "Baru saja",
+              description: "",
+              imageUrl: item.service_image_url?.[0] || null,
+            };
+          });
+          setServices(mapped);
+          const uniqueCategories = Array.from(new Set(rows.map((s) => s.category).filter(Boolean))) as string[];
+          setCategoryOptions([
+            { value: "all", label: "Semua Kategori" },
+            ...uniqueCategories.map((c) => ({ value: c, label: c })),
+          ]);
+          return;
+        }
       } catch (err) {
-        console.error("Error loading services", err);
+        console.error("Error loading services from Supabase", err);
       }
+
+      const stored = getStoredServices();
+      const mapped: ServiceItem[] = stored.map((item) => {
+        const cat = item.category || "Umum";
+        return {
+          id: item.id || Date.now(),
+          name: item.title,
+          category: cat,
+          categoryVariant: (item.categoryVariant || SERVICE_CATEGORY_VARIANT_MAP[cat] || "green") as BadgeVariant,
+          createdAt: item.createdAt || "Baru saja",
+          description: item.description || "",
+          imageUrl: item.imageUrl,
+        };
+      });
+      setServices(mapped);
+
+      const uniqueCategories = Array.from(new Set(stored.map((s) => s.category).filter(Boolean)));
+      const opts: DropdownOption[] = [
+        { value: "all", label: "Semua Kategori" },
+        ...uniqueCategories.map((c) => ({ value: c, label: c })),
+      ];
+      setCategoryOptions(opts);
     };
 
     loadServices();
@@ -97,10 +122,17 @@ export default function KelolaLayananPage() {
   const confirmDelete = async () => {
     if (deleteModal.service) {
       const target = deleteModal.service;
-      await deleteService(target.id);
-      setServices((prev) => prev.filter((s) => String(s.id) !== String(target.id)));
-      triggerNotif(`Layanan "${target.name}" berhasil dihapus`, "error");
-      setDeleteModal({ isOpen: false });
+      try {
+        await deleteService(target.id);
+        setServices((prev) => prev.filter((s) => String(s.id) !== String(target.id)));
+        triggerNotif(`Layanan "${target.name}" berhasil dihapus`, "default");
+      } catch (err: any) {
+        const msg = err?.message || err?.details || "Gagal menghapus layanan dari Supabase";
+        console.error("Error deleting service from Supabase:", err);
+        triggerNotif(`Gagal menghapus layanan: ${msg}`, "error");
+      } finally {
+        setDeleteModal({ isOpen: false });
+      }
     }
   };
 

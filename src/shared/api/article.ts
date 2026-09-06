@@ -1,3 +1,12 @@
+import {
+  addArticle as addSupabaseArticle,
+  editArticle as editSupabaseArticle,
+  deleteArticle as deleteSupabaseArticle,
+  getArticles as getSupabaseArticles,
+  getArticleById as getSupabaseArticleById,
+  isValidUuid,
+} from "@/services/articleApi";
+
 export interface ArticlePayload {
   id?: string | number;
   title: string;
@@ -13,57 +22,19 @@ export interface ArticlePayload {
 
 const STORAGE_KEY = "dps_articles_data";
 
-const DEFAULT_ARTICLES: ArticlePayload[] = [
-  {
-    id: "1",
-    title: "Standar Keselamatan Pemasangan Guardrail di Jalan Tol Indonesia",
-    titleIndonesia: "Standar Keselamatan Pemasangan Guardrail di Jalan Tol Indonesia",
-    category: ["Keselamatan Jalan", "Konstruksi"],
-    categoryColor: ["Green", "Blue"],
-    content: "<p>Analisis regulasi teknis pemasangan pagar pengaman jalan tol sesuai spesifikasi Bina Marga.</p>",
-    contentIndonesia: "<p>Analisis regulasi teknis pemasangan pagar pengaman jalan tol sesuai spesifikasi Bina Marga.</p>",
-    imageUrl: "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
-    createdAt: "25 Agu 2024, 08:30",
-    author: "Tim Redaksi DPS",
-  },
-  {
-    id: "2",
-    title: "Pentingnya Marka Termoplastik untuk Visibilitas Malam Hari",
-    titleIndonesia: "Pentingnya Marka Termoplastik untuk Visibilitas Malam Hari",
-    category: ["Inovasi Marka", "Perlengkapan Jalan"],
-    categoryColor: ["Blue", "Yellow"],
-    content: "<p>Kelebihan kandungan glass beads reflektif pada cat marka jalan panas terhadap keselamatan berkendara.</p>",
-    contentIndonesia: "<p>Kelebihan kandungan glass beads reflektif pada cat marka jalan panas terhadap keselamatan berkendara.</p>",
-    imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=800&auto=format&fit=crop&q=80",
-    createdAt: "21 Agu 2024, 13:15",
-    author: "Ir. Hendra Wijaya",
-  },
-  {
-    id: "3",
-    title: "Efisiensi PJU Tenaga Surya untuk Pengurangan Emisi Karbon",
-    titleIndonesia: "Efisiensi PJU Tenaga Surya untuk Pengurangan Emisi Karbon",
-    category: ["Teknologi Hijau", "Penerangan"],
-    categoryColor: ["Yellow", "Green"],
-    content: "<p>Pemanfaatan lampu PJU solar cell dalam proyek infrastruktur jalan ramah lingkungan.</p>",
-    contentIndonesia: "<p>Pemanfaatan lampu PJU solar cell dalam proyek infrastruktur jalan ramah lingkungan.</p>",
-    imageUrl: "https://images.unsplash.com/photo-1509391365360-2e959784a276?w=800&auto=format&fit=crop&q=80",
-    createdAt: "17 Agu 2024, 10:00",
-    author: "Siti Rahmawati",
-  },
-];
+const DEFAULT_ARTICLES: ArticlePayload[] = [];
 
 function getStoredArticles(): ArticlePayload[] {
-  if (typeof window === "undefined") return DEFAULT_ARTICLES;
+  if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_ARTICLES));
-      return DEFAULT_ARTICLES;
+      return [];
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : DEFAULT_ARTICLES;
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    return DEFAULT_ARTICLES;
+    return [];
   }
 }
 
@@ -78,8 +49,16 @@ function saveStoredArticles(articles: ArticlePayload[]) {
 }
 
 export async function getConsistingCategories(): Promise<string[]> {
-  const articles = getStoredArticles();
   const cats = new Set<string>();
+  try {
+    const supabaseArticles = await getSupabaseArticles();
+    supabaseArticles.forEach((a) => {
+      if (a.category) cats.add(a.category);
+    });
+  } catch {
+    // ignore
+  }
+  const articles = getStoredArticles();
   articles.forEach((a) => {
     (a.category || []).forEach((c) => cats.add(c));
   });
@@ -87,8 +66,28 @@ export async function getConsistingCategories(): Promise<string[]> {
 }
 
 export async function getArticleById(id: string | number): Promise<ArticlePayload | null> {
+  const strId = String(id);
+  if (isValidUuid(strId)) {
+    try {
+      const row = await getSupabaseArticleById(strId);
+      if (row) {
+        return {
+          id: row.id,
+          title: row.title,
+          category: row.category ? [row.category] : ["Umum"],
+          categoryColor: ["Green"],
+          content: row.content || "",
+          createdAt: row.created_at,
+          author: "Admin",
+        };
+      }
+    } catch (e) {
+      console.warn("Supabase fetch article by id failed:", e);
+    }
+  }
+
   const articles = getStoredArticles();
-  const found = articles.find((a) => String(a.id) === String(id));
+  const found = articles.find((a) => String(a.id) === strId);
   return found || null;
 }
 
@@ -108,17 +107,31 @@ export async function addArticle(
     imageUrl = URL.createObjectURL(bannerFile);
   }
 
-  const newArticle: ArticlePayload = {
-    ...data,
-    id: String(Date.now()),
-    imageUrl: imageUrl || "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
-    createdAt: formattedDate,
-    author: data.author || "Super Admin",
-  };
+  // Sync to Supabase
+  try {
+    const categoryString = Array.isArray(data.category) ? data.category.join(", ") : data.category || null;
 
-  const updated = [newArticle, ...articles];
-  saveStoredArticles(updated);
-  return newArticle;
+    const supabaseRow = await addSupabaseArticle({
+      title: data.title,
+      category: categoryString,
+      content: data.content,
+    });
+
+    const newArticle: ArticlePayload = {
+      ...data,
+      id: supabaseRow?.id || String(Date.now()),
+      imageUrl: imageUrl || "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
+      createdAt: formattedDate,
+      author: data.author || "Super Admin",
+    };
+    const updated = [newArticle, ...articles];
+    saveStoredArticles(updated);
+    return newArticle;
+  } catch (err: any) {
+    const errorDetails = err?.message || err?.details || err?.hint || (typeof err === "string" ? err : JSON.stringify(err));
+    console.error("Supabase addArticle failed:", errorDetails);
+    throw new Error(errorDetails);
+  }
 }
 
 export async function editArticle(
@@ -156,6 +169,32 @@ export async function editArticle(
     throw new Error(`Article with id ${id} not found.`);
   }
 
+  const targetArticle: ArticlePayload = updatedArticle;
   saveStoredArticles(updated);
-  return updatedArticle;
+
+  // Sync to Supabase
+  try {
+    const categoryString = Array.isArray(data.category) ? data.category.join(", ") : data.category;
+
+    await editSupabaseArticle(String(id), {
+      title: data.title,
+      category: categoryString,
+      content: data.content,
+    });
+  } catch (err: any) {
+    const errorDetails = err?.message || err?.details || err?.hint || (typeof err === "string" ? err : JSON.stringify(err));
+    console.error(`Supabase editArticle failed for ID ${id}:`, errorDetails);
+    throw new Error(`Supabase Error: ${errorDetails}`);
+  }
+
+  return targetArticle;
+}
+
+export async function deleteArticle(id: string | number): Promise<void> {
+  const strId = String(id);
+  await deleteSupabaseArticle(strId);
+
+  const articles = getStoredArticles();
+  const nextArticles = articles.filter((a) => String(a.id) !== strId);
+  saveStoredArticles(nextArticles);
 }
