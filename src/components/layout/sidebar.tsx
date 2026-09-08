@@ -24,7 +24,7 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarMenuItem[] = [
   { id: "dashboard", label: "Dashboard", icon: "Dashboard", href: "/" },
   { id: "users", label: "Kelola Pengguna", icon: "User", href: "/kelola-pengguna" },
   { id: "seo", label: "Kelola SEO", icon: "Global", href: "/kelola-seo" },
-  { id: "content", label: "Kelola Konten", icon: "Document", href: "/content" },
+  { id: "content", label: "Kelola Konten", icon: "Document", href: "/kelola-konten" },
   { id: "services", label: "Kelola Layanan", icon: "Setting", href: "/kelola-layanan" },
   { id: "products", label: "Kelola Produk", icon: "Box", href: "/kelola-produk" },
   { id: "articles", label: "Kelola Artikel", icon: "Paper", href: "/kelola-artikel" },

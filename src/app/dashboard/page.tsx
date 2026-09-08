@@ -76,6 +76,11 @@ const WEEKLY_DATA: Record<string, { summary: string; peak: string; data: WeeklyT
   },
 };
 
+// Deterministic number formatter to avoid SSR / Client locale hydration mismatches
+function formatNumber(val: number): string {
+  return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
 export default function DashboardPage() {
   const [articles, setArticles] = useState<DashboardArticleItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -413,8 +418,11 @@ export default function DashboardPage() {
                       onMouseLeave={() => setHoveredBar(null)}
                     >
                       {/* Tooltip on hover */}
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-8 px-2 py-1 bg-dark text-white text-[11px] font-semibold rounded-md pointer-events-none whitespace-nowrap shadow-md z-10">
-                        {bar.views.toLocaleString()} views
+                      <div
+                        suppressHydrationWarning
+                        className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-8 px-2 py-1 bg-dark text-white text-[11px] font-semibold rounded-md pointer-events-none whitespace-nowrap shadow-md z-10"
+                      >
+                        {formatNumber(bar.views)} views
                       </div>
 
                       {/* Bar Pillar */}
@@ -637,9 +645,12 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Total Pembaca */}
-                    <div className="w-36 flex items-center gap-1.5 text-dark/80 text-sm font-semibold font-sans">
+                    <div
+                      suppressHydrationWarning
+                      className="w-36 flex items-center gap-1.5 text-dark/80 text-sm font-semibold font-sans"
+                    >
                       <span className="size-2 rounded-full bg-g1 inline-block" />
-                      {article.views.toLocaleString()} <span className="text-dark/40 font-normal text-xs">views</span>
+                      {formatNumber(article.views)} <span className="text-dark/40 font-normal text-xs">views</span>
                     </div>
 
                     {/* Waktu Dibuat */}
