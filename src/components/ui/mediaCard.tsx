@@ -64,7 +64,7 @@ export default function MediaCard({
                             e.stopPropagation();
                             onDelete();
                         }}
-                        className="size-9 bg-red-state hover:opacity-90 text-white rounded-lg flex justify-center items-center transition-all cursor-pointer shrink-0"
+                        className="size-9 bg-red-state hover:bg-red-state/90 border border-red-300 hover:border-red-400 text-white rounded-lg flex justify-center items-center hover:opacity-80 active:opacity-60 active:scale-95 transition-all cursor-pointer shrink-0"
                         title="Delete Media"
                     >
                         <LordIcon name="Delete" size={18} primaryColor="#FFFFFF" />
@@ -102,8 +102,8 @@ export default function MediaCard({
                             e.stopPropagation();
                             onDelete();
                         }}
-                        className="absolute top-2 right-2 size-9 bg-red-state hover:opacity-90 text-white rounded-lg flex justify-center items-center shadow-md opacity-0 group-hover:opacity-100 transition-all cursor-pointer active:scale-95 z-10"
-                        title="Delete Media"
+                        className="absolute top-2 right-2 size-9 bg-red-state hover:bg-red-state/90 border border-red-300 hover:border-red-400 text-white rounded-full flex justify-center items-center shadow-md opacity-0 group-hover:opacity-100 hover:opacity-80 active:opacity-60 active:scale-95 transition-all duration-200 cursor-pointer z-10"
+                        title="Hapus Media"
                     >
                         <LordIcon name="Delete" size={18} primaryColor="#FFFFFF" />
                     </button>
@@ -133,7 +133,7 @@ export default function MediaCard({
                             e.stopPropagation();
                             onDelete();
                         }}
-                        className="size-8 bg-red-state hover:opacity-90 text-white rounded-lg flex justify-center items-center transition-all cursor-pointer shrink-0 active:scale-95 sm:hidden"
+                        className="size-8 bg-red-state hover:bg-red-state/90 border border-red-300 hover:border-red-400 text-white rounded-lg flex justify-center items-center hover:opacity-80 active:opacity-60 active:scale-95 transition-all cursor-pointer shrink-0 sm:hidden"
                         title="Delete Media"
                     >
                         <LordIcon name="Delete" size={16} primaryColor="#FFFFFF" />

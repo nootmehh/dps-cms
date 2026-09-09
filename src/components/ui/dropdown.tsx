@@ -9,7 +9,9 @@ export interface DropdownOption {
 
 interface BaseDropdownProps {
   label?: ReactNode;
+  labelClassName?: string;
   placeholder?: string;
+  searchPlaceholder?: string;
   options: DropdownOption[];
   containerClassName?: string;
   disabled?: boolean;
@@ -33,7 +35,9 @@ export type DropdownProps = SingleDropdownProps | MultipleDropdownProps;
 
 export default function Dropdown({
   label,
+  labelClassName = "",
   placeholder = "Select option...",
+  searchPlaceholder = "Search Category",
   options,
   value,
   onChange,
@@ -64,8 +68,22 @@ export default function Dropdown({
     };
   }, []);
 
+  // Deduplicate options by value and label
+  const seenValues = new Set<string>();
+  const seenLabels = new Set<string>();
+  const uniqueOptions = options.filter((option) => {
+    const valKey = String(option.value).toLowerCase().trim();
+    const labelKey =
+      typeof option.label === "string" ? option.label.toLowerCase().trim() : "";
+    if (seenValues.has(valKey)) return false;
+    if (labelKey && seenLabels.has(labelKey)) return false;
+    seenValues.add(valKey);
+    if (labelKey) seenLabels.add(labelKey);
+    return true;
+  });
+
   // Filter options based on search query
-  const filteredOptions = options.filter((option) => {
+  const filteredOptions = uniqueOptions.filter((option) => {
     const labelStr =
       typeof option.label === "string"
         ? option.label
@@ -111,11 +129,11 @@ export default function Dropdown({
   const getSelectedLabels = () => {
     if (multiple && Array.isArray(value)) {
       return value.map((val) => {
-        const found = options.find((opt) => opt.value === val);
+        const found = uniqueOptions.find((opt) => opt.value === val);
         return found || { value: val, label: val };
       });
     }
-    const singleOpt = options.find((opt) => opt.value === value);
+    const singleOpt = uniqueOptions.find((opt) => opt.value === value);
     if (!singleOpt && value) {
       return [{ value: value as string, label: value as string }];
     }
@@ -124,7 +142,7 @@ export default function Dropdown({
 
   const selectedOptions = getSelectedLabels();
 
-  const hasExactMatch = options.some((opt) => {
+  const hasExactMatch = uniqueOptions.some((opt) => {
     const labelStr =
       typeof opt.label === "string" ? opt.label : opt.searchLabel || opt.value;
     return labelStr.toLowerCase() === searchQuery.trim().toLowerCase();
@@ -139,7 +157,7 @@ export default function Dropdown({
       className={`w-full max-w-116.5 inline-flex flex-col justify-start items-start gap-1 relative ${containerClassName}`}
     >
       {label && (
-        <label className="self-stretch justify-start text-g1 text-sm font-semibold font-sans">
+        <label className={`self-stretch justify-start text-dark text-sm font-semibold font-sans ${labelClassName}`}>
           {label}
         </label>
       )}
@@ -147,14 +165,14 @@ export default function Dropdown({
       {/* Segmented Connected Dropdown Bar (Compro Accordion Style) */}
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`group self-stretch flex items-center gap-0 w-full cursor-pointer select-none transition-all duration-300 ${disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : ""
+        className={`group self-stretch flex items-center gap-0 w-full cursor-pointer select-none transition-all duration-200 hover:opacity-80 active:opacity-70 ${disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : ""
           } ${selectClassName}`}
       >
         {/* Left Main Pill */}
         <div
-          className={`flex-1 min-w-0 h-12 px-5 py-2.5 flex justify-between items-center gap-2.5 overflow-hidden transition-all duration-300 ease-in-out ${isOpen
+          className={`flex-1 min-w-0 h-12 px-5 py-2.5 flex justify-between items-center gap-2.5 overflow-hidden transition-all duration-200 ease-in-out ${isOpen
               ? "bg-brand-background rounded-2xl sm:rounded-3xl border border-g1 shadow-[0px_2px_6px_0px_rgba(6,137,81,0.2)]"
-              : "bg-brand-background rounded-[28px] border border-transparent group-hover:border-g1 group-hover:opacity-95"
+              : "bg-brand-background rounded-[28px] border border-white-80 group-hover:border-g1 group-hover:shadow-[0px_2px_6px_0px_rgba(6,137,81,0.15)]"
             }`}
         >
           <div className="flex-1 flex flex-wrap gap-1.5 items-center overflow-hidden">
@@ -176,13 +194,13 @@ export default function Dropdown({
                 </div>
               ))
             ) : !multiple && selectedOptions.length > 0 && !isOpen ? (
-              <span className="text-dark text-sm font-semibold font-sans truncate">
+              <span className="text-dark/60 text-sm font-semibold font-sans truncate">
                 {selectedOptions[0].label}
               </span>
             ) : null}
 
             {/* Interactive Search Input inside Select Box */}
-            {(!multiple || selectedOptions.length === 0 || isOpen) && (
+            {(multiple || selectedOptions.length === 0 || isOpen) && (
               <input
                 type="text"
                 disabled={disabled}
@@ -198,11 +216,15 @@ export default function Dropdown({
                 placeholder={
                   searchQuery
                     ? ""
-                    : selectedOptions.length > 0 && typeof selectedOptions[0]?.label === "string"
-                      ? selectedOptions[0].label
-                      : placeholder
+                    : isOpen
+                      ? searchPlaceholder
+                      : selectedOptions.length > 0
+                        ? ""
+                        : placeholder
                 }
-                className="flex-1 bg-transparent text-dark text-sm font-normal font-sans placeholder:text-dark/40 outline-none border-none min-w-15"
+                className={`flex-1 bg-transparent text-dark/60 text-sm font-normal font-sans placeholder:text-dark/40 outline-none border-none ${
+                  !multiple && selectedOptions.length > 0 && !isOpen ? "hidden" : "min-w-15"
+                }`}
               />
             )}
           </div>
@@ -210,14 +232,16 @@ export default function Dropdown({
 
         {/* Right Segment: Circle Chevron Button (Connected with gap-0) */}
         <div
-          className={`size-12 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${isOpen
+          className={`size-12 rounded-full flex items-center justify-center shrink-0 transition-all duration-200 ${isOpen
               ? "bg-g1 text-white shadow-[0px_2px_4px_0px_rgba(6,137,81,0.25)] border border-transparent"
-              : "bg-brand-background text-g1 border border-transparent group-hover:border-g1 group-hover:opacity-95"
+              : "bg-brand-background text-g1 border border-white-80 group-hover:border-g1 group-hover:bg-g1/10 group-hover:shadow-[0px_2px_6px_0px_rgba(6,137,81,0.15)]"
             }`}
         >
           <LordIcon
             name={isOpen ? "ChevronUp" : "ChevronDown"}
             size={20}
+            trigger="hover"
+            target=".group"
             primaryColor={isOpen ? "#FFFFFF" : "#0A9863"}
           />
         </div>
@@ -225,7 +249,7 @@ export default function Dropdown({
 
       {/* Options Dropdown Panel */}
       {isOpen && (
-        <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white border border-white-80 rounded-2xl shadow-[0px_8px_24px_0px_rgba(0,0,0,0.08)] z-50 max-h-60 overflow-y-auto p-1.5 flex flex-col gap-0.5 animate-fade-in">
+        <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white border border-white-70 hover:border-g1 rounded-3xl z-50 max-h-60 overflow-y-auto p-1.5 flex flex-col gap-0.5 transition-colors duration-200 animate-fade-in shadow-lg">
           {filteredOptions.length === 0 && !showCustomAddOption ? (
             <div className="py-3 px-4 text-center text-slate-400 text-sm font-sans">
               No options found
@@ -237,14 +261,17 @@ export default function Dropdown({
                 <div
                   key={option.value}
                   onClick={() => handleSelect(option.value)}
-                  className={`px-4 py-2.5 rounded-lg flex items-center justify-between text-sm font-sans cursor-pointer transition-colors ${active
+                  className={`px-4 py-2.5 rounded-full flex items-center justify-between text-sm font-sans cursor-pointer transition-colors ${
+                    active
                       ? "bg-g1/10 text-g1 font-semibold"
-                      : "text-dark hover:bg-g1/[0.06] font-normal"
-                    }`}
+                      : "text-dark hover:bg-g1/10 hover:text-g1 font-normal"
+                  }`}
                 >
-                  <span>{option.label}</span>
+                  <span className="truncate">{option.label}</span>
                   {active && (
-                    <LordIcon name="Right 1" size={16} primaryColor="#0A9863" />
+                    <div className="shrink-0 ml-2 flex items-center">
+                      <LordIcon name="CheckCircle" size={18} primaryColor="#0A9863" />
+                    </div>
                   )}
                 </div>
               );
@@ -254,10 +281,12 @@ export default function Dropdown({
           {showCustomAddOption && (
             <div
               onClick={() => handleSelect(searchQuery.trim())}
-              className="px-4 py-2.5 rounded-lg flex items-center justify-between text-sm font-medium font-sans text-g1 hover:bg-g1/5 cursor-pointer border-t border-g1/10"
+              className="px-4 py-2.5 rounded-full flex items-center justify-between text-sm font-medium font-sans text-g1 hover:bg-g1/10 cursor-pointer border-t border-g1/10 transition-colors"
             >
-              <span>Add "{searchQuery.trim()}"</span>
-              <LordIcon name="Add" size={16} primaryColor="#0A9863" />
+              <span className="truncate">Add "{searchQuery.trim()}"</span>
+              <div className="shrink-0 ml-2 flex items-center">
+                <LordIcon name="Add" size={16} primaryColor="#0A9863" />
+              </div>
             </div>
           )}
         </div>

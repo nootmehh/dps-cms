@@ -1,4 +1,7 @@
+"use client";
+
 import { type ReactNode } from "react";
+import Link from "next/link";
 import Button from "../ui/button";
 import LordIcon from "../common/lordIcon";
 
@@ -24,25 +27,26 @@ export default function Navbar({
 }: NavbarProps) {
   return (
     <header
-      className={`w-full px-6 md:px-12 py-4 bg-white border-b border-gray-200 inline-flex justify-between items-center gap-4 ${className}`}
+      className={`w-full px-6 md:px-12 py-4 bg-white border-b border-white-80 inline-flex justify-between items-center gap-4 select-none ${className}`}
     >
-      {/* Left Section: Brand Logo & Title */}
-      <div className="flex justify-start items-center gap-3 shrink-0">
-        {logoSrc ? (
-          <img
-            className="w-16 h-8 object-contain"
-            src={logoSrc}
-            alt={brandTitle}
-          />
-        ) : (
-          <div className="w-10 h-8 bg-g1/15 text-g1 rounded-lg flex items-center justify-center font-bold text-xs">
-            DPS
-          </div>
-        )}
-        <div className="justify-start text-dark text-xl md:text-2xl font-bold font-serif tracking-tight">
-          {brandTitle}
-        </div>
-      </div>
+      {/* Left Section: Brand Logo (from Compro) */}
+      <Link
+        href="/"
+        className="flex items-center cursor-pointer select-none shrink-0"
+      >
+        {/* Full Logo on >= 420px */}
+        <img
+          className="h-9 w-auto object-contain transition-all aspect-[801/96] hidden min-[420px]:block"
+          src={logoSrc || "/dps-logo-default.png"}
+          alt={brandTitle || "DPS Logo"}
+        />
+        {/* Icon Logo on < 420px */}
+        <img
+          className="h-9 w-auto object-contain transition-all block min-[420px]:hidden"
+          src="/dps-logo-icon.png"
+          alt={brandTitle || "DPS Logo Icon"}
+        />
+      </Link>
 
       {/* Right Section: User Profile & Logout */}
       <div className="flex justify-start items-center gap-3 sm:gap-4">

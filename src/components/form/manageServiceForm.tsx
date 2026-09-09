@@ -1,0 +1,950 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Navbar from "../layout/navbar";
+import Sidebar from "../layout/sidebar";
+import Button from "../ui/button";
+import InputBox from "../ui/inputBox";
+import DescriptionBox from "../ui/descriptionBox";
+import UploadFile from "../ui/uploadFile";
+import Dropdown from "../ui/dropdown";
+import Badge from "../ui/badge";
+import Notification, { type NotificationType } from "../ui/notification";
+import LordIcon from "../common/lordIcon";
+import {
+  getServiceById,
+  addService,
+  editService,
+  getConsistingServiceCategories,
+  DEFAULT_SERVICE_CATEGORIES,
+  SERVICE_CATEGORY_VARIANT_MAP,
+  type ServiceKeunggulanItem,
+  type ServiceMaterialItem,
+  type ServiceFAQItem,
+} from "../../shared/api/service";
+import { getStoredProducts, type ProductPayload } from "../../shared/api/product";
+import { getProducts } from "@/services/productApi";
+
+export interface ManageServiceFormProps {
+  id?: string;
+}
+
+export default function ManageServiceForm({ id }: ManageServiceFormProps) {
+  const router = useRouter();
+
+  // Basic Info
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState<string>(DEFAULT_SERVICE_CATEGORIES[0]);
+  const [categoryVariant, setCategoryVariant] = useState<string>("green");
+  const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
+
+  // Dynamic Keunggulan
+  const [keunggulan, setKeunggulan] = useState<ServiceKeunggulanItem[]>([
+    { title: "", description: "" },
+  ]);
+
+  // Dynamic Material & Peralatan (Linked with Product Catalog)
+  const [materialPeralatan, setMaterialPeralatan] = useState<ServiceMaterialItem[]>([
+    { category: "", name: "" },
+  ]);
+
+  // Products from catalog
+  const [catalogProducts, setCatalogProducts] = useState<ProductPayload[]>([]);
+
+  // Dynamic FAQ
+  const [faq, setFaq] = useState<ServiceFAQItem[]>([
+    { question: "", answer: "" },
+  ]);
+
+  type ServiceDetailTab = "keunggulan" | "material" | "faq";
+  const [activeTab, setActiveTab] = useState<ServiceDetailTab>("keunggulan");
+
+  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [availableCategories, setAvailableCategories] = useState<string[]>(DEFAULT_SERVICE_CATEGORIES);
+
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    message: string;
+    type: NotificationType;
+  }>({
+    isOpen: false,
+    message: "",
+    type: "default",
+  });
+
+  const showNotif = (message: string, type: NotificationType = "default") => {
+    setNotification({
+      isOpen: true,
+      message,
+      type,
+    });
+  };
+
+  // Load catalog products from Supabase
+  useEffect(() => {
+    const loadCatalog = async () => {
+      try {
+        const rows = await getProducts();
+        if (rows && rows.length > 0) {
+          const mapped: ProductPayload[] = rows.map((r) => ({
+            id: r.id,
+            title: r.title,
+            category: r.category || "Umum",
+            imageUrl: r.product_image_url?.[0] || r.highlight_img_url || null,
+            description: r.description || "",
+            detailProduct: r.detail_product || [],
+            suitableFor: r.suitable_for || [],
+            kelebihan: r.kelebihan || [],
+            kekurangan: r.kekurangan || [],
+            createdAt: r.created_at,
+          }));
+          setCatalogProducts(mapped);
+          return;
+        }
+      } catch (err) {
+        console.error("Error loading products from Supabase catalog:", err);
+      }
+      try {
+        const prods = getStoredProducts();
+        setCatalogProducts(prods);
+      } catch (err) {
+        console.error("Error loading products from catalog", err);
+      }
+    };
+    loadCatalog();
+  }, []);
+
+  // Load existing categories
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const existing = await getConsistingServiceCategories();
+        if (existing.length > 0) {
+          setAvailableCategories(existing);
+          if (!id) {
+            setCategory(existing[0]);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading service categories", err);
+      }
+    };
+    loadCategories();
+  }, [id]);
+
+  // Load service if editing
+  useEffect(() => {
+    if (!id) return;
+
+    const loadService = async () => {
+      setLoading(true);
+      try {
+        const service = await getServiceById(id);
+        if (service) {
+          setTitle(service.title || "");
+          setCategory(service.category || DEFAULT_SERVICE_CATEGORIES[0]);
+          setCategoryVariant(
+            service.categoryVariant || SERVICE_CATEGORY_VARIANT_MAP[service.category] || "green"
+          );
+          setDescription(service.description || "");
+          setImageUrl(service.imageUrl || null);
+
+          if (service.keunggulan && service.keunggulan.length > 0) {
+            setKeunggulan(service.keunggulan);
+          }
+          if (service.materialPeralatan && service.materialPeralatan.length > 0) {
+            setMaterialPeralatan(service.materialPeralatan);
+          }
+          if (service.faq && service.faq.length > 0) {
+            setFaq(service.faq);
+          }
+
+          if (service.category && !availableCategories.includes(service.category)) {
+            setAvailableCategories((prev) => Array.from(new Set([...prev, service.category])));
+          }
+        } else {
+          showNotif("Layanan tidak ditemukan.", "error");
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Gagal memuat data layanan.";
+        showNotif(errorMessage, "error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadService();
+  }, [id]);
+
+  // Keunggulan handlers
+  const handleAddKeunggulan = () => {
+    setKeunggulan((prev) => [...prev, { title: "", description: "" }]);
+  };
+  const handleUpdateKeunggulan = (index: number, field: "title" | "description", val: string) => {
+    setKeunggulan((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: val };
+      return next;
+    });
+  };
+  const handleRemoveKeunggulan = (index: number) => {
+    setKeunggulan((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Material & Peralatan handlers (Linked to Katalog Produk)
+  const handleAddMaterial = (productId?: string) => {
+    if (productId) {
+      const found = catalogProducts.find((p) => String(p.id) === String(productId));
+      if (found) {
+        setMaterialPeralatan((prev) => [
+          ...prev,
+          {
+            productId: String(found.id),
+            category: found.category,
+            name: found.title,
+            imageUrl: found.imageUrl || null,
+          },
+        ]);
+        return;
+      }
+    }
+    setMaterialPeralatan((prev) => [
+      ...prev,
+      { productId: undefined, category: "", name: "", imageUrl: null },
+    ]);
+  };
+
+  const handleSelectProductForMaterial = (index: number, selectedId: string) => {
+    if (!selectedId || selectedId === "manual") {
+      setMaterialPeralatan((prev) => {
+        const next = [...prev];
+        next[index] = {
+          ...next[index],
+          productId: undefined,
+        };
+        return next;
+      });
+      return;
+    }
+
+    const found = catalogProducts.find((p) => String(p.id) === String(selectedId));
+    if (found) {
+      setMaterialPeralatan((prev) => {
+        const next = [...prev];
+        next[index] = {
+          ...next[index],
+          productId: String(found.id),
+          category: found.category,
+          name: found.title,
+          imageUrl: found.imageUrl || null,
+        };
+        return next;
+      });
+    }
+  };
+
+  const handleUpdateMaterial = (index: number, field: "category" | "name", val: string) => {
+    setMaterialPeralatan((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: val };
+      return next;
+    });
+  };
+
+  const handleRemoveMaterial = (index: number) => {
+    setMaterialPeralatan((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // FAQ handlers
+  const handleAddFaq = () => {
+    setFaq((prev) => [...prev, { question: "", answer: "" }]);
+  };
+  const handleUpdateFaq = (index: number, field: "question" | "answer", val: string) => {
+    setFaq((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: val };
+      return next;
+    });
+  };
+  const handleRemoveFaq = (index: number) => {
+    setFaq((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!title.trim()) {
+      showNotif("Nama / Judul layanan wajib diisi.", "error");
+      return;
+    }
+
+    if (!category.trim()) {
+      showNotif("Kategori layanan wajib dipilih.", "error");
+      return;
+    }
+
+    // Clean data
+    const cleanedKeunggulan = keunggulan.filter((k) => k.title.trim() || k.description.trim());
+    const cleanedMaterial = materialPeralatan
+      .filter((m) => m.category.trim() || m.name.trim() || m.productId)
+      .map((m) => ({
+        productId: m.productId ? String(m.productId) : undefined,
+        category: m.category.trim(),
+        name: m.name.trim(),
+        imageUrl: m.imageUrl || null,
+      }));
+    const cleanedFaq = faq.filter((f) => f.question.trim() || f.answer.trim());
+
+    setSubmitting(true);
+    try {
+      const payload = {
+        title: title.trim(),
+        category: category.trim(),
+        categoryVariant: categoryVariant || SERVICE_CATEGORY_VARIANT_MAP[category.trim()] || "green",
+        description: description.trim(),
+        imageUrl: imageUrl,
+        keunggulan: cleanedKeunggulan,
+        materialPeralatan: cleanedMaterial,
+        faq: cleanedFaq,
+      };
+
+      if (id) {
+        await editService(id, payload, imageFile, imageRemoved);
+        showNotif(`Layanan "${title.trim()}" berhasil diperbarui!`, "success");
+      } else {
+        await addService(payload, imageFile);
+        showNotif(`Layanan "${title.trim()}" berhasil ditambahkan!`, "success");
+      }
+
+      // Return to services list page
+      setTimeout(() => {
+        router.push("/kelola-layanan");
+      }, 1000);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Gagal menyimpan layanan.";
+      showNotif(errorMessage, "error");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-white-90 flex flex-col items-center">
+      {/* Top Navbar */}
+      <Navbar
+        brandTitle="Dua Putra Srikandi"
+        userName="Username"
+        userRole="Super Admin"
+        onLogout={() => showNotif("Anda telah logout dari sistem", "error")}
+      />
+
+      {/* Main Body */}
+      <main className="w-full max-w-360 px-6 lg:px-12 py-8 flex flex-col md:flex-row justify-center items-start gap-6">
+        {/* Sidebar Component */}
+        <Sidebar activeId="services" className="md:sticky md:top-8 shrink-0" />
+
+        {/* Main Content Card */}
+        <div className="flex-1 p-6 md:p-8 bg-white rounded-4xl border border-white-80 shadow-xs flex flex-col justify-start items-start gap-6 w-full overflow-hidden">
+          {/* Header Block */}
+          <div className="self-stretch flex flex-col justify-start items-start gap-1">
+            <div className="text-dark/40 text-xs md:text-sm font-normal font-sans tracking-wider uppercase">
+              FORMULIR LAYANAN
+            </div>
+            <h1 className="text-g1 text-2xl md:text-3xl font-bold font-sans">
+              {id ? "Edit Layanan" : "Tambah Layanan Baru"}
+            </h1>
+          </div>
+
+          {/* Divider */}
+          <div className="self-stretch h-px bg-g1/10" aria-hidden="true" />
+
+          {loading ? (
+            <div className="w-full py-20 flex flex-col items-center justify-center gap-4 text-g1">
+              <div className="w-10 h-10 border-4 border-g1 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm font-sans text-dark/60">Memuat data layanan...</span>
+            </div>
+          ) : (
+            /* Form Area */
+            <form onSubmit={handleSubmit} className="flex flex-col gap-8 w-full">
+              <div className="flex flex-col gap-6">
+                {/* 1. INFORMASI UTAMA LAYANAN */}
+                <div className="flex flex-col gap-5">
+                  <div className="text-g1 text-base font-bold font-sans">
+                    Informasi Utama Layanan
+                  </div>
+
+                  {/* Service Image Upload with Large Preview */}
+                  <UploadFile
+                    label="Foto / Banner Layanan"
+                    descriptionPrefix="Ukuran Disarankan"
+                    descriptionValue="(800px * 600px)"
+                    previewLayout="large"
+                    multiple={false}
+                    defaultImageUrl={imageUrl || undefined}
+                    defaultImageLabel="Foto Layanan Saat Ini"
+                    onRemoveDefaultImage={() => {
+                      setImageUrl(null);
+                      setImageFile(null);
+                      setImageRemoved(true);
+                    }}
+                    onFilesSelected={(files: File[]) => {
+                      if (files.length > 0) {
+                        setImageFile(files[0]);
+                        setImageUrl(URL.createObjectURL(files[0]));
+                        setImageRemoved(false);
+                      } else {
+                        setImageFile(null);
+                        setImageUrl(null);
+                        setImageRemoved(true);
+                      }
+                    }}
+                    className="max-w-none w-full"
+                  />
+
+                  {/* Service Title */}
+                  <InputBox
+                    label={
+                      <span>
+                        Nama / Judul Layanan <span className="text-red-state">*</span>
+                      </span>
+                    }
+                    placeholder="mis. Pengecatan Marka Jalan"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                    containerClassName="max-w-none"
+                  />
+
+                  {/* Category & Badge Variant */}
+                  <div className="flex flex-col md:flex-row items-stretch gap-4 w-full">
+                    <Dropdown
+                      label={
+                        <span>
+                          Kategori Layanan <span className="text-red-state">*</span>
+                        </span>
+                      }
+                      placeholder="Pilih atau ketik kategori layanan..."
+                      options={availableCategories.map((c) => ({ value: c, label: c }))}
+                      value={category}
+                      onChange={(val) => {
+                        setCategory(val);
+                        if (SERVICE_CATEGORY_VARIANT_MAP[val]) {
+                          setCategoryVariant(SERVICE_CATEGORY_VARIANT_MAP[val]);
+                        }
+                      }}
+                      multiple={false}
+                      allowCustomValues={true}
+                      containerClassName="flex-1 max-w-none"
+                    />
+
+                    <Dropdown
+                      label={
+                        <span>
+                          Warna Badge Kategori <span className="text-red-state">*</span>
+                        </span>
+                      }
+                      placeholder="Pilih Warna"
+                      options={[
+                        { value: "green", label: <Badge variant="green" text="Green" />, searchLabel: "Green" },
+                        { value: "blue", label: <Badge variant="blue" text="Blue" />, searchLabel: "Blue" },
+                        { value: "yellow", label: <Badge variant="yellow" text="Yellow" />, searchLabel: "Yellow" },
+                        { value: "orange", label: <Badge variant="orange" text="Orange" />, searchLabel: "Orange" },
+                        { value: "purple", label: <Badge variant="purple" text="Purple" />, searchLabel: "Purple" },
+                        { value: "red", label: <Badge variant="red" text="Red" />, searchLabel: "Red" },
+                      ]}
+                      value={categoryVariant}
+                      onChange={(val) => setCategoryVariant(val)}
+                      multiple={false}
+                      containerClassName="w-full max-w-none md:w-60 shrink-0"
+                      selectClassName="bg-white"
+                    />
+                  </div>
+
+                  {/* Service Description */}
+                  <DescriptionBox
+                    label={
+                      <span>
+                        Deskripsi Lengkap Layanan <span className="text-red-state">*</span>
+                      </span>
+                    }
+                    placeholder="Tuliskan deskripsi lengkap mengenai ruang lingkup, metode pengerjaan, dan standar layanan..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={5}
+                    containerClassName="max-w-none"
+                    required
+                  />
+                </div>
+
+                {/* Section Divider */}
+                <div className="self-stretch h-px bg-g1/10" aria-hidden="true" />
+
+                {/* 2. DETAIL & INFORMASI TAMBAHAN (TAB NAVIGATION) */}
+                <div className="flex flex-col gap-5 w-full">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="text-g1 text-base font-bold font-sans">
+                      Detail & Informasi Tambahan
+                    </div>
+                    <span className="text-xs text-dark/50 font-normal font-sans">
+                      Pilih tab untuk mengisi atau mengubah detail layanan
+                    </span>
+                  </div>
+
+                  {/* Tab Navigation Buttons Bar */}
+                  <div className="self-stretch flex items-center gap-2 p-1.5 bg-white-90 rounded-full border border-white-80 shrink-0 overflow-x-auto">
+                    {/* Tab 1: Keunggulan Layanan */}
+                    <button
+                      type="button"
+                      id="tab-keunggulan"
+                      onClick={() => setActiveTab("keunggulan")}
+                      className={`group flex items-center gap-2 px-5 py-2.5 rounded-full font-sans text-sm font-semibold transition-all duration-200 cursor-pointer select-none whitespace-nowrap active:scale-[0.98] ${
+                        activeTab === "keunggulan"
+                          ? "bg-g1 text-white border border-g2 shadow-sm shadow-g1/25 hover:opacity-80 active:opacity-60"
+                          : "text-dark/70 border border-transparent hover:border-g1/40 hover:text-g1 hover:bg-white hover:opacity-80 active:opacity-60 hover:shadow-xs hover:-translate-y-0.5"
+                      }`}
+                    >
+                      <LordIcon
+                        name="CheckCircle"
+                        size={18}
+                        trigger="hover"
+                        target="button"
+                        primaryColor={activeTab === "keunggulan" ? "#ffffff" : "#0A9863"}
+                        secondaryColor={activeTab === "keunggulan" ? "#ffffff" : "#0A9863"}
+                      />
+                      <span>Keunggulan Layanan</span>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full font-bold transition-all duration-200 ${
+                          activeTab === "keunggulan"
+                            ? "bg-white/20 text-white"
+                            : "bg-g1/10 text-g1 group-hover:bg-g1 group-hover:text-white"
+                        }`}
+                      >
+                        {keunggulan.length}
+                      </span>
+                    </button>
+
+                    {/* Tab 2: Material & Peralatan */}
+                    <button
+                      type="button"
+                      id="tab-material"
+                      onClick={() => setActiveTab("material")}
+                      className={`group flex items-center gap-2 px-5 py-2.5 rounded-full font-sans text-sm font-semibold transition-all duration-200 cursor-pointer select-none whitespace-nowrap active:scale-[0.98] ${
+                        activeTab === "material"
+                          ? "bg-g1 text-white border border-g2 shadow-sm shadow-g1/25 hover:opacity-80 active:opacity-60"
+                          : "text-dark/70 border border-transparent hover:border-g1/40 hover:text-g1 hover:bg-white hover:opacity-80 active:opacity-60 hover:shadow-xs hover:-translate-y-0.5"
+                      }`}
+                    >
+                      <LordIcon
+                        name="Setting"
+                        size={18}
+                        trigger="hover"
+                        target="button"
+                        primaryColor={activeTab === "material" ? "#ffffff" : "#0A9863"}
+                        secondaryColor={activeTab === "material" ? "#ffffff" : "#0A9863"}
+                      />
+                      <span>Material & Peralatan</span>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full font-bold transition-all duration-200 ${
+                          activeTab === "material"
+                            ? "bg-white/20 text-white"
+                            : "bg-g1/10 text-g1 group-hover:bg-g1 group-hover:text-white"
+                        }`}
+                      >
+                        {materialPeralatan.length}
+                      </span>
+                    </button>
+
+                    {/* Tab 3: FAQ */}
+                    <button
+                      type="button"
+                      id="tab-faq"
+                      onClick={() => setActiveTab("faq")}
+                      className={`group flex items-center gap-2 px-5 py-2.5 rounded-full font-sans text-sm font-semibold transition-all duration-200 cursor-pointer select-none whitespace-nowrap active:scale-[0.98] ${
+                        activeTab === "faq"
+                          ? "bg-g1 text-white border border-g2 shadow-sm shadow-g1/25 hover:opacity-80 active:opacity-60"
+                          : "text-dark/70 border border-transparent hover:border-g1/40 hover:text-g1 hover:bg-white hover:opacity-80 active:opacity-60 hover:shadow-xs hover:-translate-y-0.5"
+                      }`}
+                    >
+                      <LordIcon
+                        name="Global"
+                        size={18}
+                        trigger="hover"
+                        target="button"
+                        primaryColor={activeTab === "faq" ? "#ffffff" : "#0A9863"}
+                        secondaryColor={activeTab === "faq" ? "#ffffff" : "#0A9863"}
+                      />
+                      <span>FAQ</span>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full font-bold transition-all duration-200 ${
+                          activeTab === "faq"
+                            ? "bg-white/20 text-white"
+                            : "bg-g1/10 text-g1 group-hover:bg-g1 group-hover:text-white"
+                        }`}
+                      >
+                        {faq.length}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* TAB CONTENT: 1. KEUNGGULAN LAYANAN */}
+                  {activeTab === "keunggulan" && (
+                    <div className="flex flex-col gap-4 w-full">
+                      <div className="self-stretch px-3.5 py-2 bg-brand-background rounded-full flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-6">
+                        <div className="flex items-center gap-2.5">
+                          <div className="size-6 text-g1 flex items-center justify-center shrink-0">
+                            <LordIcon name="CheckCircle" size={20} primaryColor="#0A9863" />
+                          </div>
+                          <div>
+                            <span className="text-g1 text-sm md:text-base font-semibold font-sans">
+                              Keunggulan Layanan
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Add Keunggulan Button */}
+                        <Button
+                          type="button"
+                          onClick={handleAddKeunggulan}
+                          text="Tambah Keunggulan"
+                          variant="fill"
+                          size="sm"
+                          rightIcon="Add"
+                          className="shrink-0 cursor-pointer"
+                        />
+                      </div>
+
+                      {keunggulan.length === 0 ? (
+                        <div className="text-dark/40 text-sm font-normal font-sans pl-2 py-6 text-center bg-brand-background/20 rounded-2xl border border-dashed border-white-80">
+                          Belum ada poin keunggulan. Klik tombol <span className="text-g1 font-semibold">+ Tambah Keunggulan</span> untuk menambahkan.
+                        </div>
+                      ) : (
+                        <div className="flex flex-col divide-y divide-g1/10 w-full">
+                          {keunggulan.map((item, index) => (
+                            <div
+                              key={index}
+                              className="flex flex-col md:flex-row items-stretch md:items-start gap-3 w-full py-4 first:pt-1 last:pb-1"
+                            >
+                              <InputBox
+                                label={
+                                  <span>
+                                    Judul Keunggulan <span className="text-g1">#{index + 1}</span>
+                                  </span>
+                                }
+                                placeholder="cth. Material Bersertifikat TKDN"
+                                value={item.title}
+                                onChange={(e) => handleUpdateKeunggulan(index, "title", e.target.value)}
+                                containerClassName="w-full md:w-64 shrink-0 max-w-none"
+                              />
+
+                              <DescriptionBox
+                                label={
+                                  <span>
+                                    Penjelasan <span className="text-g1">#{index + 1}</span>
+                                  </span>
+                                }
+                                placeholder="cth. Menggunakan cat coldplastic bersertifikat TKDN..."
+                                value={item.description}
+                                onChange={(e) => handleUpdateKeunggulan(index, "description", e.target.value)}
+                                rows={2}
+                                containerClassName="flex-1 max-w-none"
+                              />
+
+                              <div className="h-11 md:mt-7 flex items-center shrink-0 justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveKeunggulan(index)}
+                                  className="size-9 bg-red-state hover:bg-red-state/90 border border-red-300 hover:border-red-400 text-white rounded-full flex justify-center items-center hover:opacity-80 active:opacity-60 active:scale-95 transition-all duration-200 cursor-pointer shadow-xs shrink-0"
+                                  title="Hapus Keunggulan"
+                                >
+                                  <LordIcon name="Delete" size={16} primaryColor="#FFFFFF" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB CONTENT: 2. MATERIAL & PERALATAN */}
+                  {activeTab === "material" && (
+                    <div className="flex flex-col gap-4 w-full">
+                      <div className="self-stretch px-3.5 py-2 bg-brand-background rounded-full flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-6">
+                        <div className="flex items-center gap-2.5">
+                          <div className="size-6 text-g1 flex items-center justify-center shrink-0">
+                            <LordIcon name="Setting" size={20} primaryColor="#0A9863" />
+                          </div>
+                          <div>
+                            <span className="text-g1 text-sm md:text-base font-semibold font-sans">
+                              Material & Peralatan
+                            </span>
+                            <span className="text-dark/50 text-xs md:text-sm font-normal font-sans hidden sm:inline ml-2">
+                              (Tautkan ID Katalog Produk atau manual)
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Add Material Button */}
+                        <Button
+                          type="button"
+                          onClick={() => handleAddMaterial()}
+                          text="Tambah Material"
+                          variant="fill"
+                          size="sm"
+                          rightIcon="Add"
+                          className="shrink-0 cursor-pointer"
+                        />
+                      </div>
+
+                      {materialPeralatan.length === 0 ? (
+                        <div className="text-dark/40 text-sm font-normal font-sans pl-2 py-6 text-center bg-brand-background/20 rounded-2xl border border-dashed border-white-80">
+                          Belum ada material/peralatan. Klik tombol <span className="text-g1 font-semibold">+ Tambah Material</span> untuk menambahkan.
+                        </div>
+                      ) : (
+                        <div className="flex flex-col divide-y divide-g1/10 w-full">
+                          {materialPeralatan.map((item, index) => {
+                            const linkedProduct = item.productId
+                              ? catalogProducts.find((p) => String(p.id) === String(item.productId))
+                              : undefined;
+                            return (
+                              <div
+                                key={index}
+                                className="flex flex-col gap-3 w-full py-4 first:pt-1 last:pb-1"
+                              >
+                                {/* Header line with index, badge & remove */}
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-g1 font-mono">#{index + 1}</span>
+                                    {item.productId ? (
+                                      <Badge
+                                        text={`ID Produk: #${String(item.productId).length > 12 ? String(item.productId).slice(0, 8) + "..." : item.productId}`}
+                                        variant="green"
+                                        showDot={true}
+                                      />
+                                    ) : (
+                                      <Badge text="Input Manual" variant="gray" showDot={false} />
+                                    )}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveMaterial(index)}
+                                    className="size-9 bg-red-state hover:bg-red-state/90 border border-red-300 hover:border-red-400 text-white rounded-full flex items-center justify-center hover:opacity-80 active:opacity-60 active:scale-95 transition-all duration-200 cursor-pointer shadow-xs shrink-0"
+                                    title="Hapus Material"
+                                  >
+                                    <LordIcon name="Delete" size={16} primaryColor="#FFFFFF" />
+                                  </button>
+                                </div>
+
+                                {/* Catalog Picker */}
+                                <Dropdown
+                                  label={
+                                    <span className="flex items-center gap-1.5">
+                                      <span>Ambil dari Katalog Produk</span>
+                                      <span className="text-xs font-normal text-dark/50">(pilih ID → nama & kategori otomatis terisi)</span>
+                                    </span>
+                                  }
+                                  placeholder="Pilih atau cari produk dari katalog..."
+                                  options={[
+                                    {
+                                      value: "manual",
+                                      label: (
+                                        <div className="flex items-center gap-2 py-1 text-dark/70">
+                                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-700">Manual</span>
+                                          <span>Input Manual (Tanpa Tautan Katalog)</span>
+                                        </div>
+                                      ),
+                                      searchLabel: "Input Manual Kustom Tanpa Tautan Katalog",
+                                    },
+                                    ...catalogProducts.map((p) => ({
+                                      value: String(p.id),
+                                      label: (
+                                        <div className="flex items-center gap-2.5 py-1">
+                                          <span className="px-2 py-0.5 rounded-full bg-g1/10 text-g1 text-xs font-bold font-mono shrink-0">
+                                            ID: #{String(p.id).length > 12 ? String(p.id).slice(0, 8) + "..." : p.id}
+                                          </span>
+                                          <span className="text-dark font-medium truncate">{p.title}</span>
+                                          <span className="text-dark/40 text-xs truncate">({p.category})</span>
+                                        </div>
+                                      ),
+                                      searchLabel: `[ID #${p.id}] ${p.title} ${p.category}`,
+                                    })),
+                                  ]}
+                                  value={item.productId ? String(item.productId) : "manual"}
+                                  onChange={(val) => handleSelectProductForMaterial(index, val)}
+                                  multiple={false}
+                                  containerClassName="w-full max-w-none"
+                                />
+
+                                {/* Linked Product Preview */}
+                                {linkedProduct && (
+                                  <div className="flex items-center gap-3 p-2.5 bg-g1/10 rounded-2xl border border-g1/20">
+                                    {linkedProduct.imageUrl ? (
+                                      <img src={linkedProduct.imageUrl} alt={linkedProduct.title} className="size-10 rounded-xl object-cover border border-g1/20 shrink-0" />
+                                    ) : (
+                                      <div className="size-10 rounded-xl bg-g1/15 text-g1 flex items-center justify-center text-xs font-bold shrink-0">#{linkedProduct.id}</div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-xs font-semibold text-dark truncate">{linkedProduct.title}</div>
+                                      <div className="text-xs text-dark/50 truncate">{linkedProduct.category}</div>
+                                    </div>
+                                    <span className="text-[11px] text-g1 bg-white px-2.5 py-0.5 rounded-full border border-g1/20 font-medium shrink-0">
+                                      Tersinkron ✓
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Category + Name fields */}
+                                <div className="flex flex-col md:flex-row items-stretch gap-3 w-full">
+                                  <InputBox
+                                    label={
+                                      <span>
+                                        Kategori Material <span className="text-g1">#{index + 1}</span>
+                                      </span>
+                                    }
+                                    placeholder="cth. Cat Marka Jalan"
+                                    value={item.category}
+                                    onChange={(e) => handleUpdateMaterial(index, "category", e.target.value)}
+                                    containerClassName="w-full md:w-80 shrink-0 max-w-none"
+                                  />
+                                  <InputBox
+                                    label={
+                                      <span>
+                                        Nama Material / Peralatan <span className="text-g1">#{index + 1}</span>
+                                      </span>
+                                    }
+                                    placeholder="cth. Cat Coldplastic Merk DPS"
+                                    value={item.name}
+                                    onChange={(e) => handleUpdateMaterial(index, "name", e.target.value)}
+                                    containerClassName="flex-1 max-w-none"
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB CONTENT: 3. FAQ */}
+                  {activeTab === "faq" && (
+                    <div className="flex flex-col gap-4 w-full">
+                      <div className="self-stretch px-3.5 py-2 bg-brand-background rounded-full flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-6">
+                        <div className="flex items-center gap-2.5">
+                          <div className="size-6 text-g1 flex items-center justify-center shrink-0">
+                            <LordIcon name="Global" size={20} primaryColor="#0A9863" />
+                          </div>
+                          <div>
+                            <span className="text-g1 text-sm md:text-base font-semibold font-sans">
+                              FAQ (Pertanyaan yang Sering Diajukan)
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Add FAQ Button */}
+                        <Button
+                          type="button"
+                          onClick={handleAddFaq}
+                          text="Tambah FAQ"
+                          variant="fill"
+                          size="sm"
+                          rightIcon="Add"
+                          className="shrink-0 cursor-pointer"
+                        />
+                      </div>
+
+                      {faq.length === 0 ? (
+                        <div className="text-dark/40 text-sm font-normal font-sans pl-2 py-6 text-center bg-brand-background/20 rounded-2xl border border-dashed border-white-80">
+                          Belum ada FAQ. Klik tombol <span className="text-g1 font-semibold">+ Tambah FAQ</span> untuk menambahkan.
+                        </div>
+                      ) : (
+                        <div className="flex flex-col divide-y divide-g1/10 w-full">
+                          {faq.map((item, index) => (
+                            <div
+                              key={index}
+                              className="flex flex-col md:flex-row items-stretch md:items-start gap-3 w-full py-4 first:pt-1 last:pb-1"
+                            >
+                              <InputBox
+                                label={
+                                  <span>
+                                    Pertanyaan (Q) <span className="text-g1">#{index + 1}</span>
+                                  </span>
+                                }
+                                placeholder="cth. Berapa lama cat marka jalan kering?"
+                                value={item.question}
+                                onChange={(e) => handleUpdateFaq(index, "question", e.target.value)}
+                                containerClassName="w-full md:w-72 shrink-0 max-w-none"
+                              />
+
+                              <DescriptionBox
+                                label={
+                                  <span>
+                                    Jawaban (A) <span className="text-g1">#{index + 1}</span>
+                                  </span>
+                                }
+                                placeholder="cth. Tergantung jenis cat; coldplastic umumnya kering dalam waktu singkat..."
+                                value={item.answer}
+                                onChange={(e) => handleUpdateFaq(index, "answer", e.target.value)}
+                                rows={2}
+                                containerClassName="flex-1 max-w-none"
+                              />
+
+                              <div className="h-11 md:mt-7 flex items-center shrink-0 justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveFaq(index)}
+                                  className="size-9 bg-red-state hover:bg-red-state/90 border border-red-300 hover:border-red-400 text-white rounded-full flex justify-center items-center hover:opacity-80 active:opacity-60 active:scale-95 transition-all duration-200 cursor-pointer shadow-xs shrink-0"
+                                  title="Hapus FAQ"
+                                >
+                                  <LordIcon name="Delete" size={16} primaryColor="#FFFFFF" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Form Divider */}
+              <div className="self-stretch h-px bg-g1/10" aria-hidden="true" />
+
+              {/* Action Buttons */}
+              <div className="self-stretch flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-2 w-full">
+                <Button
+                  type="button"
+                  onClick={() => router.push("/kelola-layanan")}
+                  text="Batal"
+                  variant="outline"
+                  className="w-full sm:w-36 cursor-pointer"
+                />
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  text={submitting ? "Menyimpan..." : id ? "Perbarui Layanan" : "Simpan Layanan"}
+                  variant="fill"
+                  rightIcon="Add"
+                  className="w-full sm:w-48 cursor-pointer"
+                />
+              </div>
+            </form>
+          )}
+        </div>
+      </main>
+
+      {/* Toast Notification */}
+      <Notification
+        isOpen={notification.isOpen}
+        message={notification.message}
+        type={notification.type}
+        onClose={() => setNotification((prev) => ({ ...prev, isOpen: false }))}
+      />
+    </div>
+  );
+}

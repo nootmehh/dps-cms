@@ -1,4 +1,4 @@
-import ManageProductForm from "@/components/product/manageProductForm";
+import ManageProductForm from "@/components/form/manageProductForm";
 
 interface PageProps {
   params: Promise<{ id: string }>;

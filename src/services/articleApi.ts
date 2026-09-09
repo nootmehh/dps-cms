@@ -4,6 +4,7 @@ export interface SupabaseArticleRow {
   id: string;
   title: string;
   category: string | null;
+  category_color: string | null;
   content: string | null;
   created_at: string;
   edited_at: string;
@@ -19,12 +20,14 @@ export interface ArticleLookupQuery {
 export interface CreateArticlePayload {
   title: string;
   category?: string | null;
+  category_color?: string | null;
   content?: string | null;
 }
 
 export interface EditArticlePayload {
   title?: string;
   category?: string | null;
+  category_color?: string | null;
   content?: string | null;
 }
 
@@ -100,6 +103,7 @@ export async function addArticle(payload: CreateArticlePayload): Promise<Supabas
   const insertData = {
     title: payload.title,
     category: payload.category || null,
+    category_color: payload.category_color || null,
     content: payload.content || null,
   };
 
@@ -135,6 +139,7 @@ export async function editArticle(
 
   if (payload.title !== undefined) updateData.title = payload.title;
   if (payload.category !== undefined) updateData.category = payload.category;
+  if (payload.category_color !== undefined) updateData.category_color = payload.category_color;
   if (payload.content !== undefined) updateData.content = payload.content;
 
   const { data, error } = await supabase

@@ -9,7 +9,7 @@ import InputBox from "@/components/ui/inputBox";
 import Dropdown, { type DropdownOption } from "@/components/ui/dropdown";
 import Badge, { type BadgeVariant } from "@/components/ui/badge";
 import Notification, { type NotificationType } from "@/components/ui/notification";
-import DeleteConfirmationModal from "@/components/ui/modal/deleteConfirmation";
+import DeleteConfirmationModal from "@/components/modal/deleteConfirmation";
 import LordIcon from "@/components/common/lordIcon";
 
 export interface UserItem {
@@ -289,7 +289,7 @@ export default function KelolaPenggunaPage() {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                leftIcon="Global"
+                leftIcon="Search"
               />
             </div>
             <div className="w-full sm:w-60">
@@ -367,9 +367,9 @@ export default function KelolaPenggunaPage() {
                         type="button"
                         title="Edit Pengguna"
                         onClick={() => handleOpenEdit(user)}
-                        className="size-9 p-1 bg-brand-background hover:bg-g1/15 rounded-full flex justify-center items-center text-g1 transition-colors cursor-pointer"
+                        className="group size-9 p-1 bg-brand-background text-g1 border border-g1/40 hover:border-g1 hover:bg-g1/15 hover:opacity-80 rounded-full flex justify-center items-center hover:shadow-[0px_2px_6px_0px_rgba(6,137,81,0.25)] active:scale-95 transition-all duration-200 cursor-pointer"
                       >
-                        <LordIcon name="Edit" size={18} primaryColor="#0A9863" />
+                        <LordIcon name="Edit" size={18} primaryColor="#0A9863" trigger="hover" target="button, .group" />
                       </button>
 
                       {/* Delete Action Button (Disabled for Super Admin) */}
@@ -387,7 +387,7 @@ export default function KelolaPenggunaPage() {
                           type="button"
                           title="Hapus Pengguna"
                           onClick={() => setDeleteModal({ isOpen: true, user })}
-                          className="size-9 p-1 bg-red-state hover:opacity-90 rounded-full flex justify-center items-center text-white transition-opacity cursor-pointer shadow-xs"
+                          className="size-9 p-1 bg-red-state text-white border border-red-300 hover:border-red-400 hover:opacity-80 active:opacity-60 active:scale-95 rounded-full flex justify-center items-center hover:shadow-[0px_2px_6px_0px_rgba(249,76,76,0.3)] transition-all duration-200 cursor-pointer shadow-xs"
                         >
                           <LordIcon name="Delete" size={18} primaryColor="#FFFFFF" />
                         </button>

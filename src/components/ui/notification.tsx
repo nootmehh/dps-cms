@@ -109,10 +109,10 @@ export default function Notification({
             {/* Close Button */}
             <button
                 onClick={onClose}
-                className="p-1 rounded-lg text-black hover:text-black/70 hover:bg-slate-100/50 transition-all cursor-pointer flex items-center justify-center shrink-0"
-                title="Close"
+                className="size-7 rounded-full text-black hover:text-black/70 hover:bg-slate-100/50 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                title="Tutup"
             >
-                <LordIcon name="Delete" size={16} primaryColor="#666666" />
+                <LordIcon name="Cross" size={16} primaryColor="#666666" />
             </button>
         </div>
     );

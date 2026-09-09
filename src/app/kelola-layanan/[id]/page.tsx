@@ -1,4 +1,4 @@
-import ManageServiceForm from "@/components/service/manageServiceForm";
+import ManageServiceForm from "@/components/form/manageServiceForm";
 
 interface PageProps {
   params: Promise<{ id: string }>;

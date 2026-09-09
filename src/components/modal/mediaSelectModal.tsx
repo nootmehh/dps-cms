@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
-import MediaCard from "../mediaCard";
-import Pagination from "../pagination";
-import InputBox from "../inputBox";
-import { fetchMediaList } from "../../../shared/api/media";
-import LordIcon from "../../common/lordIcon";
+import MediaCard from "@/components/ui/mediaCard";
+import Pagination from "@/components/ui/pagination";
+import InputBox from "@/components/ui/inputBox";
+import { fetchMediaList } from "@/shared/api/media";
+import LordIcon from "@/components/common/lordIcon";
 
 export interface MediaSelectModalItem {
     id: string;
@@ -104,9 +104,9 @@ export default function MediaSelectModal({
                         type="button"
                         onClick={onClose}
                         className="p-2 rounded-full text-dark/60 hover:bg-brand-background transition-all cursor-pointer flex items-center justify-center"
-                        title="Close"
+                        title="Tutup"
                     >
-                        <LordIcon name="Delete" size={20} primaryColor="#110D31" />
+                        <LordIcon name="Cross" size={20} primaryColor="#110D31" />
                     </button>
                 </div>
 
@@ -124,7 +124,7 @@ export default function MediaSelectModal({
                                 setSearchQuery(e.target.value);
                                 setCurrentPage(1);
                             }}
-                            leftIcon="Global"
+                            leftIcon="Search"
                             containerClassName="w-full max-w-none md:w-1/2"
                         />
                     </div>

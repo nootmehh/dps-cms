@@ -9,10 +9,11 @@ import Notification, { type NotificationType } from "@/components/ui/notificatio
 import Pagination from "@/components/ui/pagination";
 import Badge, { type BadgeVariant } from "@/components/ui/badge";
 import UploadFile from "@/components/ui/uploadFile";
-import DeleteConfirmationModal from "@/components/ui/modal/deleteConfirmation";
+import DeleteConfirmationModal from "@/components/modal/deleteConfirmation";
 import InputBox from "@/components/ui/inputBox";
 import Sidebar from "@/components/layout/sidebar";
 import Navbar from "@/components/layout/navbar";
+import EmptyState from "@/components/common/emptyState";
 
 export default function ComponentsShowcasePage() {
   // Notification state
@@ -504,6 +505,45 @@ export default function ComponentsShowcasePage() {
             <div className="p-4 rounded-2xl bg-yellow-state text-dark flex flex-col justify-between h-24">
               <span className="font-semibold text-sm">Yellow State</span>
               <span className="text-xs font-mono opacity-90">#FFD84A</span>
+            </div>
+          </div>
+        </section>
+
+        {/* --- SECTION 12: EMPTY STATE COMPONENT --- */}
+        <section className="bg-white rounded-3xl p-6 md:p-8 border border-white-80 shadow-xs flex flex-col gap-6">
+          <div>
+            <h2 className="text-xl font-bold text-dark">12. Empty State Component</h2>
+            <p className="text-sm text-slate-500">
+              Clean animated empty state with LordIcon (StorageBox lineal icon) and interactive hover trigger.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Standard Empty State */}
+            <div className="p-6 rounded-2xl bg-white-90 border border-white-80 flex flex-col items-center justify-center">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 self-start">
+                Default Empty State
+              </h3>
+              <EmptyState
+                text="Belum ada data yang tersedia saat ini."
+              />
+            </div>
+
+            {/* Empty State with Action Button */}
+            <div className="p-6 rounded-2xl bg-white-90 border border-white-80 flex flex-col items-center justify-center">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 self-start">
+                Empty State with Action Button
+              </h3>
+              <EmptyState
+                text="Tidak ada artikel yang sesuai dengan filter atau pencarian Anda."
+              >
+                <Button
+                  text="Tambah Artikel Baru"
+                  variant="fill"
+                  leftIcon="Add"
+                  onClick={() => triggerNotif("Tambah Artikel clicked", "default")}
+                />
+              </EmptyState>
             </div>
           </div>
         </section>

@@ -17,6 +17,7 @@ export interface ArticlePayload {
   contentIndonesia?: string;
   imageUrl?: string | null;
   createdAt?: string;
+  editedAt?: string;
   author?: string;
 }
 
@@ -52,9 +53,12 @@ export async function getConsistingCategories(): Promise<string[]> {
   const cats = new Set<string>();
   try {
     const supabaseArticles = await getSupabaseArticles();
-    supabaseArticles.forEach((a) => {
-      if (a.category) cats.add(a.category);
-    });
+    if (supabaseArticles && supabaseArticles.length > 0) {
+      supabaseArticles.forEach((a) => {
+        if (a.category) cats.add(a.category);
+      });
+      return Array.from(cats);
+    }
   } catch {
     // ignore
   }
@@ -75,7 +79,7 @@ export async function getArticleById(id: string | number): Promise<ArticlePayloa
           id: row.id,
           title: row.title,
           category: row.category ? [row.category] : ["Umum"],
-          categoryColor: ["Green"],
+          categoryColor: [row.category_color?.toLowerCase() || "green"],
           content: row.content || "",
           createdAt: row.created_at,
           author: "Admin",
@@ -91,6 +95,8 @@ export async function getArticleById(id: string | number): Promise<ArticlePayloa
   return found || null;
 }
 
+import { uploadFileToServer } from "@/shared/api/upload";
+
 export async function addArticle(
   data: Omit<ArticlePayload, "id" | "createdAt">,
   bannerFile?: File | null
@@ -104,16 +110,25 @@ export async function addArticle(
 
   let imageUrl = data.imageUrl || null;
   if (bannerFile) {
-    imageUrl = URL.createObjectURL(bannerFile);
+    try {
+      imageUrl = await uploadFileToServer(bannerFile, "articles");
+    } catch (err) {
+      console.warn("Upload article banner to server failed, falling back to local blob:", err);
+      imageUrl = URL.createObjectURL(bannerFile);
+    }
   }
 
   // Sync to Supabase
   try {
     const categoryString = Array.isArray(data.category) ? data.category.join(", ") : data.category || null;
+    const categoryColorVal = Array.isArray(data.categoryColor)
+      ? data.categoryColor[0]?.toLowerCase() || "green"
+      : (data.categoryColor as any)?.toLowerCase() || "green";
 
     const supabaseRow = await addSupabaseArticle({
       title: data.title,
       category: categoryString,
+      category_color: categoryColorVal,
       content: data.content,
     });
 
@@ -143,14 +158,24 @@ export async function editArticle(
   const articles = getStoredArticles();
   let updatedArticle: ArticlePayload | null = null;
 
+  let uploadedBannerUrl: string | null = null;
+  if (bannerFile) {
+    try {
+      uploadedBannerUrl = await uploadFileToServer(bannerFile, "articles");
+    } catch (err) {
+      console.warn("Upload article banner to server failed, falling back to local blob:", err);
+      uploadedBannerUrl = URL.createObjectURL(bannerFile);
+    }
+  }
+
   const updated = articles.map((article) => {
     if (String(article.id) === String(id)) {
       let finalImageUrl = article.imageUrl;
       if (bannerRemoved) {
         finalImageUrl = null;
       }
-      if (bannerFile) {
-        finalImageUrl = URL.createObjectURL(bannerFile);
+      if (bannerFile && uploadedBannerUrl) {
+        finalImageUrl = uploadedBannerUrl;
       } else if (data.imageUrl !== undefined) {
         finalImageUrl = data.imageUrl;
       }
@@ -175,10 +200,16 @@ export async function editArticle(
   // Sync to Supabase
   try {
     const categoryString = Array.isArray(data.category) ? data.category.join(", ") : data.category;
+    const categoryColorVal = data.categoryColor !== undefined
+      ? (Array.isArray(data.categoryColor)
+          ? data.categoryColor[0]?.toLowerCase() || "green"
+          : (data.categoryColor as any)?.toLowerCase() || "green")
+      : undefined;
 
     await editSupabaseArticle(String(id), {
       title: data.title,
       category: categoryString,
+      category_color: categoryColorVal,
       content: data.content,
     });
   } catch (err: any) {

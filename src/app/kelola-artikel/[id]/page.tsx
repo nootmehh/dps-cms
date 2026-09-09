@@ -1,4 +1,4 @@
-import ManageArticleForm from "@/components/article/manageArticleForm";
+import ManageArticleForm from "@/components/form/manageArticleForm";
 
 interface PageProps {
   params: Promise<{ id: string }>;

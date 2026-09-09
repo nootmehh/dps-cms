@@ -28,7 +28,7 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarMenuItem[] = [
   { id: "services", label: "Kelola Layanan", icon: "Setting", href: "/kelola-layanan" },
   { id: "products", label: "Kelola Produk", icon: "Box", href: "/kelola-produk" },
   { id: "articles", label: "Kelola Artikel", icon: "Paper", href: "/kelola-artikel" },
-  { id: "media", label: "Kelola Media", icon: "Image 2", href: "/media" },
+  { id: "media", label: "Kelola Media", icon: "Image 2", href: "/kelola-media" },
 ];
 
 export default function Sidebar({

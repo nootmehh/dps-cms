@@ -8,8 +8,8 @@ import InputBox from "@/components/ui/inputBox";
 import Badge from "@/components/ui/badge";
 import Notification, { type NotificationType } from "@/components/ui/notification";
 import LordIcon from "@/components/common/lordIcon";
-import EditPageMetaModal from "@/components/seo/editPageMetaModal";
-import ConnectGaModal from "@/components/seo/connectGaModal";
+import EditPageMetaModal from "@/components/modal/editPageMetaModal";
+import ConnectGaModal from "@/components/modal/connectGaModal";
 import {
   getSeoSettings,
   updateSeoSettings,

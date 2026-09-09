@@ -13,6 +13,7 @@ export type ButtonVariant =
   | "unique-red"
   // Backwards compatibility aliases
   | "primary"
+  | "outline"
   | "outline-primary"
   | "outline-white"
   | "ghost-primary"
@@ -23,6 +24,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   leftIcon?: string | ReactNode;
   rightIcon?: string | ReactNode;
   variant?: ButtonVariant;
+  size?: "sm" | "md";
 }
 
 export default function Button({
@@ -30,6 +32,7 @@ export default function Button({
   leftIcon,
   rightIcon,
   variant = "fill",
+  size = "md",
   className = "",
   disabled,
   ...props
@@ -38,7 +41,7 @@ export default function Button({
   const normalizedVariant: ButtonVariant =
     variant === "primary"
       ? "fill"
-      : variant === "outline-primary"
+      : variant === "outline" || variant === "outline-primary"
       ? "stroke"
       : variant === "ghost-primary"
       ? "ghost-green"
@@ -79,11 +82,12 @@ export default function Button({
     // Clean up filename if passed like "Dashboard.svg" or "Dashboard"
     const cleanName = icon.replace(/\.svg$/i, "").replace(/^\/icons\//i, "");
 
+    const isSmall = size === "sm";
     return (
-      <div className="size-6 shrink-0 flex items-center justify-center overflow-hidden">
+      <div className={`${isSmall ? "size-4" : "size-6"} shrink-0 flex items-center justify-center overflow-hidden`}>
         <LordIcon
           name={cleanName}
-          size={24}
+          size={isSmall ? 16 : 24}
           trigger="hover"
           target="button, a, .btn-custom"
           primaryColor={iconColor}
@@ -97,15 +101,18 @@ export default function Button({
   if (!isUniqueVariant) {
     const hasCustomJustify = className.includes("justify-");
     const defaultJustify = hasCustomJustify ? "" : "justify-center";
+    const sizeClasses = size === "sm"
+      ? "h-8 px-3 py-1.5 rounded-full text-xs gap-1.5"
+      : "h-12 px-4 py-3 rounded-[48px] text-sm gap-2.5";
 
     return (
       <button
         disabled={disabled}
-        className={`btn-custom btn-variant-${normalizedVariant} h-12 px-4 py-3 rounded-[48px] inline-flex items-center gap-2.5 text-sm font-semibold font-sans cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed ${defaultJustify} ${className}`}
+        className={`btn-custom btn-variant-${normalizedVariant} ${sizeClasses} inline-flex items-center font-semibold font-sans cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed ${defaultJustify} ${className}`}
         {...props}
       >
         {renderIcon(leftIcon)}
-        <span className="leading-6 flex-initial font-semibold text-sm">{text}</span>
+        <span className={`${size === "sm" ? "leading-tight text-xs" : "leading-6 text-sm"} flex-initial font-semibold`}>{text}</span>
         {renderIcon(rightIcon)}
       </button>
     );

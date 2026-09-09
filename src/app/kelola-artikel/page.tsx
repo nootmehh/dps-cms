@@ -9,9 +9,11 @@ import Button from "@/components/ui/button";
 import InputBox from "@/components/ui/inputBox";
 import Dropdown, { type DropdownOption } from "@/components/ui/dropdown";
 import Badge, { type BadgeVariant } from "@/components/ui/badge";
+import Pagination from "@/components/ui/pagination";
 import Notification, { type NotificationType } from "@/components/ui/notification";
-import DeleteConfirmationModal from "@/components/ui/modal/deleteConfirmation";
+import DeleteConfirmationModal from "@/components/modal/deleteConfirmation";
 import LordIcon from "@/components/common/lordIcon";
+import EmptyState from "@/components/common/emptyState";
 import { getArticles } from "@/services/articleApi";
 import { deleteArticle, type ArticlePayload } from "@/shared/api/article";
 
@@ -21,18 +23,9 @@ export interface ArticleItem {
   category: string;
   categoryVariant: BadgeVariant;
   createdAt: string;
+  editedAt: string;
   excerpt?: string;
 }
-
-const CATEGORY_OPTIONS: DropdownOption[] = [
-  { value: "all", label: "Semua Kategori" },
-  { value: "Keselamatan Jalan", label: "Keselamatan Jalan" },
-  { value: "Inovasi Marka", label: "Inovasi Marka" },
-  { value: "Teknologi Hijau", label: "Teknologi Hijau" },
-  { value: "Konstruksi", label: "Konstruksi" },
-  { value: "Perlengkapan Jalan", label: "Perlengkapan Jalan" },
-  { value: "Penerangan", label: "Penerangan" },
-];
 
 const CATEGORY_VARIANT_MAP: Record<string, BadgeVariant> = {
   "Keselamatan Jalan": "green",
@@ -41,15 +34,29 @@ const CATEGORY_VARIANT_MAP: Record<string, BadgeVariant> = {
   Konstruksi: "blue",
   "Perlengkapan Jalan": "orange",
   Penerangan: "yellow",
+  "Aturan Lalu Lintas": "blue",
+  "Marka Jalan": "green",
+  Keselamatan: "orange",
 };
+
+const SORT_OPTIONS: DropdownOption[] = [
+  { value: "terbaru", label: "Terbaru" },
+  { value: "terlama", label: "Terlama" },
+  { value: "a-z", label: "A - Z" },
+  { value: "z-a", label: "Z - A" },
+];
 
 export default function KelolaArtikelPage() {
   const router = useRouter();
   const [articles, setArticles] = useState<ArticleItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
+  const [selectedSort, setSelectedSort] = useState<string>("terbaru");
+  const [categoryOptions, setCategoryOptions] = useState<DropdownOption[]>([
+    { value: "all", label: "Semua Kategori" },
+  ]);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 8;
 
   // Modals state
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; article?: ArticleItem }>({
@@ -83,14 +90,29 @@ export default function KelolaArtikelPage() {
               id: item.id,
               title: item.title,
               category: mainCat,
-              categoryVariant: CATEGORY_VARIANT_MAP[mainCat] || "green",
+              categoryVariant: (item.category_color?.toLowerCase() as BadgeVariant) || CATEGORY_VARIANT_MAP[mainCat] || "green",
               createdAt: item.created_at
                 ? new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
                 : "Baru saja",
+              editedAt: item.edited_at
+                ? new Date(item.edited_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                : item.created_at
+                  ? new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
+                  : "Baru saja",
               excerpt: item.content ? item.content.replace(/<[^>]*>?/gm, "").slice(0, 80) : "",
             };
           });
           setArticles(mapped);
+
+          const uniqueCategories = Array.from(
+            new Set(rows.map((a) => a.category).filter(Boolean))
+          ).filter(
+            (c) => c !== "all" && c !== "Semua Kategori" && c !== "Semua"
+          ) as string[];
+          setCategoryOptions([
+            { value: "all", label: "Semua Kategori" },
+            ...uniqueCategories.map((c) => ({ value: c, label: c })),
+          ]);
           return;
         }
       } catch (e) {
@@ -109,12 +131,23 @@ export default function KelolaArtikelPage() {
               id: item.id || Date.now(),
               title: item.title,
               category: mainCat,
-              categoryVariant: CATEGORY_VARIANT_MAP[mainCat] || "green",
+              categoryVariant: (item.categoryColor?.[0]?.toLowerCase() as BadgeVariant) || CATEGORY_VARIANT_MAP[mainCat] || "green",
               createdAt: item.createdAt || "Baru saja",
+              editedAt: item.editedAt || item.createdAt || "Baru saja",
               excerpt: item.content ? item.content.replace(/<[^>]*>?/gm, "").slice(0, 80) : "",
             };
           });
           setArticles(mapped);
+
+          const uniqueCategories = Array.from(
+            new Set(parsed.map((a) => Array.isArray(a.category) ? a.category[0] : a.category).filter(Boolean))
+          ).filter(
+            (c) => c !== "all" && c !== "Semua Kategori" && c !== "Semua"
+          ) as string[];
+          setCategoryOptions([
+            { value: "all", label: "Semua Kategori" },
+            ...uniqueCategories.map((c) => ({ value: c, label: c })),
+          ]);
           return;
         }
       } catch (e) {
@@ -146,14 +179,27 @@ export default function KelolaArtikelPage() {
   };
 
   // Filter & Search Logic
-  const filteredArticles = articles.filter((article) => {
-    const matchCategory =
-      selectedCategoryFilter === "all" || article.category === selectedCategoryFilter;
-    const matchSearch =
-      article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (article.excerpt && article.excerpt.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchCategory && matchSearch;
-  });
+  const filteredArticles = articles
+    .filter((article) => {
+      const matchCategory =
+        selectedCategoryFilter === "all" || article.category === selectedCategoryFilter;
+      const matchSearch =
+        article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (article.excerpt && article.excerpt.toLowerCase().includes(searchQuery.toLowerCase()));
+      return matchCategory && matchSearch;
+    })
+    .sort((a, b) => {
+      if (selectedSort === "a-z") {
+        return a.title.localeCompare(b.title);
+      }
+      if (selectedSort === "z-a") {
+        return b.title.localeCompare(a.title);
+      }
+      if (selectedSort === "terlama") {
+        return String(a.createdAt).localeCompare(String(b.createdAt));
+      }
+      return 0;
+    });
 
   const totalPages = Math.ceil(filteredArticles.length / itemsPerPage) || 1;
   const paginatedArticles = filteredArticles.slice(
@@ -185,8 +231,7 @@ export default function KelolaArtikelPage() {
                 Kelola Artikel
               </h1>
               <p className="text-dark text-sm font-normal font-sans">
-                Kelola publikasi artikel, berita proyek, dan wawasan konstruksi di website{" "}
-                <span className="text-g1 font-semibold">Dua Putra Srikandi</span>.
+                Kelola konten artikel & berita proyek di halaman ini
               </p>
             </div>
 
@@ -215,63 +260,78 @@ export default function KelolaArtikelPage() {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                leftIcon="Global"
+                leftIcon="Search"
               />
             </div>
-            <div className="w-full sm:w-64">
-              <Dropdown
-                options={CATEGORY_OPTIONS}
-                value={selectedCategoryFilter}
-                onChange={(val) => {
-                  setSelectedCategoryFilter(val);
-                  setCurrentPage(1);
-                }}
-                placeholder="Filter Kategori"
-              />
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+              <div className="w-full sm:w-60">
+                <Dropdown
+                  options={categoryOptions}
+                  value={selectedCategoryFilter}
+                  onChange={(val) => {
+                    setSelectedCategoryFilter(val);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Filter Kategori"
+                  searchPlaceholder="Search Category"
+                />
+              </div>
+              <div className="w-full sm:w-48">
+                <Dropdown
+                  options={SORT_OPTIONS}
+                  value={selectedSort}
+                  onChange={(val) => {
+                    setSelectedSort(val);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Urutkan"
+                  searchPlaceholder="Urutkan"
+                />
+              </div>
             </div>
           </div>
 
           {/* Table Container */}
           <div className="self-stretch flex-1 bg-white flex flex-col justify-start items-start gap-2 overflow-x-auto overflow-y-auto min-h-0 w-full pr-1">
             {/* Table Header */}
-            <div className="self-stretch min-w-[720px] h-11 bg-white-90 rounded-xl flex items-center px-4 overflow-hidden select-none sticky top-0 z-10 shrink-0">
-              <div className="w-14 text-g1 text-sm font-semibold font-sans">No.</div>
-              <div className="flex-1 text-g1 text-sm font-semibold font-sans">Nama Artikel</div>
-              <div className="w-48 text-g1 text-sm font-semibold font-sans">Kategori</div>
-              <div className="w-48 text-g1 text-sm font-semibold font-sans">Waktu Dibuat</div>
-              <div className="w-24 text-left text-g1 text-sm font-semibold font-sans">Action</div>
+            <div className="self-stretch min-w-[840px] h-11 bg-white-90 rounded-xl flex items-center px-4 overflow-hidden select-none sticky top-0 z-10 shrink-0">
+              <div className="w-14 text-g1 text-xs font-semibold font-sans">No.</div>
+              <div className="flex-1 text-g1 text-xs font-semibold font-sans">Nama Artikel</div>
+              <div className="w-48 text-g1 text-xs font-semibold font-sans">Kategori</div>
+              <div className="w-24 text-g1 text-xs font-semibold font-sans">Waktu Dibuat</div>
+              <div className="w-24 text-g1 text-xs font-semibold font-sans">Waktu Diedit</div>
+              <div className="w-24 text-left text-g1 text-xs font-semibold font-sans">Action</div>
             </div>
 
             {/* Table Rows */}
-            {paginatedArticles.length === 0 ? (
-              <div className="self-stretch py-12 text-center text-slate-400 text-sm font-sans">
-                Tidak ada artikel yang sesuai dengan pencarian atau filter.
-              </div>
+            {filteredArticles.length === 0 ? (
+              <EmptyState
+                text={
+                  searchQuery || selectedCategoryFilter !== "all"
+                    ? "Tidak ada artikel yang sesuai dengan pencarian atau filter Anda."
+                    : "Belum ada artikel yang tersedia saat ini."
+                }
+              />
             ) : (
               paginatedArticles.map((article, idx) => (
                 <div
                   key={article.id}
-                  className="self-stretch min-w-[720px] min-h-[58px] border-b border-white-90 hover:bg-white-90/60 transition-colors flex items-center px-4 py-2"
+                  className="self-stretch min-w-[840px] min-h-[54px] border-b border-white-90 hover:bg-white-90/60 transition-colors flex items-center px-4 py-2"
                 >
                   {/* No. */}
-                  <div className="w-14 text-dark/90 text-sm font-normal font-sans">
+                  <div className="w-14 text-dark/90 text-xs font-normal font-sans">
                     {(currentPage - 1) * itemsPerPage + idx + 1}.
                   </div>
 
-                  {/* Nama Artikel */}
+                  {/* Nama Artikel (Up to 2 lines title max) */}
                   <div className="flex-1 flex flex-col justify-center pr-4">
-                    <span className="text-dark/90 text-sm font-semibold font-sans line-clamp-1">
+                    <span className="text-dark/90 text-xs font-semibold font-sans line-clamp-2">
                       {article.title}
                     </span>
-                    {article.excerpt && (
-                      <span className="text-dark/50 text-xs font-normal font-sans line-clamp-1">
-                        {article.excerpt}
-                      </span>
-                    )}
                   </div>
 
                   {/* Kategori Badge */}
-                  <div className="w-48 flex items-center">
+                  <div className="w-48 flex items-center pr-2">
                     <Badge
                       text={article.category}
                       variant={article.categoryVariant}
@@ -280,8 +340,13 @@ export default function KelolaArtikelPage() {
                   </div>
 
                   {/* Waktu Dibuat */}
-                  <div className="w-48 text-dark/75 text-sm font-normal font-sans">
+                  <div className="w-24 text-dark/75 text-xs font-normal font-sans">
                     {article.createdAt}
+                  </div>
+
+                  {/* Waktu Diedit */}
+                  <div className="w-24 text-dark/75 text-xs font-normal font-sans">
+                    {article.editedAt || article.createdAt}
                   </div>
 
                   {/* Action Buttons */}
@@ -290,9 +355,9 @@ export default function KelolaArtikelPage() {
                     <Link
                       href={`/kelola-artikel/${article.id}`}
                       title="Edit Artikel"
-                      className="size-9 p-1 bg-brand-background hover:bg-g1/15 rounded-full flex justify-center items-center text-g1 transition-colors cursor-pointer"
+                      className="group size-9 p-1 bg-brand-background text-g1 border border-g1/40 hover:border-g1 hover:bg-g1/15 hover:opacity-80 rounded-full flex justify-center items-center hover:shadow-[0px_2px_6px_0px_rgba(6,137,81,0.25)] active:scale-95 transition-all duration-200 cursor-pointer"
                     >
-                      <LordIcon name="Edit" size={18} primaryColor="#0A9863" />
+                      <LordIcon name="Edit" size={18} primaryColor="#0A9863" trigger="hover" target="a, .group" />
                     </Link>
 
                     {/* Delete Action Button */}
@@ -300,7 +365,7 @@ export default function KelolaArtikelPage() {
                       type="button"
                       title="Hapus Artikel"
                       onClick={() => setDeleteModal({ isOpen: true, article })}
-                      className="size-9 p-1 bg-red-state hover:opacity-90 rounded-full flex justify-center items-center text-white transition-opacity cursor-pointer shadow-xs"
+                      className="size-9 p-1 bg-red-state text-white border border-red-300 hover:border-red-400 hover:opacity-80 active:opacity-60 active:scale-95 rounded-full flex justify-center items-center hover:shadow-[0px_2px_6px_0px_rgba(249,76,76,0.3)] transition-all duration-200 cursor-pointer shadow-xs"
                     >
                       <LordIcon name="Delete" size={18} primaryColor="#FFFFFF" />
                     </button>
@@ -310,56 +375,18 @@ export default function KelolaArtikelPage() {
             )}
           </div>
 
-          {/* Table Footer / Pagination */}
-          <div className="self-stretch flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-white-80 shrink-0">
-            <div className="text-dark/60 text-xs font-normal font-sans">
-              Menampilkan{" "}
-              <strong className="text-dark font-semibold">
-                {filteredArticles.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}
-              </strong>{" "}
-              -{" "}
-              <strong className="text-dark font-semibold">
-                {Math.min(currentPage * itemsPerPage, filteredArticles.length)}
-              </strong>{" "}
-              dari <strong className="text-dark font-semibold">{filteredArticles.length}</strong>{" "}
-              artikel
-            </div>
+          {/* Bottom Divider */}
+          <div className="w-full h-px bg-g1/10 shrink-0" aria-hidden="true" />
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="px-3 py-1.5 rounded-lg border border-white-80 text-xs font-semibold text-dark/70 hover:bg-white-90 disabled:opacity-40 disabled:pointer-events-none cursor-pointer transition-colors"
-                >
-                  Sebelumnya
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                  <button
-                    key={pageNum}
-                    type="button"
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={`size-8 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                      currentPage === pageNum
-                        ? "bg-g1 text-white shadow-xs"
-                        : "text-dark/70 hover:bg-white-90 border border-white-80"
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="px-3 py-1.5 rounded-lg border border-white-80 text-xs font-semibold text-dark/70 hover:bg-white-90 disabled:opacity-40 disabled:pointer-events-none cursor-pointer transition-colors"
-                >
-                  Selanjutnya
-                </button>
-              </div>
-            )}
+          {/* Pagination Component */}
+          <div className="self-stretch shrink-0">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={filteredArticles.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              itemLabel="Artikel"
+            />
           </div>
         </div>
       </main>

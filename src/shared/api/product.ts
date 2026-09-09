@@ -17,15 +17,21 @@ export interface ProductFeatureItem {
   value: string;
 }
 
+export interface ProductSuitableItem {
+  title: string;
+  value: string;
+}
+
 export interface ProductPayload {
   id?: string | number;
   title: string;
   category: string;
   categoryVariant?: string;
   imageUrl?: string | null;
+  highlightImgUrl?: string | null;
   description: string;
   detailProduct: ProductDetailItem[];
-  suitableFor: string[];
+  suitableFor: ProductSuitableItem[];
   kelebihan: ProductFeatureItem[];
   kekurangan: ProductFeatureItem[];
   createdAt?: string;
@@ -73,26 +79,20 @@ export function getStoredProducts(): ProductPayload[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
-    return [];
-  } catch {
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error("Failed reading stored products", e);
     return [];
   }
 }
 
-export function saveStoredProducts(products: ProductPayload[]) {
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-    } catch (e) {
-      console.error("Failed to save products to localStorage", e);
-    }
+export function saveStoredProducts(products: ProductPayload[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+  } catch (e) {
+    console.error("Failed saving stored products", e);
   }
 }
 
@@ -100,9 +100,12 @@ export async function getConsistingProductCategories(): Promise<string[]> {
   const cats = new Set<string>();
   try {
     const supabaseProducts = await getSupabaseProducts();
-    supabaseProducts.forEach((p) => {
-      if (p.category) cats.add(p.category);
-    });
+    if (supabaseProducts && supabaseProducts.length > 0) {
+      supabaseProducts.forEach((p) => {
+        if (p.category) cats.add(p.category);
+      });
+      return Array.from(cats);
+    }
   } catch {
     // ignore
   }
@@ -123,11 +126,18 @@ export async function getProductById(id: string | number): Promise<ProductPayloa
           id: row.id,
           title: row.title,
           category: row.category || "Umum",
-          categoryVariant: CATEGORY_VARIANT_MAP[row.category || ""] || "green",
+          categoryVariant: row.category_color?.toLowerCase() || CATEGORY_VARIANT_MAP[row.category || ""] || "green",
           imageUrl: row.product_image_url?.[0] || row.highlight_img_url || null,
+          highlightImgUrl: row.highlight_img_url || null,
           description: row.description || "",
           detailProduct: row.detail_product || [],
-          suitableFor: row.suitable_for || [],
+          suitableFor: Array.isArray(row.suitable_for)
+            ? row.suitable_for.map((item: any) =>
+                typeof item === "string"
+                  ? { title: item, value: "" }
+                  : { title: item.title || "", value: item.value || item.description || "" }
+              )
+            : [],
           kelebihan: row.kelebihan || [],
           kekurangan: row.kekurangan || [],
           createdAt: row.created_at,
@@ -143,9 +153,12 @@ export async function getProductById(id: string | number): Promise<ProductPayloa
   return found || null;
 }
 
+import { uploadFileToServer } from "@/shared/api/upload";
+
 export async function addProduct(
   data: Omit<ProductPayload, "id" | "createdAt">,
-  imageFile?: File | null
+  imageFile?: File | null,
+  highlightImageFile?: File | null
 ): Promise<ProductPayload> {
   const products = getStoredProducts();
   const now = new Date();
@@ -156,7 +169,22 @@ export async function addProduct(
 
   let imageUrl = data.imageUrl || null;
   if (imageFile) {
-    imageUrl = URL.createObjectURL(imageFile);
+    try {
+      imageUrl = await uploadFileToServer(imageFile, "products");
+    } catch (err) {
+      console.warn("Upload product image failed, falling back to blob:", err);
+      imageUrl = URL.createObjectURL(imageFile);
+    }
+  }
+
+  let highlightImgUrl = data.highlightImgUrl || null;
+  if (highlightImageFile) {
+    try {
+      highlightImgUrl = await uploadFileToServer(highlightImageFile, "products");
+    } catch (err) {
+      console.warn("Upload highlight image failed, falling back to blob:", err);
+      highlightImgUrl = URL.createObjectURL(highlightImageFile);
+    }
   }
 
   // Sync to Supabase
@@ -164,19 +192,21 @@ export async function addProduct(
     const supabaseRow = await addSupabaseProduct({
       title: data.title,
       category: data.category,
+      category_color: data.categoryVariant || CATEGORY_VARIANT_MAP[data.category] || "green",
       description: data.description,
       detail_product: data.detailProduct,
       suitable_for: data.suitableFor,
       kelebihan: data.kelebihan,
       kekurangan: data.kekurangan,
       product_image_url: imageUrl ? [imageUrl] : null,
-      highlight_img_url: imageUrl || null,
+      highlight_img_url: highlightImgUrl || null,
     });
 
     const newProduct: ProductPayload = {
       ...data,
       id: supabaseRow?.id || String(Date.now()),
       imageUrl: imageUrl || "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
+      highlightImgUrl: highlightImgUrl || null,
       createdAt: formattedDate,
       categoryVariant: data.categoryVariant || CATEGORY_VARIANT_MAP[data.category] || "green",
     };
@@ -194,10 +224,32 @@ export async function editProduct(
   id: string | number,
   data: Partial<ProductPayload>,
   imageFile?: File | null,
-  imageRemoved?: boolean
+  imageRemoved?: boolean,
+  highlightImageFile?: File | null,
+  highlightImageRemoved?: boolean
 ): Promise<ProductPayload> {
   const products = getStoredProducts();
   let updatedProduct: ProductPayload | null = null;
+
+  let uploadedImageUrl: string | null = null;
+  if (imageFile) {
+    try {
+      uploadedImageUrl = await uploadFileToServer(imageFile, "products");
+    } catch (err) {
+      console.warn("Upload product image failed, falling back to blob:", err);
+      uploadedImageUrl = URL.createObjectURL(imageFile);
+    }
+  }
+
+  let uploadedHighlightUrl: string | null = null;
+  if (highlightImageFile) {
+    try {
+      uploadedHighlightUrl = await uploadFileToServer(highlightImageFile, "products");
+    } catch (err) {
+      console.warn("Upload highlight image failed, falling back to blob:", err);
+      uploadedHighlightUrl = URL.createObjectURL(highlightImageFile);
+    }
+  }
 
   const updated = products.map((product) => {
     if (String(product.id) === String(id)) {
@@ -205,10 +257,20 @@ export async function editProduct(
       if (imageRemoved) {
         finalImageUrl = null;
       }
-      if (imageFile) {
-        finalImageUrl = URL.createObjectURL(imageFile);
+      if (imageFile && uploadedImageUrl) {
+        finalImageUrl = uploadedImageUrl;
       } else if (data.imageUrl !== undefined) {
         finalImageUrl = data.imageUrl;
+      }
+
+      let finalHighlightImgUrl = product.highlightImgUrl;
+      if (highlightImageRemoved) {
+        finalHighlightImgUrl = null;
+      }
+      if (highlightImageFile && uploadedHighlightUrl) {
+        finalHighlightImgUrl = uploadedHighlightUrl;
+      } else if (data.highlightImgUrl !== undefined) {
+        finalHighlightImgUrl = data.highlightImgUrl;
       }
 
       const nextCategory = data.category !== undefined ? data.category : product.category;
@@ -217,6 +279,7 @@ export async function editProduct(
         ...product,
         ...data,
         imageUrl: finalImageUrl,
+        highlightImgUrl: finalHighlightImgUrl,
         categoryVariant:
           data.categoryVariant || CATEGORY_VARIANT_MAP[nextCategory] || product.categoryVariant || "green",
       };
@@ -237,13 +300,14 @@ export async function editProduct(
     await editSupabaseProduct(String(id), {
       title: data.title,
       category: data.category,
+      category_color: targetProduct.categoryVariant,
       description: data.description,
       detail_product: data.detailProduct,
       suitable_for: data.suitableFor,
       kelebihan: data.kelebihan,
       kekurangan: data.kekurangan,
       product_image_url: targetProduct.imageUrl ? [targetProduct.imageUrl] : null,
-      highlight_img_url: targetProduct.imageUrl || null,
+      highlight_img_url: targetProduct.highlightImgUrl || null,
     });
   } catch (err: any) {
     const errorDetails = err?.message || err?.details || err?.hint || (typeof err === "string" ? err : JSON.stringify(err));

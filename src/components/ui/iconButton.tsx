@@ -49,35 +49,35 @@ export default function IconButton({
   switch (variant) {
     case "glass":
       variantClasses =
-        "bg-white/20 text-white border border-white/30 hover:bg-white/30 hover:opacity-90 active:opacity-75";
+        "bg-white/20 text-white border border-white/30 hover:bg-white/30 hover:opacity-80 active:opacity-60";
       defaultIconColor = "#FFFFFF";
       break;
     case "stroke":
       variantClasses =
-        "bg-transparent text-g1 border border-g1 hover:bg-g1/10 active:bg-g1/20";
+        "bg-transparent text-g1 border border-g1 hover:bg-g1/10 hover:opacity-80 active:bg-g1/20";
       defaultIconColor = "#0A9863";
       break;
     case "white":
       variantClasses =
-        "bg-white text-g1 shadow-xs hover:bg-white-90 active:bg-white-80";
+        "bg-white text-g1 border border-white-80 hover:border-g1/40 shadow-xs hover:bg-white-90 hover:opacity-80 active:opacity-60";
       defaultIconColor = "#0A9863";
       break;
     case "ghost":
       variantClasses =
-        "bg-transparent text-g1 hover:bg-g1/10 active:bg-g1/20";
+        "bg-transparent text-g1 border border-transparent hover:border-g1/30 hover:bg-g1/10 hover:opacity-80 active:opacity-60";
       defaultIconColor = "#0A9863";
       break;
     case "fill":
     default:
       variantClasses =
-        "bg-emerald-600 text-white hover:opacity-85 active:opacity-75 shadow-none";
+        "bg-g1 text-white border border-g2 hover:opacity-80 active:opacity-60 shadow-none";
       defaultIconColor = "#FFFFFF";
       break;
   }
 
   const primaryColor = iconColor || defaultIconColor;
 
-  const baseClasses = `group btn-custom btn-icon-custom btn-icon-${variant} ${sizeClasses} rounded-full inline-flex items-center justify-center cursor-pointer select-none transition-all duration-200 hover:opacity-75 active:opacity-50 disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed ${className}`;
+  const baseClasses = `group btn-custom btn-icon-custom btn-icon-${variant} ${variantClasses} ${sizeClasses} rounded-full inline-flex items-center justify-center cursor-pointer select-none transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed ${className}`;
 
   if (href) {
     return (

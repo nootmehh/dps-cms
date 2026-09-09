@@ -6,9 +6,9 @@ import Sidebar from "@/components/layout/sidebar";
 import Button from "@/components/ui/button";
 import Notification, { type NotificationType } from "@/components/ui/notification";
 import LordIcon from "@/components/common/lordIcon";
-import TabContentBeranda from "@/components/content/tabContentBeranda";
-import TabContentTentang from "@/components/content/tabContentTentang";
-import TabContentPerusahaan from "@/components/content/tabContentPerusahaan";
+import TabContentBeranda from "@/components/form/tabContentBeranda";
+import TabContentTentang from "@/components/form/tabContentTentang";
+import TabContentPerusahaan from "@/components/form/tabContentPerusahaan";
 import {
   getSiteContent,
   updateSiteContent,
@@ -121,21 +121,23 @@ export default function KelolaKontenPage() {
           <div className="w-full h-px bg-g1/10 shrink-0" aria-hidden="true" />
 
           {/* Tab Navigation Buttons Bar */}
-          <div className="self-stretch flex items-center gap-2 p-1.5 bg-white-90 rounded-2xl border border-white-80 shrink-0 overflow-x-auto">
+          <div className="self-stretch flex items-center gap-2 p-1.5 bg-white-90 rounded-full border border-white-80 shrink-0 overflow-x-auto">
             {/* Tab 1: Halaman Beranda */}
             <button
               type="button"
               id="tab-beranda"
               onClick={() => setActiveTab("beranda")}
-              className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl font-sans text-sm font-semibold transition-all cursor-pointer select-none whitespace-nowrap ${
+              className={`group flex items-center gap-2.5 px-5 py-2.5 rounded-full font-sans text-sm font-semibold transition-all duration-200 cursor-pointer select-none whitespace-nowrap active:scale-[0.98] ${
                 activeTab === "beranda"
-                  ? "bg-g1 text-white shadow-sm shadow-g1/25"
-                  : "text-dark/70 hover:text-g1 hover:bg-white/80"
+                  ? "bg-g1 text-white border border-g2 shadow-sm shadow-g1/25 hover:opacity-80 active:opacity-60"
+                  : "text-dark/70 border border-transparent hover:border-g1/40 hover:text-g1 hover:bg-white hover:opacity-80 active:opacity-60 hover:shadow-xs hover:-translate-y-0.5"
               }`}
             >
               <LordIcon
                 name="Dashboard"
                 size={18}
+                trigger="hover"
+                target="button"
                 primaryColor={activeTab === "beranda" ? "#ffffff" : "#0A9863"}
                 secondaryColor={activeTab === "beranda" ? "#ffffff" : "#0A9863"}
               />
@@ -147,15 +149,17 @@ export default function KelolaKontenPage() {
               type="button"
               id="tab-tentang"
               onClick={() => setActiveTab("tentang")}
-              className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl font-sans text-sm font-semibold transition-all cursor-pointer select-none whitespace-nowrap ${
+              className={`group flex items-center gap-2.5 px-5 py-2.5 rounded-full font-sans text-sm font-semibold transition-all duration-200 cursor-pointer select-none whitespace-nowrap active:scale-[0.98] ${
                 activeTab === "tentang"
-                  ? "bg-g1 text-white shadow-sm shadow-g1/25"
-                  : "text-dark/70 hover:text-g1 hover:bg-white/80"
+                  ? "bg-g1 text-white border border-g2 shadow-sm shadow-g1/25 hover:opacity-80 active:opacity-60"
+                  : "text-dark/70 border border-transparent hover:border-g1/40 hover:text-g1 hover:bg-white hover:opacity-80 active:opacity-60 hover:shadow-xs hover:-translate-y-0.5"
               }`}
             >
               <LordIcon
                 name="Document"
                 size={18}
+                trigger="hover"
+                target="button"
                 primaryColor={activeTab === "tentang" ? "#ffffff" : "#0A9863"}
                 secondaryColor={activeTab === "tentang" ? "#ffffff" : "#0A9863"}
               />
@@ -167,15 +171,17 @@ export default function KelolaKontenPage() {
               type="button"
               id="tab-perusahaan"
               onClick={() => setActiveTab("perusahaan")}
-              className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl font-sans text-sm font-semibold transition-all cursor-pointer select-none whitespace-nowrap ${
+              className={`group flex items-center gap-2.5 px-5 py-2.5 rounded-full font-sans text-sm font-semibold transition-all duration-200 cursor-pointer select-none whitespace-nowrap active:scale-[0.98] ${
                 activeTab === "perusahaan"
-                  ? "bg-g1 text-white shadow-sm shadow-g1/25"
-                  : "text-dark/70 hover:text-g1 hover:bg-white/80"
+                  ? "bg-g1 text-white border border-g2 shadow-sm shadow-g1/25 hover:opacity-80 active:opacity-60"
+                  : "text-dark/70 border border-transparent hover:border-g1/40 hover:text-g1 hover:bg-white hover:opacity-80 active:opacity-60 hover:shadow-xs hover:-translate-y-0.5"
               }`}
             >
               <LordIcon
                 name="Global"
                 size={18}
+                trigger="hover"
+                target="button"
                 primaryColor={activeTab === "perusahaan" ? "#ffffff" : "#0A9863"}
                 secondaryColor={activeTab === "perusahaan" ? "#ffffff" : "#0A9863"}
               />

@@ -103,9 +103,12 @@ export async function getConsistingServiceCategories(): Promise<string[]> {
   const cats = new Set<string>();
   try {
     const supabaseServices = await getSupabaseServices();
-    supabaseServices.forEach((s) => {
-      if (s.category) cats.add(s.category);
-    });
+    if (supabaseServices && supabaseServices.length > 0) {
+      supabaseServices.forEach((s) => {
+        if (s.category) cats.add(s.category);
+      });
+      return Array.from(cats);
+    }
   } catch {
     // ignore
   }
@@ -149,7 +152,7 @@ export async function getServiceById(id: string | number): Promise<ServicePayloa
           id: supabaseRow.id,
           title: supabaseRow.title,
           category: supabaseRow.category || "Umum",
-          categoryVariant: SERVICE_CATEGORY_VARIANT_MAP[supabaseRow.category || ""] || "green",
+          categoryVariant: supabaseRow.category_color?.toLowerCase() || SERVICE_CATEGORY_VARIANT_MAP[supabaseRow.category || ""] || "green",
           imageUrl: supabaseRow.service_image_url?.[0] || null,
           keunggulan: supabaseRow.keunggulan || [],
           materialPeralatan: materialItems,
@@ -167,6 +170,8 @@ export async function getServiceById(id: string | number): Promise<ServicePayloa
   return found || null;
 }
 
+import { uploadFileToServer } from "@/shared/api/upload";
+
 export async function addService(
   data: Omit<ServicePayload, "id" | "createdAt">,
   imageFile?: File | null
@@ -180,7 +185,12 @@ export async function addService(
 
   let imageUrl = data.imageUrl || null;
   if (imageFile) {
-    imageUrl = URL.createObjectURL(imageFile);
+    try {
+      imageUrl = await uploadFileToServer(imageFile, "services");
+    } catch (err) {
+      console.warn("Upload service image failed, falling back to blob:", err);
+      imageUrl = URL.createObjectURL(imageFile);
+    }
   }
 
   // Extract product IDs from materialPeralatan
@@ -193,6 +203,7 @@ export async function addService(
     const supabaseRow = await addSupabaseService({
       title: data.title,
       category: data.category,
+      category_color: data.categoryVariant || SERVICE_CATEGORY_VARIANT_MAP[data.category] || "green",
       keunggulan: data.keunggulan,
       faq: data.faq,
       product_id: productIds.length > 0 ? productIds : null,
@@ -224,14 +235,24 @@ export async function editService(
   const services = getStoredServices();
   let updatedService: ServicePayload | null = null;
 
+  let uploadedImageUrl: string | null = null;
+  if (imageFile) {
+    try {
+      uploadedImageUrl = await uploadFileToServer(imageFile, "services");
+    } catch (err) {
+      console.warn("Upload service image failed, falling back to blob:", err);
+      uploadedImageUrl = URL.createObjectURL(imageFile);
+    }
+  }
+
   const updated = services.map((service) => {
     if (String(service.id) === String(id)) {
       let finalImageUrl = service.imageUrl;
       if (imageRemoved) {
         finalImageUrl = null;
       }
-      if (imageFile) {
-        finalImageUrl = URL.createObjectURL(imageFile);
+      if (imageFile && uploadedImageUrl) {
+        finalImageUrl = uploadedImageUrl;
       } else if (data.imageUrl !== undefined) {
         finalImageUrl = data.imageUrl;
       }
@@ -267,6 +288,7 @@ export async function editService(
     await editSupabaseService(String(id), {
       title: data.title,
       category: data.category,
+      category_color: targetService.categoryVariant,
       keunggulan: data.keunggulan,
       faq: data.faq,
       product_id: productIds.length > 0 ? productIds : null,

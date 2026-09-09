@@ -4,6 +4,7 @@ export interface SupabaseProductRow {
   id: string;
   title: string;
   category: string | null;
+  category_color: string | null;
   description: string | null;
   detail_product: any | null;
   suitable_for: any | null;
@@ -25,6 +26,7 @@ export interface ProductLookupQuery {
 export interface CreateProductPayload {
   title: string;
   category?: string | null;
+  category_color?: string | null;
   description?: string | null;
   detail_product?: any | null;
   suitable_for?: any | null;
@@ -37,6 +39,7 @@ export interface CreateProductPayload {
 export interface EditProductPayload {
   title?: string;
   category?: string | null;
+  category_color?: string | null;
   description?: string | null;
   detail_product?: any | null;
   suitable_for?: any | null;
@@ -118,6 +121,7 @@ export async function addProduct(payload: CreateProductPayload): Promise<Supabas
   const insertData = {
     title: payload.title,
     category: payload.category || null,
+    category_color: payload.category_color || null,
     description: payload.description || null,
     detail_product: payload.detail_product || null,
     suitable_for: payload.suitable_for || null,
@@ -159,6 +163,7 @@ export async function editProduct(
 
   if (payload.title !== undefined) updateData.title = payload.title;
   if (payload.category !== undefined) updateData.category = payload.category;
+  if (payload.category_color !== undefined) updateData.category_color = payload.category_color;
   if (payload.description !== undefined) updateData.description = payload.description;
   if (payload.detail_product !== undefined) updateData.detail_product = payload.detail_product;
   if (payload.suitable_for !== undefined) updateData.suitable_for = payload.suitable_for;

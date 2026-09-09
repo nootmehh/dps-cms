@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, ReactNode } from "react";
 import Button from "./button";
-import MediaSelectModal, { MediaSelectModalItem } from "./modal/mediaSelectModal";
+import MediaSelectModal, { MediaSelectModalItem } from "@/components/modal/mediaSelectModal";
 import LordIcon from "../common/lordIcon";
 
 export interface UploadFileProps {
-    label?: string;
+    label?: ReactNode;
     onFilesSelected?: (files: File[]) => void;
     multiple?: boolean;
     accept?: string;
@@ -19,6 +19,7 @@ export interface UploadFileProps {
     mediaLibraryCategory?: string;
     descriptionPrefix?: string;
     descriptionValue?: string;
+    fileTypesHint?: string;
     previewLayout?: "compact" | "large";
     className?: string;
 }
@@ -28,6 +29,7 @@ export default function UploadFile({
     onFilesSelected,
     descriptionPrefix,
     descriptionValue,
+    fileTypesHint = "(PNG, JPG, WebP)",
     multiple = false,
     accept = "image/*",
     maxFiles = 5,
@@ -189,29 +191,55 @@ export default function UploadFile({
     const activeLargeSize =
         selectedFiles.length > 0 ? formatBytes(selectedFiles[0].size) : "";
 
+    const renderLabel = () => {
+        if (!label) return null;
+        if (typeof label === "string") {
+            if (label.includes("*")) {
+                const parts = label.split("*");
+                return (
+                    <label className="text-dark text-sm font-semibold font-sans">
+                        {parts[0]}
+                        <span className="text-red-state">*</span>
+                        {parts.slice(1).join("*")}
+                    </label>
+                );
+            }
+            return <label className="text-dark text-sm font-semibold font-sans">{label}</label>;
+        }
+        return <label className="text-dark text-sm font-semibold font-sans">{label}</label>;
+    };
+
+    const renderEmphasizedHint = (text: string) => {
+        const trimmed = text.trim();
+        if (trimmed.startsWith("(") && trimmed.endsWith(")")) {
+            const inner = trimmed.slice(1, -1);
+            return (
+                <>
+                    (<span className="font-semibold text-dark/80">{inner}</span>)
+                </>
+            );
+        }
+        return <span className="font-semibold text-dark/80">{trimmed}</span>;
+    };
+
     return (
-        <div className={`w-full ${className.includes("max-w-") ? "" : "max-w-116.5"} inline-flex flex-col justify-start items-start gap-1 relative ${className}`}>
+        <div className={`w-full inline-flex flex-col justify-start items-start gap-1 relative ${className}`}>
             {/* Label header */}
-            <div className="self-stretch flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                    <label className="text-dark text-sm font-semibold font-sans">{label}</label>
-                    {descriptionPrefix && descriptionValue && (
-                        <span className="text-xs text-dark/40 font-normal font-sans">
-                            {descriptionPrefix}: <strong className="text-dark/60">{descriptionValue}</strong>
-                        </span>
+            {(label || enableMediaLibrary) && (
+                <div className="self-stretch flex justify-between items-center mb-1">
+                    {renderLabel()}
+                    {enableMediaLibrary && (
+                        <Button
+                            type="button"
+                            variant="ghost-green"
+                            size="sm"
+                            leftIcon="Image 2"
+                            text="Pilih dari Media Library"
+                            onClick={() => setIsMediaModalOpen(true)}
+                        />
                     )}
                 </div>
-                {enableMediaLibrary && (
-                    <button
-                        type="button"
-                        onClick={() => setIsMediaModalOpen(true)}
-                        className="text-xs font-semibold text-g1 hover:underline cursor-pointer flex items-center gap-1 font-sans"
-                    >
-                        <LordIcon name="Image 2" size={14} primaryColor="#0A9863" />
-                        Pilih dari Media Library
-                    </button>
-                )}
-            </div>
+            )}
 
             {/* Upload Area container */}
             <div className="self-stretch flex flex-col justify-start items-start gap-3 w-full">
@@ -227,7 +255,7 @@ export default function UploadFile({
                 {/* LARGE PREVIEW LAYOUT */}
                 {previewLayout === "large" && hasActiveImage && activeLargeUrl && (
                     <div className="self-stretch flex flex-col gap-3 w-full">
-                        <div className="relative w-full h-64 sm:h-80 md:h-96 rounded-3xl overflow-hidden border border-white-80 shadow-xs bg-slate-900/5 group flex items-center justify-center">
+                        <div className="relative w-full h-64 sm:h-80 md:h-96 rounded-3xl overflow-hidden bg-brand-background group flex items-center justify-center">
                             <img
                                 src={activeLargeUrl}
                                 alt={activeLargeName}
@@ -242,7 +270,7 @@ export default function UploadFile({
                                 <button
                                     type="button"
                                     onClick={triggerBrowse}
-                                    className="px-3 py-1.5 bg-white/90 hover:bg-white text-dark text-xs font-semibold rounded-full shadow-md backdrop-blur-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                                    className="px-3 py-1.5 bg-white/90 hover:bg-white text-dark text-xs font-semibold rounded-full border border-white-80 hover:border-g1 hover:opacity-80 active:opacity-60 shadow-md backdrop-blur-xs flex items-center gap-1.5 transition-all cursor-pointer"
                                 >
                                     <LordIcon name="Edit" size={14} primaryColor="#0A9863" />
                                     Ganti Foto
@@ -256,7 +284,7 @@ export default function UploadFile({
                                             onRemoveDefaultImage();
                                         }
                                     }}
-                                    className="size-8 bg-red-500/90 hover:bg-red-500 text-white rounded-full shadow-md backdrop-blur-xs flex items-center justify-center transition-all cursor-pointer"
+                                    className="size-8 bg-red-state hover:bg-red-state/90 border border-red-300 hover:border-red-400 text-white rounded-full shadow-md backdrop-blur-xs flex items-center justify-center hover:opacity-80 active:opacity-60 active:scale-95 transition-all cursor-pointer"
                                     title="Hapus gambar"
                                 >
                                     <LordIcon name="Delete" size={16} primaryColor="#FFFFFF" />
@@ -291,19 +319,26 @@ export default function UploadFile({
                         onDragLeave={handleDrag}
                         onDrop={handleDrop}
                         onClick={triggerBrowse}
-                        className={`self-stretch ${previewLayout === "large" ? "py-14" : "py-10"} px-4 rounded-3xl outline-1 -outline-offset-1 transition-all cursor-pointer flex flex-col justify-start items-center gap-2.5 overflow-hidden ${
+                        data-hover-target="true"
+                        className={`dropzone-box group self-stretch ${
+                            previewLayout === "large" ? "py-16 sm:py-20" : "py-14 sm:py-16"
+                        } px-4 rounded-3xl transition-all duration-200 cursor-pointer flex flex-col justify-start items-center gap-2.5 overflow-hidden border border-white-80 hover:border-g1 hover:opacity-80 hover:shadow-[0px_4px_16px_0px_rgba(6,137,81,0.12)] active:opacity-60 ${
                             dragActive
-                                ? "outline-g1 bg-g1/5 scale-[0.99] outline-dashed"
-                                : "outline-white-80 hover:bg-white-90 bg-white"
+                                ? "border-2 border-g1 bg-g1/10 border-dashed"
+                                : "bg-brand-background"
                         }`}
                     >
                         <div className="flex flex-col justify-start items-center gap-3">
-                            <div className="size-14 rounded-full bg-brand-background flex items-center justify-center">
-                                <LordIcon name="Image 2" size={32} primaryColor="#0A9863" />
-                            </div>
+                            <LordIcon
+                                name="Image 2"
+                                size={32}
+                                primaryColor="#0A9863"
+                                trigger="hover"
+                                target=".dropzone-box"
+                            />
 
                             <div className="flex flex-col justify-start items-center gap-1">
-                                <div className="text-center justify-start text-dark text-sm font-medium font-sans">
+                                <div className="text-center justify-start text-dark/70 text-xs font-medium font-sans">
                                     Tarik & Letakkan berkas foto di sini <br />atau{" "}
                                     <span className="text-g1 hover:underline font-semibold cursor-pointer">
                                         Pilih Berkas dari Komputer
@@ -316,7 +351,7 @@ export default function UploadFile({
 
                 {/* COMPACT File list preview (default) */}
                 {previewLayout === "compact" && (selectedFiles.length > 0 || defaultImageUrl || existingImageUrls.length > 0) && (
-                    <div className="self-stretch flex flex-col gap-2 bg-brand-background/60 p-4 rounded-2xl border border-white-80">
+                    <div className="self-stretch flex flex-col gap-2 bg-brand-background p-4 rounded-3xl">
                         <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 font-sans">
                             Berkas Terpilih ({multiple
                                 ? (selectedFiles.length + existingImageUrls.length + (defaultImageUrl ? 1 : 0))
@@ -328,7 +363,7 @@ export default function UploadFile({
                         {existingImageUrls.map((url, idx) => (
                             <div
                                 key={`existing-${idx}`}
-                                className="flex items-center justify-between p-2.5 bg-white border border-slate-200/60 rounded-xl shadow-xs"
+                                className="flex items-center justify-between p-2.5 bg-white border border-white-70 rounded-2xl shadow-xs"
                             >
                                 <div className="flex items-center gap-3 overflow-hidden">
                                     <img
@@ -350,7 +385,7 @@ export default function UploadFile({
                                             onRemoveExistingImage(url);
                                         }
                                     }}
-                                    className="p-1.5 rounded-md text-slate-400 hover:text-red-state hover:bg-slate-100 flex items-center justify-center transition-all cursor-pointer"
+                                    className="size-8 rounded-full border border-transparent hover:border-red-state/30 bg-transparent hover:bg-red-state/10 text-slate-400 hover:text-red-state flex items-center justify-center hover:opacity-80 active:opacity-60 active:scale-95 transition-all cursor-pointer"
                                     title="Hapus gambar"
                                 >
                                     <LordIcon name="Delete" size={16} primaryColor="#f94c4c" />
@@ -361,7 +396,7 @@ export default function UploadFile({
                         {selectedFiles.map((file, index) => (
                             <div
                                 key={index}
-                                className="flex items-center justify-between p-2.5 bg-white border border-slate-200/60 rounded-xl shadow-xs"
+                                className="flex items-center justify-between p-2.5 bg-white border border-white-70 rounded-2xl shadow-xs"
                             >
                                 <div className="flex items-center gap-3 overflow-hidden">
                                     {file.type.startsWith("image/") && previews[index] ? (
@@ -390,7 +425,7 @@ export default function UploadFile({
                                         e.stopPropagation();
                                         removeFile(index);
                                     }}
-                                    className="p-1.5 rounded-md text-slate-400 hover:text-red-state hover:bg-slate-100 flex items-center justify-center transition-all cursor-pointer"
+                                    className="size-8 rounded-full border border-transparent hover:border-red-state/30 bg-transparent hover:bg-red-state/10 text-slate-400 hover:text-red-state flex items-center justify-center hover:opacity-80 active:opacity-60 active:scale-95 transition-all cursor-pointer"
                                     title="Hapus berkas"
                                 >
                                     <LordIcon name="Delete" size={16} primaryColor="#f94c4c" />
@@ -424,7 +459,7 @@ export default function UploadFile({
                                             onRemoveDefaultImage();
                                         }
                                     }}
-                                    className="p-1.5 rounded-md text-slate-400 hover:text-red-state hover:bg-slate-100 flex items-center justify-center transition-all cursor-pointer"
+                                    className="size-8 rounded-full border border-transparent hover:border-red-state/30 bg-transparent hover:bg-red-state/10 text-slate-400 hover:text-red-state flex items-center justify-center hover:opacity-80 active:opacity-60 active:scale-95 transition-all cursor-pointer"
                                     title="Hapus gambar aktif"
                                 >
                                     <LordIcon name="Delete" size={16} primaryColor="#f94c4c" />
@@ -434,6 +469,26 @@ export default function UploadFile({
                     </div>
                 )}
             </div>
+
+            {/* Suggested size info under the box */}
+            {(descriptionPrefix || descriptionValue || fileTypesHint) && (
+                <p className="w-full text-center text-xs text-dark/60 font-normal font-sans pt-1">
+                    {fileTypesHint && (
+                        <>
+                            {renderEmphasizedHint(fileTypesHint)}
+                            {", "}
+                        </>
+                    )}
+                    {descriptionPrefix
+                        ? descriptionPrefix.endsWith(":")
+                            ? `${descriptionPrefix} `
+                            : `${descriptionPrefix}: `
+                        : descriptionValue
+                        ? "Ukuran Disarankan: "
+                        : ""}
+                    {descriptionValue && renderEmphasizedHint(descriptionValue)}
+                </p>
+            )}
 
             {/* Media Select Modal */}
             <MediaSelectModal

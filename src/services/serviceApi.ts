@@ -4,6 +4,7 @@ export interface SupabaseServiceRow {
   id: string;
   title: string;
   category: string | null;
+  category_color: string | null;
   keunggulan: { title: string; description: string }[] | null;
   faq: { question: string; answer: string }[] | null;
   product_id: string[] | null;
@@ -23,6 +24,7 @@ export interface ServiceLookupQuery {
 export interface CreateServicePayload {
   title: string;
   category?: string | null;
+  category_color?: string | null;
   keunggulan?: { title: string; description: string }[] | null;
   faq?: { question: string; answer: string }[] | null;
   product_id?: string[] | null;
@@ -32,6 +34,7 @@ export interface CreateServicePayload {
 export interface EditServicePayload {
   title?: string;
   category?: string | null;
+  category_color?: string | null;
   keunggulan?: { title: string; description: string }[] | null;
   faq?: { question: string; answer: string }[] | null;
   product_id?: string[] | null;
@@ -122,6 +125,7 @@ export async function addService(payload: CreateServicePayload): Promise<Supabas
   const insertData = {
     title: payload.title,
     category: payload.category || null,
+    category_color: payload.category_color || null,
     keunggulan: payload.keunggulan || null,
     faq: payload.faq || null,
     product_id: validProductIds && validProductIds.length > 0 ? validProductIds : null,
@@ -160,6 +164,7 @@ export async function editService(
 
   if (payload.title !== undefined) updateData.title = payload.title;
   if (payload.category !== undefined) updateData.category = payload.category;
+  if (payload.category_color !== undefined) updateData.category_color = payload.category_color;
   if (payload.keunggulan !== undefined) updateData.keunggulan = payload.keunggulan;
   if (payload.faq !== undefined) updateData.faq = payload.faq;
 

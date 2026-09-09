@@ -9,7 +9,7 @@ import InputBox from "@/components/ui/inputBox";
 import Dropdown, { type DropdownOption } from "@/components/ui/dropdown";
 import Badge, { type BadgeVariant } from "@/components/ui/badge";
 import Notification, { type NotificationType } from "@/components/ui/notification";
-import DeleteConfirmationModal from "@/components/ui/modal/deleteConfirmation";
+import DeleteConfirmationModal from "@/components/modal/deleteConfirmation";
 import LordIcon from "@/components/common/lordIcon";
 import { getArticles } from "@/services/articleApi";
 import { type ArticlePayload } from "@/shared/api/article";
@@ -579,7 +579,7 @@ export default function DashboardPage() {
                     setSearchQuery(e.target.value);
                     setCurrentPage(1);
                   }}
-                  leftIcon="Global"
+                  leftIcon="Search"
                 />
               </div>
               <div className="w-full sm:w-64">
@@ -664,9 +664,9 @@ export default function DashboardPage() {
                       <Link
                         href={`/kelola-artikel/${article.id}`}
                         title="Edit Artikel"
-                        className="size-9 p-1 bg-brand-background hover:bg-g1/15 rounded-full flex justify-center items-center text-g1 transition-colors cursor-pointer"
+                        className="group size-9 p-1 bg-brand-background hover:bg-g1/15 border border-transparent hover:border-g1 rounded-full flex justify-center items-center text-g1 hover:shadow-[0px_2px_6px_0px_rgba(6,137,81,0.25)] active:scale-95 transition-all duration-200 cursor-pointer"
                       >
-                        <LordIcon name="Edit" size={18} primaryColor="#0A9863" />
+                        <LordIcon name="Edit" size={18} primaryColor="#0A9863" trigger="hover" target="a, .group" />
                       </Link>
 
                       {/* Delete Button */}
@@ -674,7 +674,7 @@ export default function DashboardPage() {
                         type="button"
                         title="Hapus Artikel"
                         onClick={() => setDeleteModal({ isOpen: true, article })}
-                        className="size-9 p-1 bg-red-state hover:opacity-90 rounded-full flex justify-center items-center text-white transition-opacity cursor-pointer shadow-xs"
+                        className="size-9 p-1 bg-red-state hover:opacity-70 active:opacity-50 rounded-full flex justify-center items-center text-white transition-opacity duration-200 cursor-pointer shadow-xs"
                       >
                         <LordIcon name="Delete" size={18} primaryColor="#FFFFFF" />
                       </button>

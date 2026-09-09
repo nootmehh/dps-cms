@@ -11,6 +11,8 @@ import type {
   TestimonialItem,
 } from "@/services/siteContentApi";
 
+import { uploadFileToServer } from "@/shared/api/upload";
+
 interface TabContentBerandaProps {
   data: SiteContentRow;
   onChange: (updater: (prev: SiteContentRow) => SiteContentRow) => void;
@@ -104,14 +106,11 @@ export default function TabContentBeranda({
   };
 
   return (
-    <div className="flex flex-col gap-8 w-full animate-fadeIn">
+    <div className="flex flex-col gap-6 w-full animate-fadeIn">
       {/* Section 1: Hero Banner */}
-      <section className="flex flex-col gap-4 p-5 rounded-2xl bg-white-90/50 border border-white-80">
-        <div className="flex items-center gap-2">
-          <div className="size-2 rounded-full bg-g1" />
-          <h3 className="text-base font-bold text-dark font-sans">
-            1. Hero Banner Utama (Halaman Beranda)
-          </h3>
+      <section className="flex flex-col gap-5 p-5 md:p-6 bg-white rounded-3xl border border-white-80 shadow-xs">
+        <div className="text-g1 text-base font-bold font-sans">
+          1. Hero Banner Utama
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
@@ -124,17 +123,22 @@ export default function TabContentBeranda({
                 onChange((prev) => ({ ...prev, hero_img_url: e.target.value }))
               }
             />
-            <p className="text-xs text-dark/60">
+            <p className="text-xs text-dark/60 font-sans">
               Rekomendasi rasio 16:9 atau resolusi minimal 1920x1080px untuk tampilan tajam.
             </p>
 
             <UploadFile
               label="Atau Pilih / Unggah Hero Image"
               defaultImageUrl={data.hero_img_url || undefined}
-              onFilesSelected={(files) => {
+              onFilesSelected={async (files) => {
                 if (files[0]) {
-                  const blobUrl = URL.createObjectURL(files[0]);
-                  onChange((prev) => ({ ...prev, hero_img_url: blobUrl }));
+                  try {
+                    const uploadedUrl = await uploadFileToServer(files[0], "site");
+                    onChange((prev) => ({ ...prev, hero_img_url: uploadedUrl }));
+                  } catch {
+                    const blobUrl = URL.createObjectURL(files[0]);
+                    onChange((prev) => ({ ...prev, hero_img_url: blobUrl }));
+                  }
                 }
               }}
               onRemoveDefaultImage={() =>
@@ -147,7 +151,7 @@ export default function TabContentBeranda({
             <span className="text-xs font-semibold text-g1 font-sans">
               Pratinjau Banner Hero:
             </span>
-            <div className="w-full aspect-video rounded-xl overflow-hidden border border-g1/20 bg-white shadow-xs relative group">
+            <div className="w-full aspect-video rounded-2xl overflow-hidden border border-g1/20 bg-white shadow-xs relative group">
               {data.hero_img_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -158,7 +162,7 @@ export default function TabContentBeranda({
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-dark/40 gap-2">
                   <LordIcon name="Image 2" size={36} primaryColor="#0A9863" />
-                  <span className="text-xs">Belum ada gambar hero</span>
+                  <span className="text-xs font-sans">Belum ada gambar hero</span>
                 </div>
               )}
             </div>
@@ -167,15 +171,12 @@ export default function TabContentBeranda({
       </section>
 
       {/* Section 2: Mitra & Partner */}
-      <section className="flex flex-col gap-4 p-5 rounded-2xl bg-white-90/50 border border-white-80">
-        <div className="flex items-center gap-2">
-          <div className="size-2 rounded-full bg-g1" />
-          <h3 className="text-base font-bold text-dark font-sans">
-            2. Logo Mitra / Partner (`partner_img_url`)
-          </h3>
+      <section className="flex flex-col gap-5 p-5 md:p-6 bg-white rounded-3xl border border-white-80 shadow-xs">
+        <div className="text-g1 text-base font-bold font-sans">
+          2. Logo Mitra & Rekanan
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 items-end">
+        <div className="p-4 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs flex flex-col sm:flex-row gap-3 items-end">
           <div className="flex-1 w-full">
             <InputBox
               label="Tambah URL Logo Mitra Baru"
@@ -200,11 +201,11 @@ export default function TabContentBeranda({
           />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mt-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 mt-1">
           {(data.partner_img_url || []).map((url, idx) => (
             <div
               key={idx}
-              className="relative p-2.5 bg-white rounded-xl border border-white-80 shadow-xs flex items-center justify-center h-20 group hover:border-g1/40 transition-colors"
+              className="relative p-3 bg-white rounded-2xl border border-white-80 shadow-xs flex items-center justify-center h-20 group hover:border-g1/40 transition-all hover:shadow-sm"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -220,15 +221,20 @@ export default function TabContentBeranda({
                 type="button"
                 onClick={() => handleRemovePartner(idx)}
                 title="Hapus Logo"
-                className="absolute -top-2 -right-2 size-6 bg-red-state text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow cursor-pointer text-xs font-bold"
+                className="absolute -top-2 -right-2 size-7 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-xs cursor-pointer text-white"
               >
-                ✕
+                <LordIcon
+                  name="Delete"
+                  size={14}
+                  primaryColor="#FFFFFF"
+                  secondaryColor="#FFFFFF"
+                />
               </button>
             </div>
           ))}
 
           {(!data.partner_img_url || data.partner_img_url.length === 0) && (
-            <div className="col-span-full py-4 text-center text-xs text-dark/50">
+            <div className="col-span-full py-6 text-center text-xs text-dark/50 font-sans">
               Belum ada logo mitra. Masukkan URL logo di atas untuk menambahkan.
             </div>
           )}
@@ -236,16 +242,13 @@ export default function TabContentBeranda({
       </section>
 
       {/* Section 3: Tagline / More Title & Statistik Prestasi */}
-      <section className="flex flex-col gap-4 p-5 rounded-2xl bg-white-90/50 border border-white-80">
-        <div className="flex items-center gap-2">
-          <div className="size-2 rounded-full bg-g1" />
-          <h3 className="text-base font-bold text-dark font-sans">
-            3. Judul Bagian Keunggulan & Counter Statistik
-          </h3>
+      <section className="flex flex-col gap-5 p-5 md:p-6 bg-white rounded-3xl border border-white-80 shadow-xs">
+        <div className="text-g1 text-base font-bold font-sans">
+          3. Highlight Keunggulan & Counter Statistik
         </div>
 
         <InputBox
-          label="Judul Section Keunggulan (`more_title`)"
+          label="Judul Section Keunggulan"
           placeholder="Mengapa Memilih Dua Putra Srikandi?"
           value={data.more_title || ""}
           onChange={(e) =>
@@ -254,9 +257,9 @@ export default function TabContentBeranda({
           className="w-full"
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
-          <div className="flex flex-col gap-1.5 p-4 rounded-xl bg-white border border-g1/20 shadow-xs">
-            <span className="text-xs font-semibold text-g1">Pelanggan Puas</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-1">
+          <div className="flex flex-col gap-1.5 p-4 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs focus-within:border-g1 focus-within:bg-white transition-all">
+            <span className="text-xs font-semibold text-g1 font-sans">Pelanggan Puas</span>
             <input
               type="number"
               min="0"
@@ -269,11 +272,11 @@ export default function TabContentBeranda({
               }
               className="text-2xl font-bold text-dark border-none outline-none bg-transparent"
             />
-            <span className="text-[11px] text-dark/50">Klien & Lembaga</span>
+            <span className="text-[11px] text-dark/50 font-sans">Klien & Lembaga</span>
           </div>
 
-          <div className="flex flex-col gap-1.5 p-4 rounded-xl bg-white border border-g1/20 shadow-xs">
-            <span className="text-xs font-semibold text-g1">Layanan Selesai</span>
+          <div className="flex flex-col gap-1.5 p-4 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs focus-within:border-g1 focus-within:bg-white transition-all">
+            <span className="text-xs font-semibold text-g1 font-sans">Layanan Selesai</span>
             <input
               type="number"
               min="0"
@@ -286,11 +289,11 @@ export default function TabContentBeranda({
               }
               className="text-2xl font-bold text-dark border-none outline-none bg-transparent"
             />
-            <span className="text-[11px] text-dark/50">Proyek Terselesaikan</span>
+            <span className="text-[11px] text-dark/50 font-sans">Proyek Terselesaikan</span>
           </div>
 
-          <div className="flex flex-col gap-1.5 p-4 rounded-xl bg-white border border-g1/20 shadow-xs">
-            <span className="text-xs font-semibold text-g1">Produk Diproduksi</span>
+          <div className="flex flex-col gap-1.5 p-4 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs focus-within:border-g1 focus-within:bg-white transition-all">
+            <span className="text-xs font-semibold text-g1 font-sans">Produk Diproduksi</span>
             <input
               type="number"
               min="0"
@@ -303,11 +306,11 @@ export default function TabContentBeranda({
               }
               className="text-2xl font-bold text-dark border-none outline-none bg-transparent"
             />
-            <span className="text-[11px] text-dark/50">Unit Cat & Rambu</span>
+            <span className="text-[11px] text-dark/50 font-sans">Unit Cat & Rambu</span>
           </div>
 
-          <div className="flex flex-col gap-1.5 p-4 rounded-xl bg-white border border-g1/20 shadow-xs">
-            <span className="text-xs font-semibold text-g1">Tahun Pengalaman</span>
+          <div className="flex flex-col gap-1.5 p-4 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs focus-within:border-g1 focus-within:bg-white transition-all">
+            <span className="text-xs font-semibold text-g1 font-sans">Tahun Pengalaman</span>
             <input
               type="number"
               min="0"
@@ -320,27 +323,24 @@ export default function TabContentBeranda({
               }
               className="text-2xl font-bold text-dark border-none outline-none bg-transparent"
             />
-            <span className="text-[11px] text-dark/50">Tahun Dedikasi</span>
+            <span className="text-[11px] text-dark/50 font-sans">Tahun Dedikasi</span>
           </div>
         </div>
       </section>
 
       {/* Section 4: Galeri Foto Proyek */}
-      <section className="flex flex-col gap-4 p-5 rounded-2xl bg-white-90/50 border border-white-80">
+      <section className="flex flex-col gap-5 p-5 md:p-6 bg-white rounded-3xl border border-white-80 shadow-xs">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="size-2 rounded-full bg-g1" />
-            <h3 className="text-base font-bold text-dark font-sans">
-              4. Galeri Proyek Beranda (`gallery`)
-            </h3>
+          <div className="text-g1 text-base font-bold font-sans">
+            4. Galeri Proyek Unggulan
           </div>
-          <span className="text-xs text-dark/60">
+          <span className="text-xs text-dark/50 font-normal font-sans">
             Total: {(data.gallery || []).length} Foto
           </span>
         </div>
 
         {/* Form Tambah Item Galeri */}
-        <div className="p-4 rounded-xl bg-white border border-g1/20 flex flex-col md:flex-row gap-3 items-end">
+        <div className="p-4 md:p-5 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs flex flex-col md:flex-row gap-3 items-end">
           <div className="flex-1 w-full">
             <InputBox
               label="URL Foto Galeri"
@@ -380,7 +380,7 @@ export default function TabContentBeranda({
           {(data.gallery || []).map((item, idx) => (
             <div
               key={item.id || idx}
-              className="group relative rounded-xl overflow-hidden bg-white border border-white-80 shadow-xs flex flex-col"
+              className="group relative rounded-2xl overflow-hidden bg-white border border-white-80 shadow-xs flex flex-col hover:border-g1/30 transition-all hover:shadow-sm"
             >
               <div className="aspect-video w-full overflow-hidden bg-gray-100 relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -396,17 +396,22 @@ export default function TabContentBeranda({
                 <button
                   type="button"
                   onClick={() => handleRemoveGallery(idx)}
-                  className="absolute top-2 right-2 size-7 bg-red-state text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow cursor-pointer text-xs font-bold"
-                  title="Hapus item"
+                  className="absolute top-2.5 right-2.5 size-8 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer opacity-0 group-hover:opacity-100 shadow-sm"
+                  title="Hapus item galeri"
                 >
-                  ✕
+                  <LordIcon
+                    name="Delete"
+                    size={16}
+                    primaryColor="#FFFFFF"
+                    secondaryColor="#FFFFFF"
+                  />
                 </button>
               </div>
-              <div className="p-3 flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-dark line-clamp-1">
+              <div className="p-3.5 flex flex-col gap-0.5">
+                <span className="text-xs font-bold text-dark line-clamp-1 font-sans">
                   {item.title || "Tanpa Judul"}
                 </span>
-                <span className="text-[11px] text-g1 font-semibold">
+                <span className="text-[11px] text-g1 font-semibold font-sans">
                   {item.category || "Umum"}
                 </span>
               </div>
@@ -414,7 +419,7 @@ export default function TabContentBeranda({
           ))}
 
           {(!data.gallery || data.gallery.length === 0) && (
-            <div className="col-span-full py-6 text-center text-xs text-dark/50">
+            <div className="col-span-full py-6 text-center text-xs text-dark/50 font-sans">
               Belum ada foto dalam galeri beranda.
             </div>
           )}
@@ -422,21 +427,18 @@ export default function TabContentBeranda({
       </section>
 
       {/* Section 5: Testimoni Klien */}
-      <section className="flex flex-col gap-4 p-5 rounded-2xl bg-white-90/50 border border-white-80">
+      <section className="flex flex-col gap-5 p-5 md:p-6 bg-white rounded-3xl border border-white-80 shadow-xs">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="size-2 rounded-full bg-g1" />
-            <h3 className="text-base font-bold text-dark font-sans">
-              5. Testimoni Klien (`testimonials`)
-            </h3>
+          <div className="text-g1 text-base font-bold font-sans">
+            5. Testimoni Klien
           </div>
-          <span className="text-xs text-dark/60">
+          <span className="text-xs text-dark/50 font-normal font-sans">
             Total: {(data.testimonials || []).length} Testimoni
           </span>
         </div>
 
         {/* Input Tambah Testimoni */}
-        <div className="p-4 rounded-xl bg-white border border-g1/20 flex flex-col gap-3">
+        <div className="p-4 md:p-5 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <InputBox
               label="Nama Klien"
@@ -458,22 +460,22 @@ export default function TabContentBeranda({
             />
           </div>
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-g1 font-sans">
               Isi Kutipan Testimoni
             </label>
             <textarea
-              rows={2}
+              rows={3}
               placeholder="Tulis testimoni atau kepuasan klien..."
               value={newTestiContent}
               onChange={(e) => setNewTestiContent(e.target.value)}
-              className="w-full p-3 rounded-xl border border-g1/30 text-sm text-dark outline-none focus:border-g1 focus:ring-1 focus:ring-g1/20"
+              className="w-full p-3.5 rounded-2xl border border-white-80 text-sm text-dark bg-white outline-none focus:border-g1 focus:ring-2 focus:ring-g1/10 transition-all font-sans placeholder:text-dark/40"
             />
           </div>
 
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-dark/70">Rating:</span>
+              <span className="text-xs font-semibold text-dark/70 font-sans">Rating:</span>
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   type="button"
@@ -504,34 +506,40 @@ export default function TabContentBeranda({
           {(data.testimonials || []).map((t, idx) => (
             <div
               key={t.id || idx}
-              className="relative p-4 rounded-xl bg-white border border-white-80 shadow-xs flex flex-col justify-between gap-3 group"
+              className="relative p-5 rounded-2xl bg-white border border-white-80 shadow-xs flex flex-col justify-between gap-3 group hover:border-g1/30 transition-all"
             >
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex text-yellow-state text-sm">
+                  <div className="flex text-yellow-state text-sm tracking-tight">
                     {"★".repeat(t.rating || 5)}
                     {"☆".repeat(5 - (t.rating || 5))}
                   </div>
                   <button
                     type="button"
                     onClick={() => handleRemoveTestimonial(idx)}
-                    className="text-red-state hover:underline text-xs font-semibold cursor-pointer opacity-80 group-hover:opacity-100"
+                    className="size-7 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                    title="Hapus testimoni"
                   >
-                    Hapus
+                    <LordIcon
+                      name="Delete"
+                      size={14}
+                      primaryColor="#FFFFFF"
+                      secondaryColor="#FFFFFF"
+                    />
                   </button>
                 </div>
-                <p className="text-sm text-dark/85 italic font-sans">
+                <p className="text-sm text-dark/85 italic font-sans leading-relaxed">
                   &ldquo;{t.content}&rdquo;
                 </p>
               </div>
 
-              <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
-                <div className="size-9 rounded-full bg-g1/15 text-g1 font-bold text-xs flex items-center justify-center">
+              <div className="flex items-center gap-3 pt-3 border-t border-white-80">
+                <div className="size-9 rounded-full bg-g1/15 text-g1 font-bold text-xs flex items-center justify-center shrink-0">
                   {t.name.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-dark">{t.name}</span>
-                  <span className="text-[11px] text-dark/60">
+                  <span className="text-xs font-bold text-dark font-sans">{t.name}</span>
+                  <span className="text-[11px] text-dark/60 font-sans">
                     {t.role} {t.company ? `• ${t.company}` : ""}
                   </span>
                 </div>
@@ -540,7 +548,7 @@ export default function TabContentBeranda({
           ))}
 
           {(!data.testimonials || data.testimonials.length === 0) && (
-            <div className="col-span-full py-4 text-center text-xs text-dark/50">
+            <div className="col-span-full py-6 text-center text-xs text-dark/50 font-sans">
               Belum ada testimoni klien tersimpan.
             </div>
           )}

@@ -38,8 +38,8 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
 
   const [articleName, setArticleName] = useState("");
   const [articleNameIndonesia, setArticleNameIndonesia] = useState("");
-  const [categories, setCategories] = useState<string[]>(["Keselamatan Jalan"]);
-  const [categoryColors, setCategoryColors] = useState<string[]>(["Green"]);
+  const [categories, setCategories] = useState<string[]>([""]);
+  const [categoryColors, setCategoryColors] = useState<string[]>(["green"]);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerRemoved, setBannerRemoved] = useState(false);
@@ -48,7 +48,7 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
 
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [availableCategories, setAvailableCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   const [notification, setNotification] = useState<{
     isOpen: boolean;
@@ -73,14 +73,18 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
     const loadCategories = async () => {
       try {
         const existing = await getConsistingCategories();
-        const merged = Array.from(new Set([...DEFAULT_CATEGORIES, ...existing]));
-        setAvailableCategories(merged);
+        if (existing.length > 0) {
+          setAvailableCategories(existing);
+          if (!id) {
+            setCategories([existing[0]]);
+          }
+        }
       } catch (err) {
         console.error("Error loading categories", err);
       }
     };
     loadCategories();
-  }, []);
+  }, [id]);
 
   // Load existing article info if in edit mode
   useEffect(() => {
@@ -96,8 +100,8 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
           setCategories(article.category && article.category.length > 0 ? article.category : ["Keselamatan Jalan"]);
           setCategoryColors(
             article.categoryColor && article.categoryColor.length > 0
-              ? article.categoryColor
-              : ["Green"]
+              ? article.categoryColor.map((c) => c.toLowerCase())
+              : ["green"]
           );
           setContent(article.content || "");
           setContentIndonesia(article.contentIndonesia || article.content || "");
@@ -188,31 +192,18 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
       {/* Main Body */}
       <main className="w-full max-w-[1440px] px-6 lg:px-12 py-8 flex flex-col md:flex-row justify-center items-start gap-6">
         {/* Sidebar Component */}
-        <Sidebar activeId="articles" />
+        <Sidebar activeId="articles" className="md:sticky md:top-8 shrink-0" />
 
         {/* Main Content Card */}
         <div className="flex-1 p-6 md:p-8 bg-white rounded-[32px] border border-white-80 shadow-xs flex flex-col justify-start items-start gap-6 w-full overflow-hidden">
-          {/* Back Button */}
-          <Button
-            type="button"
-            onClick={() => router.push("/kelola-artikel")}
-            text="Kembali"
-            leftIcon="Left 1"
-            variant="ghost-green"
-            className="cursor-pointer"
-          />
-
           {/* Header Block */}
           <div className="self-stretch flex flex-col justify-start items-start gap-1">
             <div className="text-dark/40 text-xs md:text-sm font-normal font-sans tracking-wider uppercase">
-              FORMULIR ARTIKEL
+              ARTIKEL
             </div>
             <h1 className="text-g1 text-2xl md:text-3xl font-bold font-sans">
               {id ? "Edit Artikel" : "Tambah Artikel Baru"}
             </h1>
-            <p className="text-dark/70 text-sm font-normal font-sans">
-              Lengkapi informasi artikel, banner visual, dan kategori publikasi website.
-            </p>
           </div>
 
           {/* Divider */}
@@ -253,150 +244,71 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
                   }}
                 />
 
-                {/* Article Title (Bahasa Indonesia) */}
+                {/* Article Title */}
                 <InputBox
                   label={
                     <span>
-                      Judul Artikel (Bahasa Indonesia) <span className="text-red-state">*</span>
+                      Judul Artikel <span className="text-red-state">*</span>
                     </span>
                   }
                   placeholder="mis. Standar Keselamatan Pemasangan Guardrail di Jalan Tol"
                   value={articleNameIndonesia}
                   onChange={(e) => {
                     setArticleNameIndonesia(e.target.value);
-                    if (!articleName) setArticleName(e.target.value);
+                    setArticleName(e.target.value);
                   }}
                   required
                   containerClassName="max-w-none"
                 />
 
-                {/* Article Title (English) */}
-                <InputBox
-                  label={
-                    <span>
-                      Judul Artikel (English) <span className="text-red-state">*</span>
-                    </span>
-                  }
-                  placeholder="e.g. Safety Standards for Guardrail Installation on Highways"
-                  value={articleName}
-                  onChange={(e) => setArticleName(e.target.value)}
-                  required
-                  containerClassName="max-w-none"
-                />
+                {/* Category & Badge Color */}
+                <div className="flex flex-col md:flex-row items-stretch gap-4 w-full">
+                  <Dropdown
+                    label={
+                      <span>
+                        Kategori Artikel <span className="text-red-state">*</span>
+                      </span>
+                    }
+                    placeholder="Pilih atau ketik kategori..."
+                    options={availableCategories.map((c) => ({ value: c, label: c }))}
+                    value={categories[0] || ""}
+                    onChange={(val) => setCategories([val])}
+                    multiple={false}
+                    allowCustomValues={true}
+                    containerClassName="flex-1 max-w-none"
+                  />
 
-                {/* Dynamic Categories & Colors */}
-                <div className="flex flex-col gap-3 w-full">
-                  <div className="self-stretch px-4 py-3 bg-g1/10 rounded-2xl flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-6">
-                    <div className="flex items-center gap-2.5">
-                      <div className="size-6 text-g1 flex items-center justify-center">
-                        <LordIcon name="Category" size={20} primaryColor="#0A9863" />
-                      </div>
-                      <div>
-                        <span className="text-g1 text-sm md:text-base font-semibold font-sans">
-                          Kategori Artikel
-                        </span>
-                        <span className="text-dark/50 text-xs md:text-sm font-normal font-sans">
-                          {" "}
-                          (Dapat memilih lebih dari satu)
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Add Category Button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCategories([...categories, "Konstruksi"]);
-                        setCategoryColors([...categoryColors, "Blue"]);
-                      }}
-                      className="h-9 px-3 bg-white hover:bg-g1/15 text-g1 rounded-full border border-g1/20 flex items-center justify-center gap-1.5 text-xs font-semibold font-sans transition-all cursor-pointer shadow-xs shrink-0"
-                      title="Tambah Kategori"
-                    >
-                      <LordIcon name="Add" size={16} primaryColor="#0A9863" />
-                      <span>Tambah Kategori</span>
-                    </button>
-                  </div>
-
-                  {categories.length === 0 ? (
-                    <div className="self-stretch text-dark/40 text-sm font-normal font-sans pl-4 py-2">
-                      Klik tombol <span className="text-g1 font-semibold">+ Tambah Kategori</span> di atas untuk menambahkan label.
-                    </div>
-                  ) : (
-                    categories.map((cat, index) => (
-                      <div
-                        key={index}
-                        className="self-stretch flex flex-col md:flex-row items-stretch md:items-end gap-3 w-full pl-0 md:pl-4"
-                      >
-                        <Dropdown
-                          label={
-                            <span>
-                              Kategori {index + 1} <span className="text-red-state">*</span>
-                            </span>
-                          }
-                          placeholder="Pilih atau ketik kategori..."
-                          options={availableCategories.map((c) => ({ value: c, label: c }))}
-                          value={cat}
-                          onChange={(val) => {
-                            const updated = [...categories];
-                            updated[index] = val;
-                            setCategories(updated);
-                          }}
-                          multiple={false}
-                          allowCustomValues={true}
-                          containerClassName="flex-1 max-w-none"
-                        />
-
-                        <Dropdown
-                          label={
-                            <span>
-                              Warna Badge {index + 1} <span className="text-red-state">*</span>
-                            </span>
-                          }
-                          placeholder="Pilih Warna"
-                          options={[
-                            { value: "Green", label: <Badge variant="green" text="Green" />, searchLabel: "Green" },
-                            { value: "Blue", label: <Badge variant="blue" text="Blue" />, searchLabel: "Blue" },
-                            { value: "Red", label: <Badge variant="red" text="Red" />, searchLabel: "Red" },
-                            { value: "Yellow", label: <Badge variant="yellow" text="Yellow" />, searchLabel: "Yellow" },
-                            { value: "Purple", label: <Badge variant="purple" text="Purple" />, searchLabel: "Purple" },
-                            { value: "Orange", label: <Badge variant="orange" text="Orange" />, searchLabel: "Orange" },
-                          ]}
-                          value={categoryColors[index] || "Green"}
-                          onChange={(val) => {
-                            const updated = [...categoryColors];
-                            updated[index] = val;
-                            setCategoryColors(updated);
-                          }}
-                          multiple={false}
-                          containerClassName="w-full max-w-none md:w-60 shrink-0"
-                          selectClassName="bg-white"
-                        />
-
-                        <div className="h-11 flex items-center shrink-0 justify-end">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCategories(categories.filter((_, i) => i !== index));
-                              setCategoryColors(categoryColors.filter((_, i) => i !== index));
-                            }}
-                            className="size-11 bg-red-state/10 hover:bg-red-state text-red-state hover:text-white rounded-full flex justify-center items-center transition-all cursor-pointer"
-                            title="Hapus Kategori"
-                          >
-                            <LordIcon name="Delete" size={18} primaryColor="currentColor" />
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
+                  <Dropdown
+                    label={
+                      <span>
+                        Warna Badge Kategori <span className="text-red-state">*</span>
+                      </span>
+                    }
+                    placeholder="Pilih Warna"
+                    options={[
+                      { value: "green", label: <Badge variant="green" text="Green" />, searchLabel: "Green" },
+                      { value: "blue", label: <Badge variant="blue" text="Blue" />, searchLabel: "Blue" },
+                      { value: "red", label: <Badge variant="red" text="Red" />, searchLabel: "Red" },
+                      { value: "yellow", label: <Badge variant="yellow" text="Yellow" />, searchLabel: "Yellow" },
+                      { value: "purple", label: <Badge variant="purple" text="Purple" />, searchLabel: "Purple" },
+                      { value: "orange", label: <Badge variant="orange" text="Orange" />, searchLabel: "Orange" },
+                    ]}
+                    value={categoryColors[0]?.toLowerCase() || "green"}
+                    onChange={(val) => setCategoryColors([val])}
+                    multiple={false}
+                    containerClassName="w-full max-w-none md:w-60 shrink-0"
+                    selectClassName="bg-white"
+                  />
                 </div>
 
                 {/* Article Content Editor */}
                 <ArticleEditor
-                  label="Isi Konten Artikel"
-                  englishValue={content}
-                  onEnglishChange={setContent}
-                  indonesianValue={contentIndonesia}
-                  onIndonesianChange={setContentIndonesia}
+                  label="Isi Konten Artikel *"
+                  value={contentIndonesia || content}
+                  onChange={(val) => {
+                    setContent(val);
+                    setContentIndonesia(val);
+                  }}
                   className="mt-2"
                 />
               </div>
@@ -410,7 +322,7 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
                   type="button"
                   onClick={() => router.push("/kelola-artikel")}
                   text="Batal"
-                  variant="ghost-green"
+                  variant="outline"
                   className="w-full sm:w-36 cursor-pointer"
                 />
                 <Button
