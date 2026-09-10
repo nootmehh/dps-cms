@@ -4,6 +4,7 @@ import Pagination from "@/components/ui/pagination";
 import InputBox from "@/components/ui/inputBox";
 import { fetchMediaList } from "@/shared/api/media";
 import LordIcon from "@/components/common/lordIcon";
+import EmptyState from "@/components/common/emptyState";
 
 export interface MediaSelectModalItem {
     id: string;
@@ -92,21 +93,16 @@ export default function MediaSelectModal({
             <div className="w-full max-w-4xl max-h-[90vh] bg-white rounded-3xl border border-white-80 shadow-2xl flex flex-col justify-start items-start gap-5 p-6 md:p-8 overflow-hidden animate-scale-in">
                 {/* Modal Header */}
                 <div className="self-stretch flex justify-between items-center w-full">
-                    <div className="flex-1 inline-flex flex-col justify-start items-start gap-1">
-                        <div className="self-stretch justify-start text-dark/60 text-xs font-semibold font-sans tracking-wider uppercase">
-                            MEDIA LIBRARY
-                        </div>
-                        <div className="self-stretch justify-start text-g1 text-2xl font-bold font-sans">
-                            Pilih dari Media Library
-                        </div>
+                    <div className="flex-1 text-g1 text-2xl font-bold font-sans">
+                        Pilih dari Media Library
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-2 rounded-full text-dark/60 hover:bg-brand-background transition-all cursor-pointer flex items-center justify-center"
+                        className="size-9 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all cursor-pointer flex items-center justify-center shrink-0"
                         title="Tutup"
                     >
-                        <LordIcon name="Cross" size={20} primaryColor="#110D31" />
+                        <LordIcon name="Cross" size={20} primaryColor="#666666" />
                     </button>
                 </div>
 
@@ -115,7 +111,7 @@ export default function MediaSelectModal({
 
                 {/* Filters */}
                 {mediaList.length > 0 && (
-                    <div className="self-stretch flex flex-col md:flex-row md:items-end items-stretch gap-4 w-full">
+                    <div className="self-stretch w-full">
                         <InputBox
                             label="Cari Berkas"
                             placeholder="Cari nama berkas..."
@@ -125,7 +121,7 @@ export default function MediaSelectModal({
                                 setCurrentPage(1);
                             }}
                             leftIcon="Search"
-                            containerClassName="w-full max-w-none md:w-1/2"
+                            containerClassName="w-full max-w-none"
                         />
                     </div>
                 )}
@@ -138,10 +134,17 @@ export default function MediaSelectModal({
                             <p className="text-sm">Memuat media...</p>
                         </div>
                     ) : paginatedMedia.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-16 text-slate-400 font-sans">
-                            <p className="text-base font-medium">Tidak ada media ditemukan</p>
-                            <p className="text-sm opacity-80 mt-1">Coba sesuaikan pencarian atau unggah berkas baru.</p>
-                        </div>
+                        <EmptyState
+                            iconName="Image 2"
+                            iconSize={56}
+                            primaryColor="#0A9863"
+                            text={
+                                searchQuery
+                                    ? `Tidak ada media yang cocok dengan "${searchQuery}"`
+                                    : "Belum ada berkas media di library."
+                            }
+                            className="py-12"
+                        />
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                             {paginatedMedia.map((item) => {
@@ -150,33 +153,28 @@ export default function MediaSelectModal({
                                     <div
                                         key={item.id}
                                         onClick={() => handleSelectCard(item)}
-                                        className={`relative group rounded-2xl overflow-hidden cursor-pointer border-2 transition-all ${
+                                        className={`w-full p-3 bg-white rounded-2xl border transition-all flex flex-col gap-2.5 group relative overflow-hidden cursor-pointer ${
                                             isSelected
-                                                ? "border-g1 ring-2 ring-g1/30 shadow-md"
-                                                : "border-slate-100 hover:border-slate-300 hover:shadow-xs"
+                                                ? "border-g1 outline outline-2 outline-g1 ring-2 ring-g1/20 shadow-md"
+                                                : "border-white-80 shadow-[0px_2px_4px_0px_rgba(0,0,0,0.04)] hover:shadow-md hover:border-g1 hover:outline hover:outline-2 hover:outline-g1 hover:ring-2 hover:ring-g1/20"
                                         }`}
                                     >
-                                        <div className="aspect-square bg-slate-100 relative overflow-hidden flex items-center justify-center">
+                                        <div className="w-full aspect-square rounded-xl bg-slate-100 overflow-hidden border border-slate-200/60 relative flex items-center justify-center group-hover:opacity-95 transition-opacity">
                                             <img
                                                 src={item.url}
                                                 alt={item.fileName}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
                                             />
                                             {isSelected && (
-                                                <div className="absolute top-2 right-2 size-6 bg-g1 text-white rounded-full flex items-center justify-center shadow-md">
-                                                    <LordIcon name="Right 1" size={14} primaryColor="#FFFFFF" />
+                                                <div className="absolute top-2 right-2 size-7 bg-g1 border-2 border-white text-white rounded-full flex items-center justify-center shadow-md">
+                                                    <LordIcon name="CheckCircleTick" size={16} primaryColor="#FFFFFF" secondaryColor="#FFFFFF" />
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="p-2.5 bg-white flex flex-col gap-0.5">
-                                            <p className="text-xs font-semibold text-dark truncate" title={item.fileName}>
+                                        <div className="flex items-center justify-between gap-2 min-w-0 px-0.5">
+                                            <span className="text-xs sm:text-sm font-semibold text-slate-800 truncate font-sans" title={item.fileName}>
                                                 {item.fileName}
-                                            </p>
-                                            {item.fileSize && (
-                                                <p className="text-[10px] text-slate-400 font-mono">
-                                                    {item.fileSize}
-                                                </p>
-                                            )}
+                                            </span>
                                         </div>
                                     </div>
                                 );

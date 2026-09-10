@@ -133,7 +133,13 @@ export default function Button({
       )}
 
       {/* Center Label Pill Segment */}
-      <span className="pill-segment h-12 px-5 py-3 rounded-[100px] flex items-center justify-center text-sm font-semibold font-sans text-center leading-normal">
+      <span
+        className={`pill-segment h-12 px-5 py-3 rounded-[100px] flex items-center justify-center text-sm font-semibold font-sans text-center leading-normal ${
+          className.includes("w-full") || className.includes("flex-1") || className.includes("self-stretch")
+            ? "flex-1"
+            : ""
+        }`}
+      >
         {text}
       </span>
 

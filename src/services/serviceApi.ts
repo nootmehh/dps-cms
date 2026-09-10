@@ -5,6 +5,7 @@ export interface SupabaseServiceRow {
   title: string;
   category: string | null;
   category_color: string | null;
+  description?: string | null;
   keunggulan: { title: string; description: string }[] | null;
   faq: { question: string; answer: string }[] | null;
   product_id: string[] | null;
@@ -25,6 +26,7 @@ export interface CreateServicePayload {
   title: string;
   category?: string | null;
   category_color?: string | null;
+  description?: string | null;
   keunggulan?: { title: string; description: string }[] | null;
   faq?: { question: string; answer: string }[] | null;
   product_id?: string[] | null;
@@ -35,6 +37,7 @@ export interface EditServicePayload {
   title?: string;
   category?: string | null;
   category_color?: string | null;
+  description?: string | null;
   keunggulan?: { title: string; description: string }[] | null;
   faq?: { question: string; answer: string }[] | null;
   product_id?: string[] | null;
@@ -122,7 +125,7 @@ export async function addService(payload: CreateServicePayload): Promise<Supabas
     ? payload.product_id.filter(isValidUuid)
     : null;
 
-  const insertData = {
+  const insertData: Record<string, any> = {
     title: payload.title,
     category: payload.category || null,
     category_color: payload.category_color || null,
@@ -131,6 +134,9 @@ export async function addService(payload: CreateServicePayload): Promise<Supabas
     product_id: validProductIds && validProductIds.length > 0 ? validProductIds : null,
     service_image_url: payload.service_image_url || null,
   };
+  if (payload.description !== undefined) {
+    insertData.description = payload.description || null;
+  }
 
   const { data, error } = await supabase
     .from("services")
@@ -165,6 +171,7 @@ export async function editService(
   if (payload.title !== undefined) updateData.title = payload.title;
   if (payload.category !== undefined) updateData.category = payload.category;
   if (payload.category_color !== undefined) updateData.category_color = payload.category_color;
+  if (payload.description !== undefined) updateData.description = payload.description;
   if (payload.keunggulan !== undefined) updateData.keunggulan = payload.keunggulan;
   if (payload.faq !== undefined) updateData.faq = payload.faq;
 

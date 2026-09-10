@@ -190,7 +190,7 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
       />
 
       {/* Main Body */}
-      <main className="w-full max-w-[1440px] px-6 lg:px-12 py-8 flex flex-col md:flex-row justify-center items-start gap-6">
+      <main className="w-full max-w-360 px-6 lg:px-12 py-6 flex flex-col md:flex-row justify-center items-start gap-6">
         {/* Sidebar Component */}
         <Sidebar activeId="articles" className="md:sticky md:top-8 shrink-0" />
 
@@ -330,7 +330,7 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
                   disabled={submitting}
                   text={submitting ? "Menyimpan..." : id ? "Perbarui Artikel" : "Simpan Artikel"}
                   variant="fill"
-                  rightIcon="Add"
+                  rightIcon={id ? "Pen" : "Add"}
                   className="w-full sm:w-48 cursor-pointer"
                 />
               </div>

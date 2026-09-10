@@ -28,6 +28,7 @@ export interface ProductPayload {
   category: string;
   categoryVariant?: string;
   imageUrl?: string | null;
+  imageUrls?: string[];
   highlightImgUrl?: string | null;
   description: string;
   detailProduct: ProductDetailItem[];
@@ -98,15 +99,13 @@ export function saveStoredProducts(products: ProductPayload[]): void {
 
 export async function getConsistingProductCategories(): Promise<string[]> {
   const cats = new Set<string>();
+  DEFAULT_PRODUCT_CATEGORIES.forEach((c) => cats.add(c));
   try {
     const supabaseProducts = await getSupabaseProducts();
-    if (supabaseProducts && supabaseProducts.length > 0) {
-      supabaseProducts.forEach((p) => {
-        if (p.category) cats.add(p.category);
-      });
-      return Array.from(cats);
-    }
-  } catch {
+    supabaseProducts.forEach((p) => {
+      if (p.category) cats.add(p.category);
+    });
+  } catch (e) {
     // ignore
   }
   const products = getStoredProducts();
@@ -122,12 +121,26 @@ export async function getProductById(id: string | number): Promise<ProductPayloa
     try {
       const row = await getSupabaseProductById(strId);
       if (row) {
+        let finalImageUrls: string[] = [];
+        const rawImg = row.product_image_url as any;
+        if (Array.isArray(rawImg) && rawImg.length > 0) {
+          finalImageUrls = rawImg;
+        } else if (typeof rawImg === "string" && rawImg.trim()) {
+          try {
+            const parsed = JSON.parse(rawImg);
+            finalImageUrls = Array.isArray(parsed) ? parsed : [rawImg];
+          } catch {
+            finalImageUrls = [rawImg];
+          }
+        }
+
         return {
           id: row.id,
           title: row.title,
           category: row.category || "Umum",
           categoryVariant: row.category_color?.toLowerCase() || CATEGORY_VARIANT_MAP[row.category || ""] || "green",
-          imageUrl: row.product_image_url?.[0] || row.highlight_img_url || null,
+          imageUrl: finalImageUrls[0] || row.highlight_img_url || null,
+          imageUrls: finalImageUrls,
           highlightImgUrl: row.highlight_img_url || null,
           description: row.description || "",
           detailProduct: row.detail_product || [],
@@ -153,11 +166,11 @@ export async function getProductById(id: string | number): Promise<ProductPayloa
   return found || null;
 }
 
-import { uploadFileToServer } from "@/shared/api/upload";
+import { uploadFileToServer, deleteFileFromServer, isManualUploadUrl } from "@/shared/api/upload";
 
 export async function addProduct(
   data: Omit<ProductPayload, "id" | "createdAt">,
-  imageFile?: File | null,
+  imageFile?: File | File[] | null,
   highlightImageFile?: File | null
 ): Promise<ProductPayload> {
   const products = getStoredProducts();
@@ -167,13 +180,24 @@ export async function addProduct(
     now.getHours()
   ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-  let imageUrl = data.imageUrl || null;
+  let finalImageUrls: string[] = Array.isArray((data as any).imageUrls)
+    ? [...(data as any).imageUrls]
+    : data.imageUrl
+    ? [data.imageUrl]
+    : [];
+
   if (imageFile) {
-    try {
-      imageUrl = await uploadFileToServer(imageFile, "products");
-    } catch (err) {
-      console.warn("Upload product image failed, falling back to blob:", err);
-      imageUrl = URL.createObjectURL(imageFile);
+    const filesToUpload = Array.isArray(imageFile) ? imageFile : [imageFile];
+    for (const f of filesToUpload) {
+      if (f) {
+        try {
+          const url = await uploadFileToServer(f, "products");
+          finalImageUrls.push(url);
+        } catch (err) {
+          console.warn("Upload product image failed, falling back to blob:", err);
+          finalImageUrls.push(URL.createObjectURL(f));
+        }
+      }
     }
   }
 
@@ -198,14 +222,15 @@ export async function addProduct(
       suitable_for: data.suitableFor,
       kelebihan: data.kelebihan,
       kekurangan: data.kekurangan,
-      product_image_url: imageUrl ? [imageUrl] : null,
+      product_image_url: finalImageUrls.length > 0 ? finalImageUrls : null,
       highlight_img_url: highlightImgUrl || null,
     });
 
     const newProduct: ProductPayload = {
       ...data,
       id: supabaseRow?.id || String(Date.now()),
-      imageUrl: imageUrl || "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
+      imageUrl: finalImageUrls[0] || "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
+      imageUrls: finalImageUrls,
       highlightImgUrl: highlightImgUrl || null,
       createdAt: formattedDate,
       categoryVariant: data.categoryVariant || CATEGORY_VARIANT_MAP[data.category] || "green",
@@ -223,21 +248,29 @@ export async function addProduct(
 export async function editProduct(
   id: string | number,
   data: Partial<ProductPayload>,
-  imageFile?: File | null,
+  imageFile?: File | File[] | null,
   imageRemoved?: boolean,
   highlightImageFile?: File | null,
-  highlightImageRemoved?: boolean
+  highlightImageRemoved?: boolean,
+  removedImageUrls?: string[]
 ): Promise<ProductPayload> {
   const products = getStoredProducts();
+  const existingProduct = products.find((p) => String(p.id) === String(id));
   let updatedProduct: ProductPayload | null = null;
 
-  let uploadedImageUrl: string | null = null;
+  let uploadedUrls: string[] = [];
   if (imageFile) {
-    try {
-      uploadedImageUrl = await uploadFileToServer(imageFile, "products");
-    } catch (err) {
-      console.warn("Upload product image failed, falling back to blob:", err);
-      uploadedImageUrl = URL.createObjectURL(imageFile);
+    const filesToUpload = Array.isArray(imageFile) ? imageFile : [imageFile];
+    for (const f of filesToUpload) {
+      if (f) {
+        try {
+          const url = await uploadFileToServer(f, "products");
+          uploadedUrls.push(url);
+        } catch (err) {
+          console.warn("Upload product image failed, falling back to blob:", err);
+          uploadedUrls.push(URL.createObjectURL(f));
+        }
+      }
     }
   }
 
@@ -251,34 +284,42 @@ export async function editProduct(
     }
   }
 
+  let computedFinalBannerUrls: string[] = [];
+  let computedFinalHighlightUrl: string | null = null;
+
   const updated = products.map((product) => {
     if (String(product.id) === String(id)) {
-      let finalImageUrl = product.imageUrl;
-      if (imageRemoved) {
-        finalImageUrl = null;
+      let finalImageUrls: string[] = [];
+      if (!imageRemoved) {
+        if (Array.isArray(data.imageUrls)) {
+          finalImageUrls = [...data.imageUrls];
+        } else if (product.imageUrls && product.imageUrls.length > 0) {
+          finalImageUrls = [...product.imageUrls];
+        } else if (product.imageUrl) {
+          finalImageUrls = [product.imageUrl];
+        }
       }
-      if (imageFile && uploadedImageUrl) {
-        finalImageUrl = uploadedImageUrl;
-      } else if (data.imageUrl !== undefined) {
-        finalImageUrl = data.imageUrl;
-      }
+      finalImageUrls = [...finalImageUrls, ...uploadedUrls];
+      computedFinalBannerUrls = finalImageUrls;
 
-      let finalHighlightImgUrl = product.highlightImgUrl;
+      let finalHighlightImgUrl: string | null = product.highlightImgUrl || null;
       if (highlightImageRemoved) {
         finalHighlightImgUrl = null;
       }
       if (highlightImageFile && uploadedHighlightUrl) {
         finalHighlightImgUrl = uploadedHighlightUrl;
       } else if (data.highlightImgUrl !== undefined) {
-        finalHighlightImgUrl = data.highlightImgUrl;
+        finalHighlightImgUrl = data.highlightImgUrl || null;
       }
+      computedFinalHighlightUrl = finalHighlightImgUrl;
 
       const nextCategory = data.category !== undefined ? data.category : product.category;
 
       updatedProduct = {
         ...product,
         ...data,
-        imageUrl: finalImageUrl,
+        imageUrl: finalImageUrls[0] || null,
+        imageUrls: finalImageUrls,
         highlightImgUrl: finalHighlightImgUrl,
         categoryVariant:
           data.categoryVariant || CATEGORY_VARIANT_MAP[nextCategory] || product.categoryVariant || "green",
@@ -290,6 +331,37 @@ export async function editProduct(
 
   if (!updatedProduct) {
     throw new Error(`Product with id ${id} not found.`);
+  }
+
+  // Identify manual upload URLs that are no longer in finalImageUrls and delete from server
+  const previousBannerUrls = [
+    ...(existingProduct?.imageUrls || []),
+    ...(existingProduct?.imageUrl ? [existingProduct.imageUrl] : []),
+    ...(removedImageUrls || []),
+  ];
+  const obsoleteBannerUrls = Array.from(new Set(previousBannerUrls)).filter(
+    (url) => url && !computedFinalBannerUrls.includes(url)
+  );
+
+  for (const obsoleteUrl of obsoleteBannerUrls) {
+    if (isManualUploadUrl(obsoleteUrl)) {
+      deleteFileFromServer(obsoleteUrl).catch((err) =>
+        console.warn(`Failed to delete obsolete product banner: ${obsoleteUrl}`, err)
+      );
+    }
+  }
+
+  // If previous highlight image was manual upload and is no longer used, delete it
+  if (
+    existingProduct?.highlightImgUrl &&
+    existingProduct.highlightImgUrl !== computedFinalHighlightUrl &&
+    !computedFinalBannerUrls.includes(existingProduct.highlightImgUrl)
+  ) {
+    if (isManualUploadUrl(existingProduct.highlightImgUrl)) {
+      deleteFileFromServer(existingProduct.highlightImgUrl).catch((err) =>
+        console.warn(`Failed to delete obsolete highlight image: ${existingProduct.highlightImgUrl}`, err)
+      );
+    }
   }
 
   const targetProduct: ProductPayload = updatedProduct;
@@ -306,7 +378,7 @@ export async function editProduct(
       suitable_for: data.suitableFor,
       kelebihan: data.kelebihan,
       kekurangan: data.kekurangan,
-      product_image_url: targetProduct.imageUrl ? [targetProduct.imageUrl] : null,
+      product_image_url: targetProduct.imageUrls && targetProduct.imageUrls.length > 0 ? targetProduct.imageUrls : null,
       highlight_img_url: targetProduct.highlightImgUrl || null,
     });
   } catch (err: any) {
@@ -320,9 +392,25 @@ export async function editProduct(
 
 export async function deleteProduct(id: string | number): Promise<void> {
   const strId = String(id);
-  await deleteSupabaseProduct(strId);
-
   const products = getStoredProducts();
+  const target = products.find((p) => String(p.id) === strId);
+
+  if (target) {
+    const allUrls = [
+      ...(target.imageUrls || []),
+      ...(target.imageUrl ? [target.imageUrl] : []),
+      ...(target.highlightImgUrl ? [target.highlightImgUrl] : []),
+    ];
+    for (const url of Array.from(new Set(allUrls))) {
+      if (isManualUploadUrl(url)) {
+        deleteFileFromServer(url).catch((err) =>
+          console.warn(`Failed to delete manual image on product deletion: ${url}`, err)
+        );
+      }
+    }
+  }
+
+  await deleteSupabaseProduct(strId);
   const nextProducts = products.filter((p) => String(p.id) !== strId);
   saveStoredProducts(nextProducts);
 }

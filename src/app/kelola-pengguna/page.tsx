@@ -10,24 +10,17 @@ import Dropdown, { type DropdownOption } from "@/components/ui/dropdown";
 import Badge, { type BadgeVariant } from "@/components/ui/badge";
 import Notification, { type NotificationType } from "@/components/ui/notification";
 import DeleteConfirmationModal from "@/components/modal/deleteConfirmation";
+import ManageUserModal from "@/components/modal/manageUserModal";
 import LordIcon from "@/components/common/lordIcon";
-
-export interface UserItem {
-  id: number | string;
-  username: string;
-  email: string;
-  role: string;
-  createdAt?: string;
-}
-
-const STORAGE_KEY = "dps_users_data";
-
-const INITIAL_USERS: UserItem[] = [];
-
-const ROLE_OPTIONS: DropdownOption[] = [
-  { value: "Super Admin", label: "Super Admin" },
-  { value: "Admin", label: "Admin" },
-];
+import EmptyState from "@/components/common/emptyState";
+import AuthGuard from "@/components/layout/authGuard";
+import {
+  getUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  type UserItem,
+} from "@/services/userApi";
 
 const ROLE_FILTER_OPTIONS: DropdownOption[] = [
   { value: "all", label: "Semua Role" },
@@ -35,17 +28,40 @@ const ROLE_FILTER_OPTIONS: DropdownOption[] = [
   { value: "Admin", label: "Admin" },
 ];
 
-const ROLE_VARIANT_MAP: Record<string, BadgeVariant> = {
-  "Super Admin": "purple",
-  Admin: "green",
+const SORT_OPTIONS: DropdownOption[] = [
+  { value: "terbaru", label: "Terbaru" },
+  { value: "terlama", label: "Terlama" },
+  { value: "a-z", label: "A - Z" },
+  { value: "z-a", label: "Z - A" },
+];
+
+const formatRole = (role?: string) => {
+  if (!role) return "Admin";
+  const normalized = role.toLowerCase().replace(/[_-]/g, " ").trim();
+  if (normalized === "super admin" || normalized === "superadmin") {
+    return "Super Admin";
+  }
+  if (normalized === "admin") {
+    return "Admin";
+  }
+  return role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+const getRoleVariant = (role?: string): BadgeVariant => {
+  if (!role) return "green";
+  const normalized = role.toLowerCase().replace(/[_-]/g, " ").trim();
+  if (normalized.includes("super")) return "purple";
+  return "green";
 };
 
 export default function KelolaPenggunaPage() {
   const [users, setUsers] = useState<UserItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRoleFilter, setSelectedRoleFilter] = useState("all");
+  const [selectedSort, setSelectedSort] = useState<string>("terbaru");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 8;
 
   // Modals state
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; user?: UserItem }>({
@@ -55,18 +71,11 @@ export default function KelolaPenggunaPage() {
   const [formModal, setFormModal] = useState<{
     isOpen: boolean;
     mode: "add" | "edit";
-    userId?: number | string;
+    user: UserItem | null;
   }>({
     isOpen: false,
     mode: "add",
-  });
-
-  const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    role: "Admin",
-    password: "",
-    confirmPassword: "",
+    user: null,
   });
 
   // Notification state
@@ -84,152 +93,138 @@ export default function KelolaPenggunaPage() {
     setNotification({ isOpen: true, message, type });
   };
 
-  // Load users from storage
+  // Load users on mount directly from Supabase
   useEffect(() => {
-    const loadUsers = () => {
+    const fetchUsers = async () => {
+      setIsLoading(true);
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            setUsers(parsed);
-            return;
-          }
-        }
+        const data = await getUsers();
+        setUsers(data);
+      } catch (err: any) {
+        console.error("Error loading users from Supabase:", err);
+        triggerNotif(`Gagal memuat pengguna dari Supabase: ${err.message || "Terjadi kesalahan"}`, "error");
         setUsers([]);
-      } catch {
-        setUsers([]);
+      } finally {
+        setIsLoading(false);
       }
     };
-    loadUsers();
+
+    fetchUsers();
   }, []);
 
-  const saveUsersToStorage = (updatedUsers: UserItem[]) => {
-    setUsers(updatedUsers);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUsers));
-    } catch (e) {
-      console.error("Failed to save users", e);
-    }
+  const isSuperAdmin = (role?: string) => {
+    if (!role) return false;
+    const normalized = role.trim().toLowerCase().replace(/[_-]/g, " ");
+    return normalized === "super admin" || normalized === "superadmin";
   };
 
   // Open Add Modal
   const handleOpenAdd = () => {
-    setFormData({ username: "", email: "", role: "Admin", password: "", confirmPassword: "" });
-    setFormModal({ isOpen: true, mode: "add" });
+    setFormModal({ isOpen: true, mode: "add", user: null });
   };
 
-  // Open Edit Modal
+  // Open Edit Modal (Super Admin cannot be edited)
   const handleOpenEdit = (user: UserItem) => {
-    setFormData({
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      password: "",
-      confirmPassword: "",
-    });
-    setFormModal({ isOpen: true, mode: "edit", userId: user.id });
-  };
-
-  // Save Add / Edit
-  const handleSaveUser = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.username.trim()) {
-      triggerNotif("Username wajib diisi.", "error");
+    if (isSuperAdmin(user.role)) {
+      triggerNotif("Akun Super Admin tidak dapat diedit!", "error");
       return;
     }
-    if (!formData.email.trim()) {
-      triggerNotif("Email wajib diisi.", "error");
+    setFormModal({ isOpen: true, mode: "edit", user });
+  };
+
+  // Save Add / Edit User directly to Supabase
+  const handleSaveUser = async (data: {
+    username: string;
+    email: string;
+    role: string;
+    password?: string;
+  }) => {
+    try {
+      if (formModal.mode === "add") {
+        const created = await createUser({
+          username: data.username,
+          email: data.email,
+          role: data.role,
+          password: data.password!,
+        });
+        setUsers((prev) => [created, ...prev]);
+        triggerNotif(`Pengguna "${created.username}" berhasil ditambahkan!`, "default");
+      } else if (formModal.mode === "edit" && formModal.user) {
+        if (isSuperAdmin(formModal.user.role)) {
+          triggerNotif("Akun Super Admin tidak dapat diedit!", "error");
+          return;
+        }
+        const updated = await updateUser(formModal.user.id, data);
+        setUsers((prev) =>
+          prev.map((u) => (u.id === updated.id ? updated : u))
+        );
+        triggerNotif(`Pengguna "${updated.username}" berhasil diperbarui!`, "default");
+      }
+    } catch (err: any) {
+      console.error("Error saving user:", err);
+      const isRls =
+        err?.message?.toLowerCase().includes("row-level security") ||
+        err?.code === "42501";
+      const msg = isRls
+        ? "Gagal menyimpan: Policy RLS tabel 'users' belum diizinkan. Silakan aktifkan policy INSERT/UPDATE di Supabase SQL Editor."
+        : err?.message || "Terjadi kesalahan saat menyimpan ke Supabase";
+      triggerNotif(msg, "error");
+      throw err;
+    }
+  };
+
+  // Confirm Delete User directly from Supabase
+  const confirmDelete = async () => {
+    if (!deleteModal.user) return;
+
+    if (isSuperAdmin(deleteModal.user.role)) {
+      triggerNotif("Super Admin tidak dapat dihapus dari sistem!", "error");
+      setDeleteModal({ isOpen: false });
       return;
     }
 
-    // Password validation for add or edit
-    if (formModal.mode === "add") {
-      if (!formData.password.trim()) {
-        triggerNotif("Password wajib diisi untuk akun baru.", "error");
-        return;
-      }
-      if (formData.password.length < 6) {
-        triggerNotif("Password minimal 6 karakter.", "error");
-        return;
-      }
-      if (formData.password !== formData.confirmPassword) {
-        triggerNotif("Password dan Konfirmasi Password tidak cocok!", "error");
-        return;
-      }
-    } else if (formModal.mode === "edit") {
-      if (formData.password.trim()) {
-        if (formData.password.length < 6) {
-          triggerNotif("Password minimal 6 karakter.", "error");
-          return;
-        }
-        if (formData.password !== formData.confirmPassword) {
-          triggerNotif("Password dan Konfirmasi Password tidak cocok!", "error");
-          return;
-        }
-      }
-    }
-
-    if (formModal.mode === "add") {
-      const newUser: UserItem = {
-        id: Date.now(),
-        username: formData.username.trim(),
-        email: formData.email.trim().toLowerCase(),
-        role: formData.role,
-        createdAt: "Hari ini",
-      };
-
-      const nextList = [newUser, ...users];
-      saveUsersToStorage(nextList);
-      triggerNotif(`Pengguna "${newUser.username}" berhasil ditambahkan!`, "success");
-    } else if (formModal.mode === "edit" && formModal.userId) {
-      const nextList = users.map((u) =>
-        String(u.id) === String(formModal.userId)
-          ? {
-              ...u,
-              username: formData.username.trim(),
-              email: formData.email.trim().toLowerCase(),
-              role: formData.role,
-            }
-          : u
-      );
-      saveUsersToStorage(nextList);
-      triggerNotif(`Pengguna "${formData.username.trim()}" berhasil diperbarui!`, "success");
-    }
-
-    setFormModal({ isOpen: false, mode: "add" });
-  };
-
-  // Handle Delete
-  const confirmDelete = () => {
-    if (deleteModal.user) {
-      // Safety guard against deleting Super Admin
-      if (isSuperAdmin(deleteModal.user.role)) {
-        triggerNotif("Super Admin tidak dapat dihapus dari sistem!", "error");
-        setDeleteModal({ isOpen: false });
-        return;
-      }
-
-      const nextList = users.filter((u) => String(u.id) !== String(deleteModal.user?.id));
-      saveUsersToStorage(nextList);
-      triggerNotif(`Pengguna "${deleteModal.user.username}" berhasil dihapus`, "error");
+    const target = deleteModal.user;
+    try {
+      await deleteUser(target.id);
+      setUsers((prev) => prev.filter((u) => u.id !== target.id));
+      triggerNotif(`Pengguna "${target.username}" berhasil dihapus`, "default");
+    } catch (err: any) {
+      console.error("Error deleting user:", err);
+      const isRls =
+        err?.message?.toLowerCase().includes("row-level security") ||
+        err?.code === "42501";
+      const msg = isRls
+        ? "Gagal menghapus: Policy RLS tabel 'users' belum mengizinkan DELETE di Supabase."
+        : err?.message || "Gagal menghapus pengguna dari Supabase";
+      triggerNotif(msg, "error");
+    } finally {
       setDeleteModal({ isOpen: false });
     }
   };
 
-  const isSuperAdmin = (role: string) => {
-    return role.trim().toLowerCase() === "super admin" || role.trim().toLowerCase() === "superadmin";
-  };
-
-  // Filter users
-  const filteredUsers = users.filter((u) => {
-    const matchesSearch =
-      u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = selectedRoleFilter === "all" || u.role === selectedRoleFilter;
-    return matchesSearch && matchesRole;
-  });
+  // Filter and Sort users
+  const filteredUsers = users
+    .filter((u) => {
+      const matchesSearch =
+        u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesRole =
+        selectedRoleFilter === "all" ||
+        formatRole(u.role).toLowerCase() === formatRole(selectedRoleFilter).toLowerCase();
+      return matchesSearch && matchesRole;
+    })
+    .sort((a, b) => {
+      if (selectedSort === "a-z") {
+        return a.username.localeCompare(b.username);
+      }
+      if (selectedSort === "z-a") {
+        return b.username.localeCompare(a.username);
+      }
+      if (selectedSort === "terlama") {
+        return String(a.id).localeCompare(String(b.id));
+      }
+      return String(b.id).localeCompare(String(a.id));
+    });
 
   const paginatedUsers = filteredUsers.slice(
     (currentPage - 1) * itemsPerPage,
@@ -237,7 +232,8 @@ export default function KelolaPenggunaPage() {
   );
 
   return (
-    <div className="h-screen max-h-screen bg-white-90 flex flex-col items-center overflow-hidden">
+    <AuthGuard>
+      <div className="h-screen max-h-screen bg-white-90 flex flex-col items-center overflow-hidden">
       {/* Top Navbar */}
       <Navbar
         brandTitle="Dua Putra Srikandi"
@@ -252,7 +248,7 @@ export default function KelolaPenggunaPage() {
         <Sidebar activeId="users" className="shrink-0 h-fit" />
 
         {/* Content Card */}
-        <div className="flex-1 h-full p-6 md:p-8 bg-white rounded-4xl border border-white-80 shadow-xs flex flex-col justify-start items-start gap-5 w-full overflow-hidden min-h-0">
+        <div className="flex-1 h-full p-6 md:p-8 bg-white rounded-4xl border border-white-80 hover:border-g1 transition-colors flex flex-col justify-start items-start gap-5 w-full overflow-hidden min-h-0">
           {/* Header Row */}
           <div className="self-stretch flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
             <div className="flex-1 flex flex-col justify-start items-start gap-1">
@@ -260,12 +256,11 @@ export default function KelolaPenggunaPage() {
                 Kelola Pengguna
               </h1>
               <p className="text-dark text-sm font-normal font-sans">
-                Kelola akun CMS dan hak akses pengguna di sistem{" "}
-                <span className="text-g1 font-semibold">Dua Putra Srikandi</span>.
+                Kelola akun admin dan hak akses pengguna sistem di halaman ini
               </p>
             </div>
 
-            {/* Add User Action Button */}
+            {/* Add User Button */}
             <Button
               type="button"
               text="Tambah Pengguna"
@@ -279,11 +274,11 @@ export default function KelolaPenggunaPage() {
           {/* Top Divider */}
           <div className="w-full h-px bg-g1/10 shrink-0" aria-hidden="true" />
 
-          {/* Search & Filter Row */}
+          {/* Filter and Search Row */}
           <div className="self-stretch flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 w-full shrink-0">
             <div className="w-full sm:max-w-xs">
               <InputBox
-                placeholder="Cari nama atau email pengguna..."
+                placeholder="Cari nama atau email..."
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -292,117 +287,144 @@ export default function KelolaPenggunaPage() {
                 leftIcon="Search"
               />
             </div>
-            <div className="w-full sm:w-60">
-              <Dropdown
-                options={ROLE_FILTER_OPTIONS}
-                value={selectedRoleFilter}
-                onChange={(val) => {
-                  setSelectedRoleFilter(val);
-                  setCurrentPage(1);
-                }}
-                placeholder="Filter Role"
-              />
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+              <div className="w-full sm:w-56">
+                <Dropdown
+                  options={ROLE_FILTER_OPTIONS}
+                  value={selectedRoleFilter}
+                  onChange={(val) => {
+                    setSelectedRoleFilter(val);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Filter Role"
+                  searchPlaceholder="Search Role"
+                />
+              </div>
+              <div className="w-full sm:w-48">
+                <Dropdown
+                  options={SORT_OPTIONS}
+                  value={selectedSort}
+                  onChange={(val) => {
+                    setSelectedSort(val);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Urutkan"
+                  searchPlaceholder="Urutkan"
+                />
+              </div>
             </div>
           </div>
 
           {/* Table Container */}
           <div className="self-stretch flex-1 bg-white flex flex-col justify-start items-start gap-2 overflow-x-auto overflow-y-auto min-h-0 w-full pr-1">
-            {/* Table Header */}
-            <div className="self-stretch min-w-[720px] h-11 bg-white-90 rounded-xl flex items-center px-4 overflow-hidden select-none sticky top-0 z-10 shrink-0">
-              <div className="w-14 text-g1 text-sm font-semibold font-sans">No.</div>
-              <div className="flex-1 text-g1 text-sm font-semibold font-sans">Username</div>
-              <div className="w-64 text-g1 text-sm font-semibold font-sans">Email</div>
-              <div className="w-48 text-g1 text-sm font-semibold font-sans">Role</div>
-              <div className="w-24 text-left text-g1 text-sm font-semibold font-sans">Action</div>
+            {/* Sticky Table Header */}
+            <div className="self-stretch min-w-[840px] h-11 bg-white-90 rounded-xl flex items-center px-4 overflow-hidden select-none sticky top-0 z-10 shrink-0">
+              <div className="w-14 text-g1 text-xs font-semibold font-sans">No.</div>
+              <div className="flex-1 text-g1 text-xs font-semibold font-sans">Nama Pengguna</div>
+              <div className="w-64 text-g1 text-xs font-semibold font-sans">Email</div>
+              <div className="w-40 text-g1 text-xs font-semibold font-sans">Role</div>
+              <div className="w-32 text-g1 text-xs font-semibold font-sans">Waktu Dibuat</div>
+              <div className="w-24 text-left text-g1 text-xs font-semibold font-sans">Action</div>
             </div>
 
-            {/* Table Rows */}
-            {filteredUsers.length === 0 ? (
-              <div className="self-stretch py-12 text-center text-slate-400 text-sm font-sans">
-                Tidak ada pengguna yang sesuai dengan pencarian atau filter role.
+            {/* Table Rows or Empty State */}
+            {isLoading ? (
+              <div className="w-full py-20 flex flex-col items-center justify-center gap-3 text-g1">
+                <div className="w-9 h-9 border-3 border-g1 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-semibold text-dark/60 font-sans">
+                  Memuat data pengguna...
+                </span>
               </div>
+            ) : filteredUsers.length === 0 ? (
+              <EmptyState
+                text={
+                  searchQuery || selectedRoleFilter !== "all"
+                    ? "Tidak ada pengguna yang sesuai dengan pencarian atau filter Anda."
+                    : "Belum ada pengguna yang terdaftar saat ini."
+                }
+              />
             ) : (
-              paginatedUsers.map((user, idx) => {
-                const superAdminUser = isSuperAdmin(user.role);
-                const roleVariant = ROLE_VARIANT_MAP[user.role] || "green";
+              paginatedUsers.map((user, idx) => (
+                <div
+                  key={user.id}
+                  className="self-stretch min-w-[840px] min-h-[54px] border-b border-white-90 hover:bg-white-90/60 transition-colors flex items-center px-4 py-2"
+                >
+                  {/* No. */}
+                  <div className="w-14 text-dark/90 text-xs font-normal font-sans">
+                    {(currentPage - 1) * itemsPerPage + idx + 1}.
+                  </div>
 
-                return (
-                  <div
-                    key={user.id}
-                    className="self-stretch min-w-[720px] min-h-[58px] border-b border-white-90 hover:bg-white-90/60 transition-colors flex items-center px-4 py-2"
-                  >
-                    {/* No. */}
-                    <div className="w-14 text-dark/90 text-sm font-normal font-sans">
-                      {(currentPage - 1) * itemsPerPage + idx + 1}.
-                    </div>
+                  {/* Nama Pengguna */}
+                  <div className="flex-1 flex items-center pr-4">
+                    <span className="text-dark/90 text-xs font-semibold font-sans truncate">
+                      {user.username}
+                    </span>
+                  </div>
 
-                    {/* Username */}
-                    <div className="flex-1 flex items-center gap-3 pr-4">
-                      <div className="size-8 rounded-full bg-g1/15 text-g1 font-bold text-xs flex items-center justify-center font-sans shrink-0">
-                        {user.username.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="text-dark/90 text-sm font-semibold font-sans line-clamp-1">
-                        {user.username}
+                  {/* Email */}
+                  <div className="w-64 text-dark/75 text-xs font-normal font-sans truncate pr-2">
+                    {user.email}
+                  </div>
+
+                  {/* Role Badge */}
+                  <div className="w-40 flex items-center pr-2">
+                    <Badge
+                      text={formatRole(user.role)}
+                      variant={getRoleVariant(user.role)}
+                      showDot={true}
+                    />
+                  </div>
+
+                  {/* Waktu Dibuat */}
+                  <div className="w-32 text-dark/75 text-xs font-normal font-sans">
+                    {user.createdAt || "Baru saja"}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="w-24 flex justify-start items-center gap-2.5">
+                    {isSuperAdmin(user.role) ? (
+                      <span className="text-xs font-semibold text-dark/40 font-sans select-none">
+                        Terkunci
                       </span>
-                    </div>
-
-                    {/* Email */}
-                    <div className="w-64 text-dark/80 text-sm font-normal font-sans truncate pr-2">
-                      {user.email}
-                    </div>
-
-                    {/* Role Badge */}
-                    <div className="w-48 flex items-center">
-                      <Badge
-                        text={user.role}
-                        variant={roleVariant}
-                        showDot={true}
-                      />
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="w-24 flex justify-start items-center gap-2.5">
-                      {/* Edit Action Button */}
-                      <button
-                        type="button"
-                        title="Edit Pengguna"
-                        onClick={() => handleOpenEdit(user)}
-                        className="group size-9 p-1 bg-brand-background text-g1 border border-g1/40 hover:border-g1 hover:bg-g1/15 hover:opacity-80 rounded-full flex justify-center items-center hover:shadow-[0px_2px_6px_0px_rgba(6,137,81,0.25)] active:scale-95 transition-all duration-200 cursor-pointer"
-                      >
-                        <LordIcon name="Edit" size={18} primaryColor="#0A9863" trigger="hover" target="button, .group" />
-                      </button>
-
-                      {/* Delete Action Button (Disabled for Super Admin) */}
-                      {superAdminUser ? (
+                    ) : (
+                      <>
+                        {/* Edit Action Button */}
                         <button
                           type="button"
-                          disabled
-                          title="Super Admin tidak dapat dihapus"
-                          className="size-9 p-1 bg-slate-100 text-slate-300 rounded-full flex justify-center items-center cursor-not-allowed opacity-50 border border-slate-200"
+                          onClick={() => handleOpenEdit(user)}
+                          title="Edit Pengguna"
+                          className="group size-9 p-1 bg-brand-background text-g1 border border-g1/40 hover:border-g1 hover:bg-g1/15 hover:opacity-80 rounded-full flex justify-center items-center hover:shadow-[0px_2px_6px_0px_rgba(6,137,81,0.25)] active:scale-95 transition-all duration-200 cursor-pointer"
                         >
-                          <LordIcon name="Delete" size={18} primaryColor="#94A3B8" />
+                          <LordIcon
+                            name="Edit"
+                            size={18}
+                            primaryColor="#0A9863"
+                            trigger="hover"
+                            target="button, .group"
+                          />
                         </button>
-                      ) : (
+
+                        {/* Delete Action Button */}
                         <button
                           type="button"
-                          title="Hapus Pengguna"
                           onClick={() => setDeleteModal({ isOpen: true, user })}
+                          title="Hapus Pengguna"
                           className="size-9 p-1 bg-red-state text-white border border-red-300 hover:border-red-400 hover:opacity-80 active:opacity-60 active:scale-95 rounded-full flex justify-center items-center hover:shadow-[0px_2px_6px_0px_rgba(249,76,76,0.3)] transition-all duration-200 cursor-pointer shadow-xs"
                         >
                           <LordIcon name="Delete" size={18} primaryColor="#FFFFFF" />
                         </button>
-                      )}
-                    </div>
+                      </>
+                    )}
                   </div>
-                );
-              })
+                </div>
+              ))
             )}
           </div>
 
           {/* Bottom Divider */}
           <div className="w-full h-px bg-g1/10 shrink-0" aria-hidden="true" />
 
-          {/* Pagination Component */}
+          {/* Bottom Pagination */}
           <div className="self-stretch shrink-0">
             <Pagination
               currentPage={currentPage}
@@ -415,7 +437,7 @@ export default function KelolaPenggunaPage() {
         </div>
       </main>
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete User Modal */}
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false })}
@@ -425,127 +447,13 @@ export default function KelolaPenggunaPage() {
       />
 
       {/* Add / Edit User Modal */}
-      {formModal.isOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark/40 backdrop-blur-xs animate-fade-in"
-        >
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full border border-white-80 shadow-2xl flex flex-col gap-5 animate-scale-in">
-            <div>
-              <h2 className="text-xl font-bold text-dark">
-                {formModal.mode === "add" ? "Tambah Pengguna Baru" : "Edit Pengguna"}
-              </h2>
-              <p className="text-xs text-slate-500">
-                {formModal.mode === "add"
-                  ? "Masukkan detail username, email, hak akses (role), dan password untuk akun baru."
-                  : "Perbarui informasi akun, hak akses, atau ubah password pengguna."}
-              </p>
-            </div>
-
-            <form onSubmit={handleSaveUser} className="flex flex-col gap-4">
-              <InputBox
-                label={
-                  <span>
-                    Username <span className="text-red-state">*</span>
-                  </span>
-                }
-                placeholder="cth. Jane Doe"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                required
-                containerClassName="max-w-none"
-              />
-
-              <InputBox
-                label={
-                  <span>
-                    Email <span className="text-red-state">*</span>
-                  </span>
-                }
-                type="email"
-                placeholder="cth. jane@duaputra.id"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-                containerClassName="max-w-none"
-              />
-
-              <Dropdown
-                label={
-                  <span>
-                    Role / Hak Akses <span className="text-red-state">*</span>
-                  </span>
-                }
-                options={ROLE_OPTIONS}
-                value={formData.role}
-                onChange={(val) => setFormData({ ...formData, role: val })}
-                placeholder="Pilih Role Pengguna"
-                containerClassName="max-w-none"
-              />
-
-              <InputBox
-                label={
-                  <span>
-                    {formModal.mode === "add" ? "Password" : "Password Baru"}{" "}
-                    {formModal.mode === "add" ? (
-                      <span className="text-red-state">*</span>
-                    ) : (
-                      <span className="text-dark/40 text-xs font-normal">
-                        (Kosongkan jika tidak ingin mengubah)
-                      </span>
-                    )}
-                  </span>
-                }
-                type="password"
-                placeholder={
-                  formModal.mode === "add"
-                    ? "Minimal 6 karakter..."
-                    : "Masukkan password baru jika ingin mengubah..."
-                }
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                required={formModal.mode === "add"}
-                containerClassName="max-w-none"
-              />
-
-              <InputBox
-                label={
-                  <span>
-                    Konfirmasi {formModal.mode === "add" ? "Password" : "Password Baru"}{" "}
-                    {formModal.mode === "add" || formData.password ? (
-                      <span className="text-red-state">*</span>
-                    ) : null}
-                  </span>
-                }
-                type="password"
-                placeholder="Ketik ulang password..."
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                required={formModal.mode === "add" || !!formData.password}
-                containerClassName="max-w-none"
-              />
-
-              <div className="flex justify-end items-center gap-3 pt-3">
-                <Button
-                  type="button"
-                  text="Batal"
-                  variant="ghost-green"
-                  onClick={() => setFormModal({ isOpen: false, mode: "add" })}
-                  className="cursor-pointer"
-                />
-                <Button
-                  type="submit"
-                  text={formModal.mode === "add" ? "Simpan Pengguna" : "Perbarui Pengguna"}
-                  variant="fill"
-                  rightIcon={formModal.mode === "add" ? "Add" : undefined}
-                  className="cursor-pointer"
-                />
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ManageUserModal
+        isOpen={formModal.isOpen}
+        mode={formModal.mode}
+        user={formModal.user}
+        onClose={() => setFormModal({ isOpen: false, mode: "add", user: null })}
+        onSave={handleSaveUser}
+      />
 
       {/* Toast Notification */}
       <Notification
@@ -555,5 +463,6 @@ export default function KelolaPenggunaPage() {
         onClose={() => setNotification((prev) => ({ ...prev, isOpen: false }))}
       />
     </div>
+    </AuthGuard>
   );
 }

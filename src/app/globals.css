@@ -164,10 +164,16 @@ lord-icon {
   background-color: var(--g1);
   color: #ffffff;
   box-shadow: 0px 2px 4px 0px rgba(6, 137, 81, 0.25);
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease, filter 0.2s ease;
 }
-.btn-variant-unique-green:hover:not(:disabled) {
-  opacity: 0.85;
+.btn-variant-unique-green:hover:not(:disabled) .pill-segment {
+  opacity: 0.88;
+  filter: brightness(1.06);
+  box-shadow: 0px 4px 10px 0px rgba(6, 137, 81, 0.35);
+}
+.btn-variant-unique-green:active:not(:disabled) .pill-segment {
+  opacity: 0.75;
+  transform: scale(0.98);
 }
 
 /* 8. Unique Stroke Button (Connected Pills) */

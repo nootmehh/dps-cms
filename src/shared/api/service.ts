@@ -31,6 +31,7 @@ export interface ServicePayload {
   category: string;
   categoryVariant?: string;
   imageUrl?: string | null;
+  imageUrls?: string[];
   description?: string;
   keunggulan: ServiceKeunggulanItem[];
   materialPeralatan: ServiceMaterialItem[];
@@ -125,21 +126,70 @@ export async function getServiceById(id: string | number): Promise<ServicePayloa
     try {
       const supabaseRow = await getSupabaseServiceById(strId);
       if (supabaseRow) {
+        // 1. Normalize keunggulan (Supabase uses 'value' for description)
+        let rawKeunggulan: any[] = [];
+        if (Array.isArray(supabaseRow.keunggulan)) {
+          rawKeunggulan = supabaseRow.keunggulan;
+        } else if (typeof supabaseRow.keunggulan === "string") {
+          try {
+            rawKeunggulan = JSON.parse(supabaseRow.keunggulan);
+          } catch {
+            rawKeunggulan = [];
+          }
+        }
+        const mappedKeunggulan: ServiceKeunggulanItem[] = rawKeunggulan.map((k: any) => ({
+          title: k?.title || "",
+          description: k?.description || k?.value || "",
+        }));
+
+        // 2. Normalize faq
+        let rawFaq: any[] = [];
+        if (Array.isArray(supabaseRow.faq)) {
+          rawFaq = supabaseRow.faq;
+        } else if (typeof supabaseRow.faq === "string") {
+          try {
+            rawFaq = JSON.parse(supabaseRow.faq);
+          } catch {
+            rawFaq = [];
+          }
+        }
+        const mappedFaq: ServiceFAQItem[] = rawFaq.map((f: any) => ({
+          question: f?.question || "",
+          answer: f?.answer || "",
+        }));
+
+        // 3. Normalize product_id
+        let rawProductIds: string[] = [];
+        if (Array.isArray(supabaseRow.product_id)) {
+          rawProductIds = supabaseRow.product_id;
+        } else if (typeof supabaseRow.product_id === "string") {
+          try {
+            const parsed = JSON.parse(supabaseRow.product_id);
+            if (Array.isArray(parsed)) rawProductIds = parsed;
+          } catch {
+            rawProductIds = (supabaseRow.product_id as string)
+              .replace(/[{}]/g, "")
+              .split(",")
+              .map((s) => s.trim().replace(/^"|"$/g, ""))
+              .filter(Boolean);
+          }
+        }
+
         let materialItems: ServiceMaterialItem[] = [];
-        if (supabaseRow.product_id && supabaseRow.product_id.length > 0) {
+        if (rawProductIds.length > 0) {
           try {
             const allProds = await getSupabaseProducts();
-            materialItems = supabaseRow.product_id.map((pid) => {
+            materialItems = rawProductIds.map((pid) => {
               const foundProd = allProds.find((p) => String(p.id) === String(pid));
               return {
                 productId: pid,
-                category: foundProd?.category || "Produk Katalog",
+                category: foundProd?.category || "Perlengkapan Jalan",
                 name: foundProd?.title || `Produk #${pid.slice(0, 8)}`,
                 imageUrl: foundProd?.product_image_url?.[0] || foundProd?.highlight_img_url || null,
               };
             });
           } catch {
-            materialItems = supabaseRow.product_id.map((pid) => ({
+            materialItems = rawProductIds.map((pid) => ({
               productId: pid,
               category: "Produk Katalog",
               name: `Produk #${pid.slice(0, 8)}`,
@@ -148,15 +198,35 @@ export async function getServiceById(id: string | number): Promise<ServicePayloa
           }
         }
 
+        // 4. Normalize service_image_url
+        let finalImageUrl: string | null = null;
+        let finalImageUrls: string[] = [];
+        const rawImg = supabaseRow.service_image_url as any;
+        if (Array.isArray(rawImg) && rawImg.length > 0) {
+          finalImageUrls = rawImg;
+          finalImageUrl = rawImg[0];
+        } else if (typeof rawImg === "string" && rawImg.trim()) {
+          try {
+            const parsed = JSON.parse(rawImg);
+            finalImageUrls = Array.isArray(parsed) ? parsed : [rawImg];
+            finalImageUrl = finalImageUrls[0] || null;
+          } catch {
+            finalImageUrl = rawImg;
+            finalImageUrls = [rawImg];
+          }
+        }
+
         return {
           id: supabaseRow.id,
           title: supabaseRow.title,
           category: supabaseRow.category || "Umum",
           categoryVariant: supabaseRow.category_color?.toLowerCase() || SERVICE_CATEGORY_VARIANT_MAP[supabaseRow.category || ""] || "green",
-          imageUrl: supabaseRow.service_image_url?.[0] || null,
-          keunggulan: supabaseRow.keunggulan || [],
+          imageUrl: finalImageUrl,
+          imageUrls: finalImageUrls,
+          description: supabaseRow.description || "",
+          keunggulan: mappedKeunggulan,
           materialPeralatan: materialItems,
-          faq: supabaseRow.faq || [],
+          faq: mappedFaq,
           createdAt: supabaseRow.created_at,
         };
       }
@@ -170,11 +240,11 @@ export async function getServiceById(id: string | number): Promise<ServicePayloa
   return found || null;
 }
 
-import { uploadFileToServer } from "@/shared/api/upload";
+import { uploadFileToServer, deleteFileFromServer, isManualUploadUrl } from "@/shared/api/upload";
 
 export async function addService(
   data: Omit<ServicePayload, "id" | "createdAt">,
-  imageFile?: File | null
+  imageFile?: File | File[] | null
 ): Promise<ServicePayload> {
   const services = getStoredServices();
   const now = new Date();
@@ -183,13 +253,24 @@ export async function addService(
     now.getHours()
   ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-  let imageUrl = data.imageUrl || null;
+  let finalImageUrls: string[] = Array.isArray((data as any).imageUrls)
+    ? [...(data as any).imageUrls]
+    : data.imageUrl
+    ? [data.imageUrl]
+    : [];
+
   if (imageFile) {
-    try {
-      imageUrl = await uploadFileToServer(imageFile, "services");
-    } catch (err) {
-      console.warn("Upload service image failed, falling back to blob:", err);
-      imageUrl = URL.createObjectURL(imageFile);
+    const filesToUpload = Array.isArray(imageFile) ? imageFile : [imageFile];
+    for (const f of filesToUpload) {
+      if (f) {
+        try {
+          const url = await uploadFileToServer(f, "services");
+          finalImageUrls.push(url);
+        } catch (err) {
+          console.warn("Upload service image failed, falling back to blob:", err);
+          finalImageUrls.push(URL.createObjectURL(f));
+        }
+      }
     }
   }
 
@@ -200,19 +281,26 @@ export async function addService(
 
   // Sync to Supabase
   try {
+    const formattedKeunggulan = (data.keunggulan || []).map((k: any) => ({
+      title: k.title || "",
+      value: k.value || k.description || "",
+    }));
+
     const supabaseRow = await addSupabaseService({
       title: data.title,
       category: data.category,
       category_color: data.categoryVariant || SERVICE_CATEGORY_VARIANT_MAP[data.category] || "green",
-      keunggulan: data.keunggulan,
+      description: data.description || null,
+      keunggulan: formattedKeunggulan as any,
       faq: data.faq,
       product_id: productIds.length > 0 ? productIds : null,
-      service_image_url: imageUrl ? [imageUrl] : null,
+      service_image_url: finalImageUrls.length > 0 ? finalImageUrls : null,
     });
     const newService: ServicePayload = {
       ...data,
       id: supabaseRow?.id || String(Date.now()),
-      imageUrl: imageUrl || "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
+      imageUrl: finalImageUrls[0] || "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
+      imageUrls: finalImageUrls,
       createdAt: formattedDate,
       categoryVariant: data.categoryVariant || SERVICE_CATEGORY_VARIANT_MAP[data.category] || "green",
     };
@@ -229,40 +317,55 @@ export async function addService(
 export async function editService(
   id: string | number,
   data: Partial<ServicePayload>,
-  imageFile?: File | null,
-  imageRemoved?: boolean
+  imageFile?: File | File[] | null,
+  imageRemoved?: boolean,
+  removedImageUrls?: string[]
 ): Promise<ServicePayload> {
   const services = getStoredServices();
+  const existingService = services.find((s) => String(s.id) === String(id));
   let updatedService: ServicePayload | null = null;
 
-  let uploadedImageUrl: string | null = null;
+  let uploadedUrls: string[] = [];
   if (imageFile) {
-    try {
-      uploadedImageUrl = await uploadFileToServer(imageFile, "services");
-    } catch (err) {
-      console.warn("Upload service image failed, falling back to blob:", err);
-      uploadedImageUrl = URL.createObjectURL(imageFile);
+    const filesToUpload = Array.isArray(imageFile) ? imageFile : [imageFile];
+    for (const f of filesToUpload) {
+      if (f) {
+        try {
+          const url = await uploadFileToServer(f, "services");
+          uploadedUrls.push(url);
+        } catch (err) {
+          console.warn("Upload service image failed, falling back to blob:", err);
+          uploadedUrls.push(URL.createObjectURL(f));
+        }
+      }
     }
   }
 
+  let computedFinalBannerUrls: string[] = [];
+
   const updated = services.map((service) => {
     if (String(service.id) === String(id)) {
-      let finalImageUrl = service.imageUrl;
-      if (imageRemoved) {
-        finalImageUrl = null;
+      let finalImageUrls: string[] = [];
+      if (!imageRemoved) {
+        if (Array.isArray(data.imageUrls)) {
+          finalImageUrls = [...data.imageUrls];
+        } else if (service.imageUrls && service.imageUrls.length > 0) {
+          finalImageUrls = [...service.imageUrls];
+        } else if (service.imageUrl) {
+          finalImageUrls = [service.imageUrl];
+        }
       }
-      if (imageFile && uploadedImageUrl) {
-        finalImageUrl = uploadedImageUrl;
-      } else if (data.imageUrl !== undefined) {
-        finalImageUrl = data.imageUrl;
-      }
+      finalImageUrls = [...finalImageUrls, ...uploadedUrls];
+      computedFinalBannerUrls = finalImageUrls;
 
+      const finalImageUrl = finalImageUrls[0] || null;
       const nextCategory = data.category !== undefined ? data.category : service.category;
 
       updatedService = {
         ...service,
         ...data,
         imageUrl: finalImageUrl,
+        imageUrls: finalImageUrls,
         categoryVariant:
           data.categoryVariant || SERVICE_CATEGORY_VARIANT_MAP[nextCategory] || service.categoryVariant || "green",
       };
@@ -272,11 +375,56 @@ export async function editService(
   });
 
   if (!updatedService) {
-    throw new Error(`Service with id ${id} not found.`);
+    let finalImageUrls: string[] = [];
+    if (!imageRemoved) {
+      if (Array.isArray(data.imageUrls)) {
+        finalImageUrls = [...data.imageUrls];
+      } else if (data.imageUrl) {
+        finalImageUrls = [data.imageUrl];
+      }
+    }
+    finalImageUrls = [...finalImageUrls, ...uploadedUrls];
+    computedFinalBannerUrls = finalImageUrls;
+
+    const nextCategory = data.category || "Umum";
+    updatedService = {
+      id: String(id),
+      title: data.title || "",
+      category: nextCategory,
+      categoryVariant:
+        data.categoryVariant || SERVICE_CATEGORY_VARIANT_MAP[nextCategory] || "green",
+      imageUrl: finalImageUrls[0] || null,
+      imageUrls: finalImageUrls,
+      description: data.description || "",
+      keunggulan: data.keunggulan || [],
+      materialPeralatan: data.materialPeralatan || [],
+      faq: data.faq || [],
+      createdAt: new Date().toISOString(),
+      ...data,
+    };
+    services.unshift(updatedService);
+  }
+
+  // Delete obsolete manual upload images from server disk
+  const previousBannerUrls = [
+    ...(existingService?.imageUrls || []),
+    ...(existingService?.imageUrl ? [existingService.imageUrl] : []),
+    ...(removedImageUrls || []),
+  ];
+  const obsoleteBannerUrls = Array.from(new Set(previousBannerUrls)).filter(
+    (url) => url && !computedFinalBannerUrls.includes(url)
+  );
+
+  for (const obsoleteUrl of obsoleteBannerUrls) {
+    if (isManualUploadUrl(obsoleteUrl)) {
+      deleteFileFromServer(obsoleteUrl).catch((err) =>
+        console.warn(`Failed to delete obsolete service banner: ${obsoleteUrl}`, err)
+      );
+    }
   }
 
   const targetService: ServicePayload = updatedService;
-  saveStoredServices(updated);
+  saveStoredServices(services);
 
   // Sync to Supabase
   try {
@@ -285,14 +433,27 @@ export async function editService(
       .map((m: ServiceMaterialItem) => (m.productId ? String(m.productId) : null))
       .filter((pid: string | null): pid is string => Boolean(pid));
 
+    const rawKeunggulan = data.keunggulan !== undefined ? data.keunggulan : targetService.keunggulan;
+    const formattedKeunggulan = (rawKeunggulan || []).map((k: any) => ({
+      title: k.title || "",
+      value: k.value || k.description || "",
+    }));
+
+    const finalSyncUrls = targetService.imageUrls && targetService.imageUrls.length > 0
+      ? targetService.imageUrls
+      : targetService.imageUrl
+      ? [targetService.imageUrl]
+      : null;
+
     await editSupabaseService(String(id), {
       title: data.title,
       category: data.category,
       category_color: targetService.categoryVariant,
-      keunggulan: data.keunggulan,
-      faq: data.faq,
+      description: data.description !== undefined ? data.description : targetService.description,
+      keunggulan: formattedKeunggulan as any,
+      faq: data.faq || targetService.faq,
       product_id: productIds.length > 0 ? productIds : null,
-      service_image_url: targetService.imageUrl ? [targetService.imageUrl] : null,
+      service_image_url: finalSyncUrls,
     });
   } catch (err: any) {
     const errorDetails = err?.message || err?.details || err?.hint || (typeof err === "string" ? err : JSON.stringify(err));
@@ -305,9 +466,24 @@ export async function editService(
 
 export async function deleteService(id: string | number): Promise<void> {
   const strId = String(id);
-  await deleteSupabaseService(strId);
-
   const services = getStoredServices();
+  const target = services.find((s) => String(s.id) === strId);
+
+  if (target) {
+    const allUrls = [
+      ...(target.imageUrls || []),
+      ...(target.imageUrl ? [target.imageUrl] : []),
+    ];
+    for (const url of Array.from(new Set(allUrls))) {
+      if (isManualUploadUrl(url)) {
+        deleteFileFromServer(url).catch((err) =>
+          console.warn(`Failed to delete manual image on service deletion: ${url}`, err)
+        );
+      }
+    }
+  }
+
+  await deleteSupabaseService(strId);
   const nextServices = services.filter((s) => String(s.id) !== strId);
   saveStoredServices(nextServices);
 }

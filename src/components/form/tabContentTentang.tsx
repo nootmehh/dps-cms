@@ -6,8 +6,7 @@ import DescriptionBox from "@/components/ui/descriptionBox";
 import Button from "@/components/ui/button";
 import LordIcon from "@/components/common/lordIcon";
 import UploadFile from "@/components/ui/uploadFile";
-import type { SiteContentRow } from "@/services/siteContentApi";
-
+import type { SiteContentRow, LegalityItem } from "@/services/siteContentApi";
 import { uploadFileToServer } from "@/shared/api/upload";
 
 interface TabContentTentangProps {
@@ -15,12 +14,20 @@ interface TabContentTentangProps {
   onChange: (updater: (prev: SiteContentRow) => SiteContentRow) => void;
 }
 
+import SectionHeading from "@/components/ui/sectionHeading";
+
 export default function TabContentTentang({
   data,
   onChange,
 }: TabContentTentangProps) {
+  // Local state for new mission point
   const [newMissionItem, setNewMissionItem] = useState("");
 
+  // Local state for new legality item
+  const [newQuestion, setNewQuestion] = useState("");
+  const [newAnswer, setNewAnswer] = useState("");
+
+  // Mission point handlers
   const handleAddMission = () => {
     if (!newMissionItem.trim()) return;
     onChange((prev) => ({
@@ -45,163 +52,165 @@ export default function TabContentTentang({
     });
   };
 
+  // Legality handlers
+  const handleAddLegality = () => {
+    if (!newQuestion.trim() || !newAnswer.trim()) return;
+    const newItem: LegalityItem = {
+      id: Date.now(),
+      question: newQuestion.trim(),
+      answer: newAnswer.trim(),
+    };
+    onChange((prev) => ({
+      ...prev,
+      legality: [...(prev.legality || []), newItem],
+    }));
+    setNewQuestion("");
+    setNewAnswer("");
+  };
+
+  const handleRemoveLegality = (index: number) => {
+    onChange((prev) => ({
+      ...prev,
+      legality: (prev.legality || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleUpdateLegality = (
+    index: number,
+    field: "question" | "answer",
+    val: string
+  ) => {
+    onChange((prev) => {
+      const list = [...(prev.legality || [])];
+      list[index] = { ...list[index], [field]: val };
+      return { ...prev, legality: list };
+    });
+  };
+
   return (
     <div className="flex flex-col gap-6 w-full animate-fadeIn">
-      {/* Section 1: Gambar Profil Tentang Kami */}
-      <section className="flex flex-col gap-5 p-5 md:p-6 bg-white rounded-3xl border border-white-80 shadow-xs">
-        <div className="text-g1 text-base font-bold font-sans">
-          1. Foto Profil Perusahaan
-        </div>
+      {/* 1. About Section */}
+      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+        <SectionHeading
+          number={1}
+          title="About Section"
+          info="Foto ilustrasi, deskripsi singkat, dan narasi lengkap profil perusahaan yang tampil di halaman Tentang Kami."
+        />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-          <div className="flex flex-col gap-3">
-            <InputBox
-              label="URL Gambar Tentang Kami"
-              placeholder="https://..."
-              value={data.about_image_url || ""}
-              onChange={(e) =>
-                onChange((prev) => ({
-                  ...prev,
-                  about_image_url: e.target.value,
-                }))
+        {/* Foto Ilustrasi (Hanya 1 Image / Video) */}
+        <UploadFile
+          label="Foto Ilustrasi *"
+          descriptionPrefix="Format Disarankan"
+          descriptionValue="(Rasio 3:2 atau 16:9 • Gambar atau Video)"
+          previewLayout="large"
+          accept="image/*,video/*"
+          defaultImageUrl={data.about_image_url || undefined}
+          onSelectMediaUrl={(url) =>
+            onChange((prev) => ({ ...prev, about_image_url: url }))
+          }
+          onFilesSelected={async (files) => {
+            if (files[0]) {
+              try {
+                const uploadedUrl = await uploadFileToServer(files[0], "site");
+                onChange((prev) => ({ ...prev, about_image_url: uploadedUrl }));
+              } catch {
+                const blobUrl = URL.createObjectURL(files[0]);
+                onChange((prev) => ({ ...prev, about_image_url: blobUrl }));
               }
-            />
-            <p className="text-xs text-dark/60 font-sans">
-              Foto perwakilan tim, kantor operasional, atau aktivitas konstruksi marka di lapangan.
-            </p>
+            }
+          }}
+          onRemoveDefaultImage={() =>
+            onChange((prev) => ({ ...prev, about_image_url: null }))
+          }
+        />
 
-            <UploadFile
-              label="Atau Pilih / Unggah Gambar"
-              defaultImageUrl={data.about_image_url || undefined}
-              onFilesSelected={async (files) => {
-                if (files[0]) {
-                  try {
-                    const uploadedUrl = await uploadFileToServer(files[0], "site");
-                    onChange((prev) => ({ ...prev, about_image_url: uploadedUrl }));
-                  } catch {
-                    const blobUrl = URL.createObjectURL(files[0]);
-                    onChange((prev) => ({ ...prev, about_image_url: blobUrl }));
-                  }
-                }
-              }}
-              onRemoveDefaultImage={() =>
-                onChange((prev) => ({ ...prev, about_image_url: "" }))
-              }
-            />
-          </div>
+        <DescriptionBox
+          label="Deskripsi Singkat *"
+          placeholder="Ringkasan singkat profil perusahaan untuk pengantar dan cuplikan profil..."
+          value={data.about_description_short || ""}
+          onChange={(e) =>
+            onChange((prev) => ({
+              ...prev,
+              about_description_short: e.target.value,
+            }))
+          }
+          rows={3}
+          containerClassName="max-w-none w-full"
+        />
 
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold text-g1 font-sans">
-              Pratinjau Foto Tentang Kami:
-            </span>
-            <div className="w-full aspect-video rounded-2xl overflow-hidden border border-g1/20 bg-white shadow-xs relative group">
-              {data.about_image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={data.about_image_url}
-                  alt="About Us Preview"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-dark/40 gap-2">
-                  <LordIcon name="Image 2" size={36} primaryColor="#0A9863" />
-                  <span className="text-xs font-sans">Belum ada foto tentang kami</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <DescriptionBox
+          label="Deskripsi Panjang *"
+          placeholder="Kisah perjalanan, komitmen mutu, standar operasional, dan nilai utama perusahaan..."
+          value={data.about_description_long || ""}
+          onChange={(e) =>
+            onChange((prev) => ({
+              ...prev,
+              about_description_long: e.target.value,
+            }))
+          }
+          rows={6}
+          containerClassName="max-w-none w-full"
+        />
       </section>
 
-      {/* Section 2: Deskripsi Singkat & Lengkap */}
-      <section className="flex flex-col gap-5 p-5 md:p-6 bg-white rounded-3xl border border-white-80 shadow-xs">
-        <div className="text-g1 text-base font-bold font-sans">
-          2. Deskripsi & Ringkasan Perusahaan
-        </div>
+      {/* 2. Vision & Mission Section */}
+      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+        <SectionHeading
+          number={2}
+          title="Vision & Mission Section"
+          info="Foto ilustrasi visi-misi, pernyataan visi strategis, serta poin-poin misi operasional perusahaan."
+          badge={`${(data.mission || []).length} Poin Misi`}
+        />
 
-        {/* Deskripsi Singkat */}
-        <div className="flex flex-col gap-1.5 w-full">
-          <label className="text-xs font-semibold text-g1 font-sans">
-            Deskripsi Singkat Profil
-          </label>
-          <textarea
-            rows={3}
-            placeholder="Ringkasan singkat tentang identitas perusahaan..."
-            value={data.about_description_short || ""}
-            onChange={(e) =>
-              onChange((prev) => ({
-                ...prev,
-                about_description_short: e.target.value,
-              }))
+        {/* Ilustrasi Visi & Misi */}
+        <UploadFile
+          label="Ilustrasi Visi & Misi *"
+          descriptionPrefix="Ukuran Disarankan"
+          descriptionValue="(520px × 320px / Rasio 16:10)"
+          previewLayout="large"
+          defaultImageUrl={data.vision_img_url || undefined}
+          onSelectMediaUrl={(url) =>
+            onChange((prev) => ({ ...prev, vision_img_url: url }))
+          }
+          onFilesSelected={async (files) => {
+            if (files[0]) {
+              try {
+                const uploadedUrl = await uploadFileToServer(files[0], "site");
+                onChange((prev) => ({ ...prev, vision_img_url: uploadedUrl }));
+              } catch {
+                const blobUrl = URL.createObjectURL(files[0]);
+                onChange((prev) => ({ ...prev, vision_img_url: blobUrl }));
+              }
             }
-            className="w-full p-3.5 rounded-2xl border border-white-80 text-sm text-dark bg-white outline-none focus:border-g1 focus:ring-2 focus:ring-g1/10 transition-all font-sans placeholder:text-dark/40"
-          />
-          <span className="text-[11px] text-dark/50 font-sans">
-            Ditampilkan pada kartu pengantar, cuplikan halaman beranda, dan meta description profil.
-          </span>
-        </div>
+          }}
+          onRemoveDefaultImage={() =>
+            onChange((prev) => ({ ...prev, vision_img_url: null }))
+          }
+        />
 
-        {/* Deskripsi Lengkap */}
-        <div className="flex flex-col gap-1.5 w-full">
-          <label className="text-xs font-semibold text-g1 font-sans">
-            Deskripsi Lengkap / Sejarah Perusahaan
-          </label>
-          <textarea
-            rows={6}
-            placeholder="Kisah perjalanan, komitmen kualitas, standar operasional, dan nilai utama perusahaan..."
-            value={data.about_description_long || ""}
-            onChange={(e) =>
-              onChange((prev) => ({
-                ...prev,
-                about_description_long: e.target.value,
-              }))
-            }
-            className="w-full p-3.5 rounded-2xl border border-white-80 text-sm text-dark bg-white outline-none focus:border-g1 focus:ring-2 focus:ring-g1/10 transition-all font-sans placeholder:text-dark/40"
-          />
-          <span className="text-[11px] text-dark/50 font-sans">
-            Teks naratif lengkap untuk halaman profil utama &quot;Tentang Kami&quot;.
-          </span>
-        </div>
-      </section>
+        <DescriptionBox
+          label="Visi Perusahaan *"
+          placeholder="Menyediakan produk dan jasa bermutu tinggi, berdaya saing kuat demi terciptanya kerjasama yang baik..."
+          value={data.vision || ""}
+          onChange={(e) =>
+            onChange((prev) => ({ ...prev, vision: e.target.value }))
+          }
+          rows={3}
+          containerClassName="max-w-none w-full"
+        />
 
-      {/* Section 3: Visi & Misi */}
-      <section className="flex flex-col gap-5 p-5 md:p-6 bg-white rounded-3xl border border-white-80 shadow-xs">
-        <div className="flex items-center justify-between">
-          <div className="text-g1 text-base font-bold font-sans">
-            3. Visi & Misi Perusahaan
-          </div>
-          <span className="text-xs text-dark/50 font-normal font-sans">
-            Total: {(data.mission || []).length} Poin
-          </span>
-        </div>
-
-        {/* Visi */}
-        <div className="flex flex-col gap-1.5 w-full">
-          <label className="text-xs font-semibold text-g1 font-sans">
-            Visi Perusahaan
-          </label>
-          <textarea
-            rows={2}
-            placeholder="Tuliskan cita-cita dan visi strategis perusahaan..."
-            value={data.vision || ""}
-            onChange={(e) =>
-              onChange((prev) => ({ ...prev, vision: e.target.value }))
-            }
-            className="w-full p-3.5 rounded-2xl border border-white-80 text-sm text-dark bg-white outline-none focus:border-g1 focus:ring-2 focus:ring-g1/10 transition-all font-sans placeholder:text-dark/40"
-          />
-        </div>
-
-        {/* Misi (Dynamic Array) */}
+        {/* Misi (Poin-poin misi) */}
         <div className="flex flex-col gap-3">
           <label className="text-xs font-semibold text-g1 font-sans">
-            Daftar Butir Misi
+            Daftar Poin Misi *
           </label>
 
-          {/* Input Add New Mission */}
-          <div className="p-4 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs flex flex-col sm:flex-row gap-3 items-end">
+          {/* Sub-form tambah poin misi */}
+          <div className="p-4 md:p-5 rounded-2xl bg-white-90/50 border border-white-80 shadow-xs flex flex-col sm:flex-row gap-3 items-end">
             <div className="flex-1 w-full">
               <InputBox
-                placeholder="Tulis butir misi baru..."
+                label="Tambah Poin Misi Baru *"
+                placeholder="Memberikan layanan terbaik dengan ketepatan waktu dan harga yang kompetitif..."
                 value={newMissionItem}
                 onChange={(e) => setNewMissionItem(e.target.value)}
                 onKeyDown={(e) => {
@@ -210,26 +219,28 @@ export default function TabContentTentang({
                     handleAddMission();
                   }
                 }}
+                containerClassName="max-w-none w-full"
               />
             </div>
             <Button
               type="button"
-              text="Tambah Misi"
+              text="Tambah Poin Misi"
               leftIcon="Add"
               variant="stroke"
               onClick={handleAddMission}
               disabled={!newMissionItem.trim()}
+              className="shrink-0 cursor-pointer"
             />
           </div>
 
-          {/* List Existing Mission Items */}
+          {/* List poin misi */}
           <div className="flex flex-col gap-2.5 mt-1">
             {(data.mission || []).map((m, idx) => (
               <div
                 key={idx}
                 className="flex items-center gap-3 p-3.5 rounded-2xl bg-white-90/50 border border-white-80 group hover:border-g1/30 hover:bg-white transition-all shadow-xs"
               >
-                <span className="size-7 rounded-full bg-g1 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                <span className="size-7 rounded-full bg-g1 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs font-sans">
                   {idx + 1}
                 </span>
 
@@ -243,25 +254,122 @@ export default function TabContentTentang({
                 <button
                   type="button"
                   onClick={() => handleRemoveMission(idx)}
-                  className="size-8 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-80 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs"
-                  title="Hapus butir misi"
+                  className="size-7 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs text-white"
+                  title="Hapus poin misi"
                 >
-                  <LordIcon
-                    name="Delete"
-                    size={16}
-                    primaryColor="#FFFFFF"
-                    secondaryColor="#FFFFFF"
-                  />
+                  <LordIcon name="Delete" size={14} primaryColor="#FFFFFF" secondaryColor="#FFFFFF" />
                 </button>
               </div>
             ))}
 
             {(!data.mission || data.mission.length === 0) && (
-              <div className="py-6 text-center text-xs text-dark/50 font-sans">
-                Belum ada butir misi yang ditambahkan.
+              <div className="p-6 text-center text-xs text-dark/50 font-sans border border-dashed border-white-80 rounded-2xl">
+                Belum ada poin misi yang ditambahkan.
               </div>
             )}
           </div>
+        </div>
+      </section>
+
+      {/* 3. Legality Section */}
+      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+        <SectionHeading
+          number={3}
+          title="Legality Section"
+          info="Daftar tanya jawab (Accordion / FAQ) terkait legalitas resmi, perizinan usaha, dan sertifikasi perusahaan."
+          badge={`${(data.legality || []).length} Legalitas`}
+        />
+
+        {/* Sub-form tambah legalitas */}
+        <div className="p-4 md:p-5 rounded-2xl bg-white-90/50 border border-white-80 shadow-xs flex flex-col gap-4">
+          <span className="text-xs font-semibold text-g1 font-sans">
+            Tambah Butir Legalitas Baru
+          </span>
+
+          <InputBox
+            label="Pertanyaan (Question) *"
+            placeholder="Apakah PT. Dua Putra Srikandi merupakan badan usaha yang terdaftar resmi dan memiliki legalitas pajak?"
+            value={newQuestion}
+            onChange={(e) => setNewQuestion(e.target.value)}
+            containerClassName="max-w-none w-full"
+          />
+
+          <DescriptionBox
+            label="Jawaban (Answer) *"
+            placeholder="Ya, PT. Dua Putra Srikandi adalah badan hukum berstatus Perseroan Terbatas (PT) yang sah dengan NIB..."
+            value={newAnswer}
+            onChange={(e) => setNewAnswer(e.target.value)}
+            rows={3}
+            containerClassName="max-w-none w-full"
+          />
+
+          <div className="flex justify-end pt-1">
+            <Button
+              type="button"
+              text="Tambah Legalitas"
+              leftIcon="Add"
+              variant="stroke"
+              onClick={handleAddLegality}
+              disabled={!newQuestion.trim() || !newAnswer.trim()}
+              className="cursor-pointer"
+            />
+          </div>
+        </div>
+
+        {/* List butir legalitas */}
+        <div className="flex flex-col gap-3">
+          {(data.legality || []).map((item, idx) => (
+            <div
+              key={item.id || idx}
+              className="p-5 rounded-2xl bg-white border border-white-80 shadow-xs flex flex-col gap-3 group hover:border-g1/30 transition-all"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <span className="size-6 rounded-full bg-g1/10 text-g1 font-bold text-xs flex items-center justify-center shrink-0 font-sans">
+                    Q{idx + 1}
+                  </span>
+                  <input
+                    type="text"
+                    value={item.question}
+                    onChange={(e) =>
+                      handleUpdateLegality(idx, "question", e.target.value)
+                    }
+                    className="text-sm font-bold text-dark bg-transparent border-none outline-none font-sans w-full focus:underline"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveLegality(idx)}
+                  className="size-7 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs text-white"
+                  title="Hapus legalitas"
+                >
+                  <LordIcon
+                    name="Delete"
+                    size={14}
+                    primaryColor="#FFFFFF"
+                    secondaryColor="#FFFFFF"
+                  />
+                </button>
+              </div>
+
+              <div className="pl-8.5">
+                <textarea
+                  value={item.answer}
+                  onChange={(e) =>
+                    handleUpdateLegality(idx, "answer", e.target.value)
+                  }
+                  rows={2}
+                  className="w-full text-xs text-dark/70 font-sans bg-brand-background rounded-xl p-3 border border-transparent hover:border-g1/30 focus:border-g1 outline-none resize-none leading-relaxed transition-all"
+                />
+              </div>
+            </div>
+          ))}
+
+          {(!data.legality || data.legality.length === 0) && (
+            <div className="p-6 text-center text-xs text-dark/50 font-sans border border-dashed border-white-80 rounded-2xl">
+              Belum ada butir legalitas & sertifikasi tersimpan.
+            </div>
+          )}
         </div>
       </section>
     </div>

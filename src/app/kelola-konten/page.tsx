@@ -78,7 +78,7 @@ export default function KelolaKontenPage() {
   };
 
   return (
-    <div className="h-screen max-h-screen bg-white-90 flex flex-col items-center overflow-hidden">
+    <div className="min-h-screen bg-white-90 flex flex-col items-center">
       {/* Top Navbar */}
       <Navbar
         brandTitle="Dua Putra Srikandi"
@@ -88,21 +88,20 @@ export default function KelolaKontenPage() {
       />
 
       {/* Main Body */}
-      <main className="w-full max-w-360 px-6 lg:px-12 py-6 flex-1 flex flex-col md:flex-row justify-center items-start gap-6 overflow-hidden min-h-0 h-full">
+      <main className="w-full max-w-360 px-6 lg:px-12 py-6 flex flex-col md:flex-row justify-center items-start gap-6">
         {/* Sidebar Component */}
-        <Sidebar activeId="content" className="shrink-0 h-fit" />
+        <Sidebar activeId="content" className="md:sticky md:top-8 shrink-0" />
 
         {/* Content Card */}
-        <div className="flex-1 h-full p-6 md:p-8 bg-white rounded-4xl border border-white-80 shadow-xs flex flex-col justify-start items-start gap-5 w-full overflow-hidden min-h-0">
+        <div className="flex-1 p-6 md:p-8 bg-white rounded-[32px] border border-white-80 shadow-xs flex flex-col justify-start items-start gap-6 w-full overflow-hidden">
           {/* Header Row */}
-          <div className="self-stretch flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+          <div className="self-stretch flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex-1 flex flex-col justify-start items-start gap-1">
               <h1 className="self-stretch justify-start text-g1 text-2xl md:text-3xl font-bold font-sans">
-                Kelola Konten
+                Kelola Konten Website
               </h1>
               <p className="text-dark text-sm font-normal font-sans">
-                Atur informasi landing page, profil perusahaan, dan kontak resmi{" "}
-                <span className="text-g1 font-semibold">Dua Putra Srikandi</span>.
+                Kelola konten dan informasi website di halaman ini
               </p>
             </div>
 
@@ -111,6 +110,7 @@ export default function KelolaKontenPage() {
               type="button"
               text={isSaving ? "Menyimpan..." : "Simpan Perubahan"}
               variant="fill"
+              rightIcon="Pen"
               onClick={handleSave}
               disabled={isSaving || isLoading}
               className="shrink-0 cursor-pointer"
@@ -118,7 +118,7 @@ export default function KelolaKontenPage() {
           </div>
 
           {/* Top Divider */}
-          <div className="w-full h-px bg-g1/10 shrink-0" aria-hidden="true" />
+          <div className="self-stretch h-px bg-g1/10" aria-hidden="true" />
 
           {/* Tab Navigation Buttons Bar */}
           <div className="self-stretch flex items-center gap-2 p-1.5 bg-white-90 rounded-full border border-white-80 shrink-0 overflow-x-auto">
@@ -134,7 +134,7 @@ export default function KelolaKontenPage() {
               }`}
             >
               <LordIcon
-                name="Dashboard"
+                name="Document"
                 size={18}
                 trigger="hover"
                 target="button"
@@ -156,7 +156,7 @@ export default function KelolaKontenPage() {
               }`}
             >
               <LordIcon
-                name="Document"
+                name="Target"
                 size={18}
                 trigger="hover"
                 target="button"
@@ -178,7 +178,7 @@ export default function KelolaKontenPage() {
               }`}
             >
               <LordIcon
-                name="Global"
+                name="InfoCircle"
                 size={18}
                 trigger="hover"
                 target="button"
@@ -189,38 +189,57 @@ export default function KelolaKontenPage() {
             </button>
           </div>
 
-          {/* Scrollable Content Container */}
-          <div className="self-stretch flex-1 flex flex-col gap-6 overflow-y-auto min-h-0 pr-1">
-            {isLoading ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-20 gap-3 text-dark/60">
-                <LordIcon name="Document" size={48} primaryColor="#0A9863" />
-                <span className="text-sm font-medium">Memuat data konten situs...</span>
+          {/* Form Content Area */}
+          {isLoading ? (
+            <div className="w-full py-20 flex flex-col items-center justify-center gap-4 text-g1">
+              <div className="w-10 h-10 border-4 border-g1 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm font-sans text-dark/60">Memuat data konten situs...</span>
+            </div>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSave();
+              }}
+              className="flex flex-col gap-8 w-full"
+            >
+              {activeTab === "beranda" && (
+                <TabContentBeranda
+                  data={siteContent}
+                  onChange={setSiteContent}
+                />
+              )}
+
+              {activeTab === "tentang" && (
+                <TabContentTentang
+                  data={siteContent}
+                  onChange={setSiteContent}
+                />
+              )}
+
+              {activeTab === "perusahaan" && (
+                <TabContentPerusahaan
+                  data={siteContent}
+                  onChange={setSiteContent}
+                />
+              )}
+
+              {/* Form Bottom Divider */}
+              <div className="self-stretch h-px bg-g1/10 mt-2" aria-hidden="true" />
+
+              {/* Action Buttons at Bottom */}
+              <div className="self-stretch flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-2 w-full">
+                <Button
+                  type="submit"
+                  disabled={isSaving}
+                  text={isSaving ? "Menyimpan..." : "Simpan Perubahan"}
+                  variant="fill"
+                  rightIcon="Pen"
+                  className="w-full sm:w-56 cursor-pointer"
+                />
               </div>
-            ) : (
-              <>
-                {activeTab === "beranda" && (
-                  <TabContentBeranda
-                    data={siteContent}
-                    onChange={setSiteContent}
-                  />
-                )}
-
-                {activeTab === "tentang" && (
-                  <TabContentTentang
-                    data={siteContent}
-                    onChange={setSiteContent}
-                  />
-                )}
-
-                {activeTab === "perusahaan" && (
-                  <TabContentPerusahaan
-                    data={siteContent}
-                    onChange={setSiteContent}
-                  />
-                )}
-              </>
-            )}
-          </div>
+            </form>
+          )}
         </div>
       </main>
 

@@ -1,16 +1,21 @@
 "use client";
 
 import { useState, type TextareaHTMLAttributes, type ReactNode } from "react";
+import InfoButton from "./infoButton";
 
 export interface DescriptionBoxProps
   extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "placeholder"> {
   label?: ReactNode;
+  info?: string;
+  labelInfo?: ReactNode;
   placeholder?: string;
   containerClassName?: string;
 }
 
 export default function DescriptionBox({
   label,
+  info,
+  labelInfo,
   placeholder,
   className = "",
   containerClassName = "",
@@ -22,15 +27,50 @@ export default function DescriptionBox({
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
+  const renderLabel = () => {
+    if (!label) return null;
+
+    let labelContent: ReactNode = label;
+    const labelText = typeof label === "string" ? label : "Informasi";
+
+    if (typeof label === "string" && label.includes("*")) {
+      const parts = label.split("*");
+      labelContent = (
+        <>
+          {parts[0]}
+          <span className="text-red-state">*</span>
+          {parts.slice(1).join("*")}
+        </>
+      );
+    }
+
+    if (info || labelInfo) {
+      return (
+        <div className="self-stretch flex items-center gap-1.5">
+          <label className="text-dark text-sm font-semibold font-sans">
+            {labelContent}
+          </label>
+          {info ? (
+            <InfoButton info={info} title={labelText.replace(/\*/g, "").trim()} />
+          ) : (
+            labelInfo
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <label className="self-stretch justify-start text-dark text-sm font-semibold font-sans">
+        {labelContent}
+      </label>
+    );
+  };
+
   return (
     <div
       className={`w-full max-w-116.5 inline-flex flex-col justify-start items-start gap-1 ${containerClassName}`}
     >
-      {label && (
-        <label className="self-stretch justify-start text-dark text-sm font-semibold font-sans">
-          {label}
-        </label>
-      )}
+      {renderLabel()}
       <div
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}

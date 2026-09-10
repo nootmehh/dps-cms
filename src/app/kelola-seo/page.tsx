@@ -1,22 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Navbar from "@/components/layout/navbar";
 import Sidebar from "@/components/layout/sidebar";
 import Button from "@/components/ui/button";
 import InputBox from "@/components/ui/inputBox";
+import DescriptionBox from "@/components/ui/descriptionBox";
+import UploadFile from "@/components/ui/uploadFile";
 import Badge from "@/components/ui/badge";
-import Notification, { type NotificationType } from "@/components/ui/notification";
+import SectionHeading from "@/components/ui/sectionHeading";
 import LordIcon from "@/components/common/lordIcon";
-import EditPageMetaModal from "@/components/modal/editPageMetaModal";
+import Notification, { type NotificationType } from "@/components/ui/notification";
 import ConnectGaModal from "@/components/modal/connectGaModal";
+import { uploadFileToServer } from "@/shared/api/upload";
 import {
   getSeoSettings,
   updateSeoSettings,
-  getPageMetas,
-  updatePageMeta,
   type SeoSettingsRow,
-  type PageMetaRow,
 } from "@/services/seoApi";
 
 export default function KelolaSeoPage() {
@@ -24,23 +24,14 @@ export default function KelolaSeoPage() {
     site_title_default: "Dua Putra Srikandi - Jasa & Produk Marka Jalan",
     meta_description_default:
       "Spesialis pengecatan marka jalan, perlengkapan jalan, dan fasilitas keselamatan lalu lintas terpercaya.",
-    auto_generate_sitemap: true,
+    keywords: "marka jalan, cat thermoplastic, rambu lalu lintas, guardrail, jasa marka jalan",
+    favicon_url: null,
     ga_connected: false,
     ga_measurement_id: null,
   });
 
-  const [pageMetas, setPageMetas] = useState<PageMetaRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Modal State for editing page meta
-  const [editModal, setEditModal] = useState<{
-    isOpen: boolean;
-    meta: PageMetaRow | null;
-  }>({
-    isOpen: false,
-    meta: null,
-  });
 
   // Modal State for Google Analytics
   const [gaModalOpen, setGaModalOpen] = useState(false);
@@ -65,12 +56,8 @@ export default function KelolaSeoPage() {
     const loadSeoData = async () => {
       setIsLoading(true);
       try {
-        const [settingsData, metasData] = await Promise.all([
-          getSeoSettings(),
-          getPageMetas(),
-        ]);
+        const settingsData = await getSeoSettings();
         if (settingsData) setSettings(settingsData);
-        if (metasData) setPageMetas(metasData);
       } catch (err) {
         console.error("Error loading SEO data:", err);
       } finally {
@@ -89,7 +76,8 @@ export default function KelolaSeoPage() {
         {
           site_title_default: settings.site_title_default,
           meta_description_default: settings.meta_description_default,
-          auto_generate_sitemap: settings.auto_generate_sitemap,
+          keywords: settings.keywords,
+          favicon_url: settings.favicon_url,
           ga_connected: settings.ga_connected,
           ga_measurement_id: settings.ga_measurement_id,
         },
@@ -99,28 +87,13 @@ export default function KelolaSeoPage() {
       triggerNotif("Pengaturan SEO berhasil disimpan!", "default");
     } catch (err: any) {
       console.error("Error saving SEO settings:", err);
-      triggerNotif(`Gagal menyimpan SEO: ${err.message || "Terjadi kesalahan di Supabase"}`, "error");
+      const msg =
+        err?.code === "PGRST205"
+          ? "Tabel public.seo_settings belum ada di Supabase. Silakan jalankan query SQL terlebih dahulu."
+          : err?.message || "Terjadi kesalahan saat menyimpan ke Supabase";
+      triggerNotif(`Gagal menyimpan SEO: ${msg}`, "error");
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  // Save Page Meta from Modal
-  const handleSavePageMeta = async (updatedMeta: PageMetaRow) => {
-    try {
-      const saved = await updatePageMeta(updatedMeta.id, {
-        meta_title: updatedMeta.meta_title,
-        meta_description: updatedMeta.meta_description,
-        keywords: updatedMeta.keywords,
-      });
-
-      setPageMetas((prev) =>
-        prev.map((item) => (item.id === saved.id ? saved : item))
-      );
-      triggerNotif(`Meta untuk halaman "${saved.page_name}" berhasil diperbarui!`, "default");
-    } catch (err: any) {
-      console.error("Error updating page meta:", err);
-      triggerNotif(`Gagal memperbarui meta: ${err.message || "Terjadi kesalahan"}`, "error");
     }
   };
 
@@ -148,6 +121,15 @@ export default function KelolaSeoPage() {
     }
   };
 
+  // Parse keywords into individual tags for visual chip display
+  const parsedKeywords = useMemo(() => {
+    if (!settings.keywords) return [];
+    return settings.keywords
+      .split(",")
+      .map((k) => k.trim())
+      .filter((k) => k.length > 0);
+  }, [settings.keywords]);
+
   return (
     <div className="h-screen max-h-screen bg-white-90 flex flex-col items-center overflow-hidden">
       {/* Top Navbar */}
@@ -164,7 +146,7 @@ export default function KelolaSeoPage() {
         <Sidebar activeId="seo" className="shrink-0 h-fit" />
 
         {/* Content Card */}
-        <div className="flex-1 h-full p-6 md:p-8 bg-white rounded-4xl border border-white-80 shadow-xs flex flex-col justify-start items-start gap-5 w-full overflow-hidden min-h-0">
+        <div className="flex-1 h-full p-6 md:p-8 bg-white rounded-4xl border border-white-80 hover:border-g1 transition-colors flex flex-col justify-start items-start gap-5 w-full overflow-hidden min-h-0">
           {/* Header Row */}
           <div className="self-stretch flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
             <div className="flex-1 flex flex-col justify-start items-start gap-1">
@@ -172,8 +154,7 @@ export default function KelolaSeoPage() {
                 Kelola SEO
               </h1>
               <p className="text-dark text-sm font-normal font-sans">
-                Atur meta data, sitemap, dan integrasi tools SEO untuk{" "}
-                <span className="text-g1 font-semibold">Dua Putra Srikandi</span>.
+                Kelola konfigurasi SEO situs, favicon, kata kunci, dan integrasi analitik di halaman ini.
               </p>
             </div>
 
@@ -182,6 +163,7 @@ export default function KelolaSeoPage() {
               type="button"
               text={isSaving ? "Menyimpan..." : "Simpan Perubahan"}
               variant="fill"
+              rightIcon="Pen"
               onClick={handleSaveSettings}
               disabled={isSaving || isLoading}
               className="shrink-0 cursor-pointer"
@@ -192,24 +174,56 @@ export default function KelolaSeoPage() {
           <div className="w-full h-px bg-g1/10 shrink-0" aria-hidden="true" />
 
           {/* Scrollable Content Container */}
-          <div className="self-stretch flex-1 flex flex-col gap-6 overflow-y-auto min-h-0 pr-1">
+          <div className="self-stretch flex-1 flex flex-col gap-8 overflow-y-auto min-h-0 pr-1">
+            {/* Section 1: Pengaturan Umum */}
+            <div className="self-stretch flex flex-col gap-5">
+              <SectionHeading
+                number={1}
+                title="Pengaturan Umum"
+                info="Informasi dasar metadata yang akan dibaca oleh peramban browser dan mesin pencari seperti Google dan Bing."
+              />
 
-          {/* Section 1: Pengaturan Umum */}
-          <div className="self-stretch flex flex-col gap-4">
-            <h2 className="text-g1 text-lg font-bold font-sans">
-              Pengaturan Umum
-            </h2>
+              {/* Favicon Upload */}
+              <div className="self-stretch">
+                <UploadFile
+                  label="Favicon Situs *"
+                  info="Ikon kecil situs web yang ditampilkan pada tab browser dan daftar bookmark pengguna."
+                  descriptionPrefix="Format Disarankan"
+                  descriptionValue="(ICO, PNG, SVG - Rasio 1:1, Maks 2MB)"
+                  fileTypesHint="(ICO, PNG, SVG)"
+                  accept="image/x-icon,image/png,image/svg+xml,image/vnd.microsoft.icon,image/webp,image/jpeg"
+                  previewLayout="compact"
+                  defaultImageUrl={settings.favicon_url || undefined}
+                  onSelectMediaUrl={(url) =>
+                    setSettings((prev) => ({ ...prev, favicon_url: url }))
+                  }
+                  onFilesSelected={async (files) => {
+                    if (files[0]) {
+                      try {
+                        const uploadedUrl = await uploadFileToServer(files[0], "site");
+                        setSettings((prev) => ({ ...prev, favicon_url: uploadedUrl }));
+                        triggerNotif("Favicon berhasil diunggah!", "default");
+                      } catch (err: any) {
+                        const blobUrl = URL.createObjectURL(files[0]);
+                        setSettings((prev) => ({ ...prev, favicon_url: blobUrl }));
+                        triggerNotif("Favicon disimpan secara lokal", "default");
+                      }
+                    }
+                  }}
+                  onRemoveDefaultImage={() =>
+                    setSettings((prev) => ({ ...prev, favicon_url: null }))
+                  }
+                />
+              </div>
 
-            {/* Inputs Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Site Title Default */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-dark/70 font-sans">
-                  Site Title Default
-                </label>
+              {/* Site Title Default - Full Width */}
+              <div className="self-stretch">
                 <InputBox
+                  label="Site Title Default *"
+                  info="Judul utama situs yang muncul pada tab browser dan tajuk teratas di hasil pencarian Google (disarankan 50-60 karakter)."
                   placeholder="Dua Putra Srikandi - Jasa & Produk Marka Jalan"
                   value={settings.site_title_default}
+                  containerClassName="w-full max-w-none"
                   onChange={(e) =>
                     setSettings((prev) => ({
                       ...prev,
@@ -219,13 +233,14 @@ export default function KelolaSeoPage() {
                 />
               </div>
 
-              {/* Meta Description Default */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-dark/70 font-sans">
-                  Meta Description Default
-                </label>
-                <InputBox
-                  placeholder="Spesialis pengecatan marka jalan, perlengkapan jalan..."
+              {/* Meta Description Default - Full Width */}
+              <div className="self-stretch">
+                <DescriptionBox
+                  label="Meta Description Default *"
+                  info="Ringkasan konten website yang ditampilkan pada snippet hasil pencarian mesin pencari Google (disarankan 120-160 karakter)."
+                  placeholder="Tulis ringkasan deskripsi meta untuk ditampilkan di hasil pencarian Google..."
+                  containerClassName="w-full max-w-none"
+                  rows={3}
                   value={settings.meta_description_default}
                   onChange={(e) =>
                     setSettings((prev) => ({
@@ -235,135 +250,96 @@ export default function KelolaSeoPage() {
                   }
                 />
               </div>
-            </div>
 
-            {/* Auto Generate Sitemap Toggle */}
-            <div className="self-stretch p-4 bg-white-90/60 rounded-2xl border border-white-80 flex justify-between items-center">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-sm font-semibold text-dark font-sans">
-                  Generate Sitemap.xml Otomatis
-                </span>
-                <span className="text-xs text-dark/60 font-sans">
-                  Diperbarui otomatis tiap kali ada konten baru dipublikasikan
-                </span>
-              </div>
-
-              {/* Toggle Switch */}
-              <button
-                type="button"
-                role="switch"
-                aria-checked={settings.auto_generate_sitemap}
-                onClick={() =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    auto_generate_sitemap: !prev.auto_generate_sitemap,
-                  }))
-                }
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
-                  settings.auto_generate_sitemap ? "bg-g1" : "bg-slate-300"
-                }`}
-              >
-                <div
-                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                    settings.auto_generate_sitemap ? "translate-x-6" : "translate-x-0"
-                  }`}
+              {/* Keywords Input with Tag Chips - Full Width */}
+              <div className="self-stretch flex flex-col gap-2">
+                <InputBox
+                  label="Target Keywords (Kata Kunci SEO) *"
+                  info="Daftar kata kunci target utama untuk membantu mesin pencari mengidentifikasi topik website Anda. Pisahkan setiap kata kunci dengan tanda koma (,)."
+                  placeholder="marka jalan, cat thermoplastic, rambu lalu lintas, guardrail, jasa marka jalan"
+                  value={settings.keywords || ""}
+                  containerClassName="w-full max-w-none"
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      keywords: e.target.value,
+                    }))
+                  }
                 />
-              </button>
+
+                {/* Active Keyword Chips */}
+                {parsedKeywords.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-xs font-semibold text-dark/70 font-sans mr-1">
+                      Kata Kunci Aktif ({parsedKeywords.length}):
+                    </span>
+                    {parsedKeywords.map((kw, idx) => (
+                      <Badge
+                        key={`${kw}-${idx}`}
+                        text={kw}
+                        variant="green"
+                        showDot={false}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Section 2: Meta Per Halaman */}
-          <div className="self-stretch flex flex-col gap-4 pt-2">
-            <h2 className="text-g1 text-lg font-bold font-sans">
-              Meta Per Halaman
-            </h2>
+            {/* Section 2: Integrasi Tools SEO */}
+            <div className="self-stretch flex flex-col gap-5 pt-4 border-t border-g1/10">
+              <SectionHeading
+                number={2}
+                title="Integrasi Tools SEO"
+                info="Hubungkan alat analisis web untuk memantau lalu lintas pengunjung dan performa pencarian website."
+              />
 
-            {/* Page Meta List Container */}
-            <div className="self-stretch flex flex-col border border-white-80 rounded-2xl divide-y divide-white-80 overflow-hidden">
-              {pageMetas.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-4 flex justify-between items-center gap-4 hover:bg-white-90/50 transition-colors"
-                >
+              {/* Integration Item: Google Analytics */}
+              <div className="self-stretch px-6 py-3.5 bg-white-90/60 border border-white-80 hover:border-g1 transition-colors rounded-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex items-center gap-3.5">
+                  <LordIcon
+                    name="Dashboard"
+                    size={26}
+                    trigger="hover"
+                    target="div"
+                    primaryColor="#0A9863"
+                    secondaryColor="#0A9863"
+                  />
                   <div className="flex flex-col gap-0.5">
                     <span className="text-sm font-semibold text-dark font-sans">
-                      {item.page_name}
+                      Google Analytics 4 (GA4)
                     </span>
-                    <span className="text-xs text-dark/50 font-mono">
-                      {item.route_path}
+                    <span className="text-xs text-dark/60 font-sans">
+                      {settings.ga_connected
+                        ? `Terhubung dengan ID: ${settings.ga_measurement_id || "Aktif"}`
+                        : "Belum terhubung ke properti Google Analytics"}
                     </span>
                   </div>
+                </div>
 
-                  {/* Edit Button */}
+                <div className="flex items-center gap-3 self-end sm:self-auto">
+                  {/* Status Badge */}
+                  {settings.ga_connected ? (
+                    <Badge text="Aktif" variant="green" showDot={true} />
+                  ) : (
+                    <Badge text="Belum Terhubung" variant="orange" showDot={false} />
+                  )}
+
+                  {/* Connect / Edit Button */}
                   <Button
                     type="button"
-                    text="Edit Meta"
-                    leftIcon="Edit"
+                    text={settings.ga_connected ? "Kelola Integrasi" : "Hubungkan"}
+                    leftIcon={settings.ga_connected ? "Setting" : "Global"}
                     variant="ghost-green"
-                    onClick={() => setEditModal({ isOpen: true, meta: item })}
+                    onClick={() => setGaModalOpen(true)}
                     className="cursor-pointer"
                   />
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Section 3: Integrasi Tools SEO */}
-          <div className="self-stretch flex flex-col gap-4 pt-2">
-            <h2 className="text-g1 text-lg font-bold font-sans">
-              Integrasi Tools SEO
-            </h2>
-
-            {/* Integration Item: Google Analytics */}
-            <div className="self-stretch p-4 bg-white-90/60 border border-white-80 rounded-2xl flex justify-between items-center gap-4">
-              <div className="flex items-center gap-3">
-                {/* GA Logo Icon */}
-                <div className="w-10 h-10 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 font-bold text-sm font-sans">
-                  GA
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold text-dark font-sans">
-                    Google Analytics 4 (GA4)
-                  </span>
-                  <span className="text-xs text-dark/60 font-sans">
-                    {settings.ga_connected
-                      ? `Terhubung (${settings.ga_measurement_id || "Aktif"})`
-                      : "Belum terhubung"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                {/* Status Badge */}
-                {settings.ga_connected ? (
-                  <Badge text="Aktif" variant="green" showDot={true} />
-                ) : (
-                  <Badge text="Belum Terhubung" variant="orange" showDot={false} />
-                )}
-
-                {/* Connect / Edit Button */}
-                <Button
-                  type="button"
-                  text={settings.ga_connected ? "Kelola Integrasi" : "Hubungkan"}
-                  leftIcon={settings.ga_connected ? "Setting" : "Global"}
-                  variant="ghost-green"
-                  onClick={() => setGaModalOpen(true)}
-                  className="cursor-pointer"
-                />
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </main>
-
-      {/* Edit Page Meta Modal */}
-      <EditPageMetaModal
-        isOpen={editModal.isOpen}
-        pageMeta={editModal.meta}
-        onSave={handleSavePageMeta}
-        onClose={() => setEditModal({ isOpen: false, meta: null })}
-      />
+      </main>
 
       {/* Connect Google Analytics Modal */}
       <ConnectGaModal

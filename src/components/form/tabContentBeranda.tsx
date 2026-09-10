@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import InputBox from "@/components/ui/inputBox";
+import DescriptionBox from "@/components/ui/descriptionBox";
 import Button from "@/components/ui/button";
 import LordIcon from "@/components/common/lordIcon";
 import UploadFile from "@/components/ui/uploadFile";
@@ -10,7 +11,6 @@ import type {
   GalleryItem,
   TestimonialItem,
 } from "@/services/siteContentApi";
-
 import { uploadFileToServer } from "@/shared/api/upload";
 
 interface TabContentBerandaProps {
@@ -18,33 +18,22 @@ interface TabContentBerandaProps {
   onChange: (updater: (prev: SiteContentRow) => SiteContentRow) => void;
 }
 
+import SectionHeading from "@/components/ui/sectionHeading";
+
 export default function TabContentBeranda({
   data,
   onChange,
 }: TabContentBerandaProps) {
-  // Local state for adding partner
-  const [newPartnerUrl, setNewPartnerUrl] = useState("");
-
   // Local state for new gallery item
+  const [newGalleryUrl, setNewGalleryUrl] = useState("");
   const [newGalleryTitle, setNewGalleryTitle] = useState("");
   const [newGalleryCategory, setNewGalleryCategory] = useState("");
-  const [newGalleryUrl, setNewGalleryUrl] = useState("");
 
   // Local state for new testimonial
   const [newTestiName, setNewTestiName] = useState("");
   const [newTestiRole, setNewTestiRole] = useState("");
   const [newTestiCompany, setNewTestiCompany] = useState("");
   const [newTestiContent, setNewTestiContent] = useState("");
-  const [newTestiRating, setNewTestiRating] = useState<number>(5);
-
-  const handleAddPartner = () => {
-    if (!newPartnerUrl.trim()) return;
-    onChange((prev) => ({
-      ...prev,
-      partner_img_url: [...(prev.partner_img_url || []), newPartnerUrl.trim()],
-    }));
-    setNewPartnerUrl("");
-  };
 
   const handleRemovePartner = (index: number) => {
     onChange((prev) => ({
@@ -82,10 +71,9 @@ export default function TabContentBeranda({
     const newItem: TestimonialItem = {
       id: `testi-${Date.now()}`,
       name: newTestiName.trim(),
-      role: newTestiRole.trim() || "Client",
+      role: newTestiRole.trim() || "Klien",
       company: newTestiCompany.trim(),
       content: newTestiContent.trim(),
-      rating: newTestiRating,
     };
     onChange((prev) => ({
       ...prev,
@@ -95,7 +83,6 @@ export default function TabContentBeranda({
     setNewTestiRole("");
     setNewTestiCompany("");
     setNewTestiContent("");
-    setNewTestiRating(5);
   };
 
   const handleRemoveTestimonial = (index: number) => {
@@ -107,275 +94,318 @@ export default function TabContentBeranda({
 
   return (
     <div className="flex flex-col gap-6 w-full animate-fadeIn">
-      {/* Section 1: Hero Banner */}
-      <section className="flex flex-col gap-5 p-5 md:p-6 bg-white rounded-3xl border border-white-80 shadow-xs">
-        <div className="text-g1 text-base font-bold font-sans">
-          1. Hero Banner Utama
-        </div>
+      {/* 1. Hero Section */}
+      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+        <SectionHeading
+          number={1}
+          title="Hero Section"
+          info="Gambar latar belakang utama yang tampil di bagian paling atas halaman beranda situs. Disarankan rasio 16:9 atau resolusi minimal 1920×1080px."
+        />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-          <div className="flex flex-col gap-3">
-            <InputBox
-              label="URL Gambar Hero / Banner"
-              placeholder="https://..."
-              value={data.hero_img_url || ""}
-              onChange={(e) =>
-                onChange((prev) => ({ ...prev, hero_img_url: e.target.value }))
+        <UploadFile
+          label="Foto Hero Banner *"
+          descriptionPrefix="Ukuran Disarankan"
+          descriptionValue="(1920px × 1080px / Rasio 16:9)"
+          previewLayout="large"
+          defaultImageUrl={data.hero_img_url || undefined}
+          onSelectMediaUrl={(url) =>
+            onChange((prev) => ({ ...prev, hero_img_url: url }))
+          }
+          onFilesSelected={async (files) => {
+            if (files[0]) {
+              try {
+                const uploadedUrl = await uploadFileToServer(files[0], "site");
+                onChange((prev) => ({ ...prev, hero_img_url: uploadedUrl }));
+              } catch {
+                const blobUrl = URL.createObjectURL(files[0]);
+                onChange((prev) => ({ ...prev, hero_img_url: blobUrl }));
               }
-            />
-            <p className="text-xs text-dark/60 font-sans">
-              Rekomendasi rasio 16:9 atau resolusi minimal 1920x1080px untuk tampilan tajam.
-            </p>
+            }
+          }}
+          onRemoveDefaultImage={() =>
+            onChange((prev) => ({ ...prev, hero_img_url: null }))
+          }
+        />
+      </section>
 
-            <UploadFile
-              label="Atau Pilih / Unggah Hero Image"
-              defaultImageUrl={data.hero_img_url || undefined}
-              onFilesSelected={async (files) => {
-                if (files[0]) {
-                  try {
-                    const uploadedUrl = await uploadFileToServer(files[0], "site");
-                    onChange((prev) => ({ ...prev, hero_img_url: uploadedUrl }));
-                  } catch {
-                    const blobUrl = URL.createObjectURL(files[0]);
-                    onChange((prev) => ({ ...prev, hero_img_url: blobUrl }));
-                  }
-                }
-              }}
-              onRemoveDefaultImage={() =>
-                onChange((prev) => ({ ...prev, hero_img_url: "" }))
+      {/* 2. Partner Section */}
+      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+        <SectionHeading
+          number={2}
+          title="Partner Section"
+          info="Logo instansi pemerintah, BUMN, atau perusahaan rekanan yang bekerja sama dengan Dua Putra Srikandi. Format PNG atau SVG transparan sangat disarankan."
+        />
+
+        <UploadFile
+          label="Logo Mitra & Rekanan *"
+          descriptionPrefix="Format Disarankan"
+          descriptionValue="PNG / SVG Transparan"
+          previewLayout="compact"
+          multiple={true}
+          maxFiles={30}
+          existingImageUrls={data.partner_img_url || []}
+          onRemoveExistingImage={(removedUrl) => {
+            onChange((prev) => ({
+              ...prev,
+              partner_img_url: (prev.partner_img_url || []).filter((u) => u !== removedUrl),
+            }));
+          }}
+          onAddExistingUrl={(newUrl) => {
+            onChange((prev) => ({
+              ...prev,
+              partner_img_url: [...(prev.partner_img_url || []), newUrl],
+            }));
+          }}
+          onFilesSelected={async (files) => {
+            for (const file of files) {
+              try {
+                const uploadedUrl = await uploadFileToServer(file, "site");
+                onChange((prev) => ({
+                  ...prev,
+                  partner_img_url: [...(prev.partner_img_url || []), uploadedUrl],
+                }));
+              } catch {
+                const blobUrl = URL.createObjectURL(file);
+                onChange((prev) => ({
+                  ...prev,
+                  partner_img_url: [...(prev.partner_img_url || []), blobUrl],
+                }));
               }
-            />
-          </div>
+            }
+          }}
+        />
 
-          <div className="flex flex-col gap-2">
+        {/* Grid preview logo mitra aktif */}
+        {data.partner_img_url && data.partner_img_url.length > 0 && (
+          <div className="flex flex-col gap-3 pt-2">
             <span className="text-xs font-semibold text-g1 font-sans">
-              Pratinjau Banner Hero:
+              Logo Terpasang ({data.partner_img_url.length}):
             </span>
-            <div className="w-full aspect-video rounded-2xl overflow-hidden border border-g1/20 bg-white shadow-xs relative group">
-              {data.hero_img_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={data.hero_img_url}
-                  alt="Hero Banner Preview"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-dark/40 gap-2">
-                  <LordIcon name="Image 2" size={36} primaryColor="#0A9863" />
-                  <span className="text-xs font-sans">Belum ada gambar hero</span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+              {data.partner_img_url.map((url, idx) => (
+                <div
+                  key={idx}
+                  className="relative p-3 bg-white rounded-2xl border border-white-80 shadow-xs flex items-center justify-center h-20 group hover:border-g1/40 transition-all hover:shadow-sm"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={`Partner ${idx + 1}`}
+                    className="max-h-12 max-w-full object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        "https://placehold.co/120x40/png?text=Partner";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePartner(idx)}
+                    title="Hapus Logo"
+                    className="absolute -top-2 -right-2 size-7 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-xs cursor-pointer text-white"
+                  >
+                    <LordIcon name="Delete" size={14} primaryColor="#FFFFFF" secondaryColor="#FFFFFF" />
+                  </button>
                 </div>
-              )}
+              ))}
             </div>
           </div>
-        </div>
+        )}
       </section>
 
-      {/* Section 2: Mitra & Partner */}
-      <section className="flex flex-col gap-5 p-5 md:p-6 bg-white rounded-3xl border border-white-80 shadow-xs">
-        <div className="text-g1 text-base font-bold font-sans">
-          2. Logo Mitra & Rekanan
-        </div>
+      {/* 3. Why Us Section */}
+      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+        <SectionHeading
+          number={3}
+          title="Why Us Section"
+          info="Angka pencapaian resmi perusahaan yang ditampilkan sebagai counter statistik di halaman beranda."
+        />
 
-        <div className="p-4 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs flex flex-col sm:flex-row gap-3 items-end">
-          <div className="flex-1 w-full">
-            <InputBox
-              label="Tambah URL Logo Mitra Baru"
-              placeholder="https://.../logo-partner.png"
-              value={newPartnerUrl}
-              onChange={(e) => setNewPartnerUrl(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAddPartner();
-                }
-              }}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 rounded-2xl bg-white-90/50 border border-white-80 shadow-xs flex items-center gap-3.5 hover:border-g1/30 transition-all">
+            <LordIcon
+              name="ThumbsUp"
+              size={48}
+              primaryColor="#0A9863"
+              secondaryColor="#ffc738"
+              tertiaryColor="#f9c9c0"
+              quaternaryColor="#4bb3fd"
             />
-          </div>
-          <Button
-            type="button"
-            text="Tambah Mitra"
-            leftIcon="Add"
-            variant="stroke"
-            onClick={handleAddPartner}
-            disabled={!newPartnerUrl.trim()}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5 mt-1">
-          {(data.partner_img_url || []).map((url, idx) => (
-            <div
-              key={idx}
-              className="relative p-3 bg-white rounded-2xl border border-white-80 shadow-xs flex items-center justify-center h-20 group hover:border-g1/40 transition-all hover:shadow-sm"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={url}
-                alt={`Partner ${idx + 1}`}
-                className="max-h-12 max-w-full object-contain"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    "https://placehold.co/120x40/png?text=Partner";
-                }}
+            <div className="flex-1 min-w-0 flex flex-col gap-1">
+              <span className="text-sm font-semibold text-dark font-sans truncate">
+                Pelanggan Puas <span className="text-red-state">*</span>
+              </span>
+              <input
+                type="text"
+                placeholder="99%"
+                value={data.value_satisfy_customer ?? ""}
+                onChange={(e) =>
+                  onChange((prev) => ({
+                    ...prev,
+                    value_satisfy_customer: e.target.value,
+                  }))
+                }
+                className="w-full text-xl font-bold text-dark border-b border-g1/20 focus:border-g1 outline-none bg-transparent py-0.5 font-sans placeholder:text-dark/25 placeholder:font-normal placeholder:text-base"
               />
-              <button
-                type="button"
-                onClick={() => handleRemovePartner(idx)}
-                title="Hapus Logo"
-                className="absolute -top-2 -right-2 size-7 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-xs cursor-pointer text-white"
-              >
-                <LordIcon
-                  name="Delete"
-                  size={14}
-                  primaryColor="#FFFFFF"
-                  secondaryColor="#FFFFFF"
-                />
-              </button>
             </div>
-          ))}
+          </div>
 
-          {(!data.partner_img_url || data.partner_img_url.length === 0) && (
-            <div className="col-span-full py-6 text-center text-xs text-dark/50 font-sans">
-              Belum ada logo mitra. Masukkan URL logo di atas untuk menambahkan.
+          <div className="p-4 rounded-2xl bg-white-90/50 border border-white-80 shadow-xs flex items-center gap-3.5 hover:border-g1/30 transition-all">
+            <LordIcon
+              name="Road"
+              size={48}
+              primaryColor="#0A9863"
+              secondaryColor="#ebe6ef"
+              tertiaryColor="#f24c00"
+              quaternaryColor="#3a3347"
+            />
+            <div className="flex-1 min-w-0 flex flex-col gap-1">
+              <span className="text-sm font-semibold text-dark font-sans truncate">
+                Layanan Selesai <span className="text-red-state">*</span>
+              </span>
+              <input
+                type="text"
+                placeholder="50+"
+                value={data.value_finished_services ?? ""}
+                onChange={(e) =>
+                  onChange((prev) => ({
+                    ...prev,
+                    value_finished_services: e.target.value,
+                  }))
+                }
+                className="w-full text-xl font-bold text-dark border-b border-g1/20 focus:border-g1 outline-none bg-transparent py-0.5 font-sans placeholder:text-dark/25 placeholder:font-normal placeholder:text-base"
+              />
             </div>
-          )}
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white-90/50 border border-white-80 shadow-xs flex items-center gap-3.5 hover:border-g1/30 transition-all">
+            <LordIcon
+              name="Bucket"
+              size={48}
+              primaryColor="#0A9863"
+              secondaryColor="#ffc738"
+            />
+            <div className="flex-1 min-w-0 flex flex-col gap-1">
+              <span className="text-sm font-semibold text-dark font-sans truncate">
+                Produk Diproduksi <span className="text-red-state">*</span>
+              </span>
+              <input
+                type="text"
+                placeholder="300+"
+                value={data.value_product_produced ?? ""}
+                onChange={(e) =>
+                  onChange((prev) => ({
+                    ...prev,
+                    value_product_produced: e.target.value,
+                  }))
+                }
+                className="w-full text-xl font-bold text-dark border-b border-g1/20 focus:border-g1 outline-none bg-transparent py-0.5 font-sans placeholder:text-dark/25 placeholder:font-normal placeholder:text-base"
+              />
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white-90/50 border border-white-80 shadow-xs flex items-center gap-3.5 hover:border-g1/30 transition-all">
+            <LordIcon
+              name="Check"
+              size={48}
+              primaryColor="#0A9863"
+              secondaryColor="#06D07A"
+            />
+            <div className="flex-1 min-w-0 flex flex-col gap-1">
+              <span className="text-sm font-semibold text-dark font-sans truncate">
+                Tahun Pengalaman <span className="text-red-state">*</span>
+              </span>
+              <input
+                type="text"
+                placeholder="5+"
+                value={data.value_years_experience ?? ""}
+                onChange={(e) =>
+                  onChange((prev) => ({
+                    ...prev,
+                    value_years_experience: e.target.value,
+                  }))
+                }
+                className="w-full text-xl font-bold text-dark border-b border-g1/20 focus:border-g1 outline-none bg-transparent py-0.5 font-sans placeholder:text-dark/25 placeholder:font-normal placeholder:text-base"
+              />
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Section 3: Tagline / More Title & Statistik Prestasi */}
-      <section className="flex flex-col gap-5 p-5 md:p-6 bg-white rounded-3xl border border-white-80 shadow-xs">
-        <div className="text-g1 text-base font-bold font-sans">
-          3. Highlight Keunggulan & Counter Statistik
-        </div>
+      {/* 4. Gallery Section */}
+      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+        <SectionHeading
+          number={4}
+          title="Gallery Section"
+          info="Dokumentasi portofolio foto pengerjaan marka jalan, guardrail, dan perlengkapan jalan yang ditampilkan di halaman beranda."
+          badge={`Total: ${(data.gallery || []).length} Foto`}
+        />
 
         <InputBox
-          label="Judul Section Keunggulan"
-          placeholder="Mengapa Memilih Dua Putra Srikandi?"
+          label="Judul Gallery *"
+          placeholder="Berikut Hasil Pekerjaan Kami"
           value={data.more_title || ""}
           onChange={(e) =>
             onChange((prev) => ({ ...prev, more_title: e.target.value }))
           }
-          className="w-full"
+          containerClassName="max-w-none w-full"
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-1">
-          <div className="flex flex-col gap-1.5 p-4 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs focus-within:border-g1 focus-within:bg-white transition-all">
-            <span className="text-xs font-semibold text-g1 font-sans">Pelanggan Puas</span>
-            <input
-              type="number"
-              min="0"
-              value={data.value_satisfy_customer ?? 0}
-              onChange={(e) =>
-                onChange((prev) => ({
-                  ...prev,
-                  value_satisfy_customer: parseInt(e.target.value) || 0,
-                }))
+        {/* Sub-form tambah galeri */}
+        <div className="p-4 md:p-5 rounded-2xl bg-white-90/50 border border-white-80 shadow-xs flex flex-col gap-4">
+          <span className="text-xs font-semibold text-g1 font-sans">Tambah Item Galeri Baru</span>
+
+          <UploadFile
+            label="Foto Proyek *"
+            descriptionPrefix="Ukuran Disarankan"
+            descriptionValue="(800px × 600px)"
+            previewLayout="compact"
+            defaultImageUrl={newGalleryUrl || undefined}
+            onSelectMediaUrl={(url) => setNewGalleryUrl(url)}
+            onFilesSelected={async (files) => {
+              if (files[0]) {
+                try {
+                  const uploadedUrl = await uploadFileToServer(files[0], "site");
+                  setNewGalleryUrl(uploadedUrl);
+                } catch {
+                  const blobUrl = URL.createObjectURL(files[0]);
+                  setNewGalleryUrl(blobUrl);
+                }
               }
-              className="text-2xl font-bold text-dark border-none outline-none bg-transparent"
-            />
-            <span className="text-[11px] text-dark/50 font-sans">Klien & Lembaga</span>
-          </div>
+            }}
+            onRemoveDefaultImage={() => setNewGalleryUrl("")}
+          />
 
-          <div className="flex flex-col gap-1.5 p-4 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs focus-within:border-g1 focus-within:bg-white transition-all">
-            <span className="text-xs font-semibold text-g1 font-sans">Layanan Selesai</span>
-            <input
-              type="number"
-              min="0"
-              value={data.value_finished_services ?? 0}
-              onChange={(e) =>
-                onChange((prev) => ({
-                  ...prev,
-                  value_finished_services: parseInt(e.target.value) || 0,
-                }))
-              }
-              className="text-2xl font-bold text-dark border-none outline-none bg-transparent"
-            />
-            <span className="text-[11px] text-dark/50 font-sans">Proyek Terselesaikan</span>
-          </div>
-
-          <div className="flex flex-col gap-1.5 p-4 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs focus-within:border-g1 focus-within:bg-white transition-all">
-            <span className="text-xs font-semibold text-g1 font-sans">Produk Diproduksi</span>
-            <input
-              type="number"
-              min="0"
-              value={data.value_product_produced ?? 0}
-              onChange={(e) =>
-                onChange((prev) => ({
-                  ...prev,
-                  value_product_produced: parseInt(e.target.value) || 0,
-                }))
-              }
-              className="text-2xl font-bold text-dark border-none outline-none bg-transparent"
-            />
-            <span className="text-[11px] text-dark/50 font-sans">Unit Cat & Rambu</span>
-          </div>
-
-          <div className="flex flex-col gap-1.5 p-4 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs focus-within:border-g1 focus-within:bg-white transition-all">
-            <span className="text-xs font-semibold text-g1 font-sans">Tahun Pengalaman</span>
-            <input
-              type="number"
-              min="0"
-              value={data.value_years_experience ?? 0}
-              onChange={(e) =>
-                onChange((prev) => ({
-                  ...prev,
-                  value_years_experience: parseInt(e.target.value) || 0,
-                }))
-              }
-              className="text-2xl font-bold text-dark border-none outline-none bg-transparent"
-            />
-            <span className="text-[11px] text-dark/50 font-sans">Tahun Dedikasi</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Section 4: Galeri Foto Proyek */}
-      <section className="flex flex-col gap-5 p-5 md:p-6 bg-white rounded-3xl border border-white-80 shadow-xs">
-        <div className="flex items-center justify-between">
-          <div className="text-g1 text-base font-bold font-sans">
-            4. Galeri Proyek Unggulan
-          </div>
-          <span className="text-xs text-dark/50 font-normal font-sans">
-            Total: {(data.gallery || []).length} Foto
-          </span>
-        </div>
-
-        {/* Form Tambah Item Galeri */}
-        <div className="p-4 md:p-5 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs flex flex-col md:flex-row gap-3 items-end">
-          <div className="flex-1 w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <InputBox
-              label="URL Foto Galeri"
-              placeholder="https://..."
-              value={newGalleryUrl}
-              onChange={(e) => setNewGalleryUrl(e.target.value)}
-            />
-          </div>
-          <div className="flex-1 w-full">
-            <InputBox
-              label="Judul Proyek"
+              label="Judul Proyek *"
               placeholder="Contoh: Marka Jalan Tol Cipali"
               value={newGalleryTitle}
               onChange={(e) => setNewGalleryTitle(e.target.value)}
+              containerClassName="max-w-none w-full"
             />
-          </div>
-          <div className="w-full md:w-48">
             <InputBox
-              label="Kategori"
-              placeholder="Contoh: Marka Jalan"
+              label="Kategori *"
+              placeholder="Contoh: Marka Jalan, Guardrail, Rambu"
               value={newGalleryCategory}
               onChange={(e) => setNewGalleryCategory(e.target.value)}
+              containerClassName="max-w-none w-full"
             />
           </div>
-          <Button
-            type="button"
-            text="Tambah Foto"
-            leftIcon="Add"
-            variant="stroke"
-            onClick={handleAddGallery}
-            disabled={!newGalleryUrl.trim()}
-          />
+
+          <div className="flex justify-end pt-1">
+            <Button
+              type="button"
+              text="Tambah ke Galeri"
+              leftIcon="Add"
+              variant="stroke"
+              onClick={handleAddGallery}
+              disabled={!newGalleryUrl.trim() || !newGalleryTitle.trim()}
+              className="cursor-pointer"
+            />
+          </div>
         </div>
 
-        {/* List Foto Galeri */}
+        {/* Grid item galeri */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {(data.gallery || []).map((item, idx) => (
             <div
@@ -396,15 +426,10 @@ export default function TabContentBeranda({
                 <button
                   type="button"
                   onClick={() => handleRemoveGallery(idx)}
-                  className="absolute top-2.5 right-2.5 size-8 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer opacity-0 group-hover:opacity-100 shadow-sm"
+                  className="absolute top-2.5 right-2.5 size-8 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer opacity-0 group-hover:opacity-100 shadow-sm text-white"
                   title="Hapus item galeri"
                 >
-                  <LordIcon
-                    name="Delete"
-                    size={16}
-                    primaryColor="#FFFFFF"
-                    secondaryColor="#FFFFFF"
-                  />
+                  <LordIcon name="Delete" size={16} primaryColor="#FFFFFF" secondaryColor="#FFFFFF" />
                 </button>
               </div>
               <div className="p-3.5 flex flex-col gap-0.5">
@@ -419,77 +444,58 @@ export default function TabContentBeranda({
           ))}
 
           {(!data.gallery || data.gallery.length === 0) && (
-            <div className="col-span-full py-6 text-center text-xs text-dark/50 font-sans">
+            <div className="col-span-full py-6 text-center text-xs text-dark/50 font-sans border border-dashed border-white-80 rounded-2xl">
               Belum ada foto dalam galeri beranda.
             </div>
           )}
         </div>
       </section>
 
-      {/* Section 5: Testimoni Klien */}
-      <section className="flex flex-col gap-5 p-5 md:p-6 bg-white rounded-3xl border border-white-80 shadow-xs">
-        <div className="flex items-center justify-between">
-          <div className="text-g1 text-base font-bold font-sans">
-            5. Testimoni Klien
-          </div>
-          <span className="text-xs text-dark/50 font-normal font-sans">
-            Total: {(data.testimonials || []).length} Testimoni
-          </span>
-        </div>
+      {/* 5. Testimonial Section */}
+      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+        <SectionHeading
+          number={5}
+          title="Testimonial Section"
+          info="Kutipan ulasan dan kepuasan dari klien terpercaya yang ditampilkan di halaman beranda sebagai social proof."
+          badge={`Total: ${(data.testimonials || []).length} Testimoni`}
+        />
 
-        {/* Input Tambah Testimoni */}
-        <div className="p-4 md:p-5 rounded-2xl bg-white-90/40 border border-white-80 shadow-xs flex flex-col gap-4">
+        {/* Sub-form tambah testimoni */}
+        <div className="p-4 md:p-5 rounded-2xl bg-white-90/50 border border-white-80 shadow-xs flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <InputBox
-              label="Nama Klien"
+              label="Nama Klien *"
               placeholder="Contoh: Ir. Hendra Gunawan"
               value={newTestiName}
               onChange={(e) => setNewTestiName(e.target.value)}
+              containerClassName="max-w-none w-full"
             />
             <InputBox
               label="Jabatan"
               placeholder="Contoh: Project Manager"
               value={newTestiRole}
               onChange={(e) => setNewTestiRole(e.target.value)}
+              containerClassName="max-w-none w-full"
             />
             <InputBox
               label="Instansi / Perusahaan"
               placeholder="Contoh: Dinas PUPR"
               value={newTestiCompany}
               onChange={(e) => setNewTestiCompany(e.target.value)}
+              containerClassName="max-w-none w-full"
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-g1 font-sans">
-              Isi Kutipan Testimoni
-            </label>
-            <textarea
-              rows={3}
-              placeholder="Tulis testimoni atau kepuasan klien..."
-              value={newTestiContent}
-              onChange={(e) => setNewTestiContent(e.target.value)}
-              className="w-full p-3.5 rounded-2xl border border-white-80 text-sm text-dark bg-white outline-none focus:border-g1 focus:ring-2 focus:ring-g1/10 transition-all font-sans placeholder:text-dark/40"
-            />
-          </div>
+          <DescriptionBox
+            label="Isi Kutipan Testimoni *"
+            placeholder="Tulis ulasan atau kepuasan klien terhadap pekerjaan marka jalan..."
+            value={newTestiContent}
+            onChange={(e) => setNewTestiContent(e.target.value)}
+            rows={3}
+            containerClassName="max-w-none w-full"
+          />
 
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-dark/70 font-sans">Rating:</span>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  type="button"
-                  key={star}
-                  onClick={() => setNewTestiRating(star)}
-                  className={`text-lg transition-colors cursor-pointer ${
-                    star <= newTestiRating ? "text-yellow-state" : "text-gray-300"
-                  }`}
-                >
-                  ★
-                </button>
-              ))}
-            </div>
-
+          <div className="flex justify-end pt-1">
             <Button
               type="button"
               text="Tambah Testimoni"
@@ -497,11 +503,12 @@ export default function TabContentBeranda({
               variant="stroke"
               onClick={handleAddTestimonial}
               disabled={!newTestiName.trim() || !newTestiContent.trim()}
+              className="cursor-pointer"
             />
           </div>
         </div>
 
-        {/* List Testimoni */}
+        {/* List testimoni */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {(data.testimonials || []).map((t, idx) => (
             <div
@@ -510,22 +517,14 @@ export default function TabContentBeranda({
             >
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex text-yellow-state text-sm tracking-tight">
-                    {"★".repeat(t.rating || 5)}
-                    {"☆".repeat(5 - (t.rating || 5))}
-                  </div>
+                  <LordIcon name="Quote" size={24} primaryColor="#0A9863" />
                   <button
                     type="button"
                     onClick={() => handleRemoveTestimonial(idx)}
-                    className="size-7 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                    className="size-7 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer shadow-xs text-white"
                     title="Hapus testimoni"
                   >
-                    <LordIcon
-                      name="Delete"
-                      size={14}
-                      primaryColor="#FFFFFF"
-                      secondaryColor="#FFFFFF"
-                    />
+                    <LordIcon name="Delete" size={14} primaryColor="#FFFFFF" secondaryColor="#FFFFFF" />
                   </button>
                 </div>
                 <p className="text-sm text-dark/85 italic font-sans leading-relaxed">
@@ -534,12 +533,12 @@ export default function TabContentBeranda({
               </div>
 
               <div className="flex items-center gap-3 pt-3 border-t border-white-80">
-                <div className="size-9 rounded-full bg-g1/15 text-g1 font-bold text-xs flex items-center justify-center shrink-0">
-                  {t.name.slice(0, 2).toUpperCase()}
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-dark font-sans">{t.name}</span>
-                  <span className="text-[11px] text-dark/60 font-sans">
+                <div className="w-0.5 h-8 bg-g1 rounded-full shrink-0" />
+                <div className="flex-1 flex flex-col justify-start items-start min-w-0">
+                  <span className="text-xs font-bold text-dark font-sans truncate w-full">
+                    {t.name}
+                  </span>
+                  <span className="text-[11px] text-dark/60 font-sans truncate w-full">
                     {t.role} {t.company ? `• ${t.company}` : ""}
                   </span>
                 </div>

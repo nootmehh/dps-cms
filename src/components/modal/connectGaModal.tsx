@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Button from "@/components/ui/button";
 import InputBox from "@/components/ui/inputBox";
+import LordIcon from "@/components/common/lordIcon";
 
 export interface ConnectGaModalProps {
   isOpen: boolean;
@@ -61,58 +62,52 @@ export default function ConnectGaModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg p-6 bg-white rounded-4xl outline -outline-offset-1 outline-slate-200 flex flex-col justify-start items-start gap-6 shadow-2xl animate-scale-in"
+        className="w-full max-w-125 p-6 bg-white rounded-4xl outline -outline-offset-1 outline-slate-200 inline-flex flex-col justify-start items-start gap-6 shadow-2xl animate-scale-in"
       >
         {/* Title Bar */}
-        <div className="self-stretch flex justify-between items-start">
-          <div className="flex-1 flex flex-col justify-start items-start gap-1">
-            <div className="text-dark/50 text-xs font-semibold font-sans tracking-wider uppercase">
-              INTEGRASI GOOGLE ANALYTICS
-            </div>
-            <div className="text-dark text-xl font-bold font-sans">
-              Hubungkan Google Analytics 4
-            </div>
+        <div className="self-stretch inline-flex justify-between items-center">
+          <div className="flex-1 text-dark text-xl font-bold font-sans">
+            Hubungkan Google Analytics 4
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all cursor-pointer flex items-center justify-center"
-            title="Close"
+            className="size-9 rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all cursor-pointer flex items-center justify-center shrink-0"
+            title="Tutup"
           >
-            ✕
+            <LordIcon name="Cross" size={20} primaryColor="#666666" />
           </button>
         </div>
 
         {/* Divider */}
         <div className="self-stretch h-px bg-slate-200" />
 
-        {/* Form */}
-        <form onSubmit={handleConnect} className="self-stretch flex flex-col gap-4">
+        {/* Form Body */}
+        <form onSubmit={handleConnect} className="self-stretch flex flex-col gap-6">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-dark/70 font-sans">
-              Measurement ID (Google Analytics 4)
-            </label>
             <InputBox
-              placeholder="Contoh: G-XXXXXXXXXX"
+              label="Measurement ID (Google Analytics 4) *"
+              placeholder="G-XXXXXXXXXX"
               value={gaId}
               onChange={(e) => setGaId(e.target.value)}
+              containerClassName="w-full max-w-none"
             />
-            <p className="text-xs text-dark/50 font-sans">
-              Masukkan ID Pengukuran dari properti Google Analytics 4 Anda.
+            <p className="text-xs text-dark/60 font-sans">
+              Masukkan ID Pengukuran dari properti Google Analytics 4 Anda (dimulai dengan G-).
             </p>
           </div>
 
           {/* Divider */}
-          <div className="self-stretch h-px bg-slate-200 mt-2" />
+          <div className="self-stretch h-px bg-slate-200" />
 
           {/* Action Buttons */}
-          <div className="self-stretch flex justify-between items-center pt-2">
+          <div className="self-stretch inline-flex justify-between items-center">
             {isConnected ? (
               <button
                 type="button"
                 onClick={handleDisconnect}
                 disabled={submitting}
-                className="px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                className="px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
               >
                 Putuskan Hubungan
               </button>
@@ -120,7 +115,7 @@ export default function ConnectGaModal({
               <div />
             )}
 
-            <div className="flex items-center gap-3">
+            <div className="inline-flex items-center gap-3">
               <Button
                 type="button"
                 text="Batal"

@@ -4,10 +4,13 @@ export interface SeoSettingsRow {
   id?: string;
   site_title_default: string;
   meta_description_default: string;
-  auto_generate_sitemap: boolean;
+  keywords?: string | null;
+  favicon_url?: string | null;
+  auto_generate_sitemap?: boolean;
   ga_connected: boolean;
   ga_measurement_id?: string | null;
   created_at?: string;
+  updated_at?: string;
   edited_at?: string;
 }
 
@@ -25,6 +28,8 @@ export interface PageMetaRow {
 export interface UpdateSeoSettingsPayload {
   site_title_default?: string;
   meta_description_default?: string;
+  keywords?: string | null;
+  favicon_url?: string | null;
   auto_generate_sitemap?: boolean;
   ga_connected?: boolean;
   ga_measurement_id?: string | null;
@@ -40,6 +45,8 @@ const DEFAULT_SETTINGS: SeoSettingsRow = {
   site_title_default: "Dua Putra Srikandi - Jasa & Produk Marka Jalan",
   meta_description_default:
     "Spesialis pengecatan marka jalan, perlengkapan jalan, dan fasilitas keselamatan lalu lintas terpercaya.",
+  keywords: "marka jalan, cat thermoplastic, rambu lalu lintas, guardrail, jasa marka jalan",
+  favicon_url: null,
   auto_generate_sitemap: true,
   ga_connected: false,
   ga_measurement_id: null,
@@ -93,7 +100,10 @@ export async function getSeoSettings(): Promise<SeoSettingsRow> {
     }
 
     if (data && data.length > 0) {
-      return data[0] as SeoSettingsRow;
+      return {
+        ...DEFAULT_SETTINGS,
+        ...data[0],
+      } as SeoSettingsRow;
     }
 
     return DEFAULT_SETTINGS;
@@ -113,10 +123,11 @@ export async function updateSeoSettings(
   const updateData: Record<string, any> = {
     site_title_default: payload.site_title_default,
     meta_description_default: payload.meta_description_default,
-    auto_generate_sitemap: payload.auto_generate_sitemap,
-    ga_connected: payload.ga_connected,
+    keywords: payload.keywords ?? null,
+    favicon_url: payload.favicon_url ?? null,
+    ga_connected: payload.ga_connected ?? false,
     ga_measurement_id: payload.ga_measurement_id ?? null,
-    edited_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
   if (existingId && existingId !== "default") {
@@ -129,6 +140,28 @@ export async function updateSeoSettings(
 
     if (error) {
       console.error("Error updating seo_settings in Supabase:", error.message || error);
+      throw error;
+    }
+
+    return data as SeoSettingsRow;
+  }
+
+  // Check if any row exists first
+  const { data: existingRows } = await supabase
+    .from("seo_settings")
+    .select("id")
+    .limit(1);
+
+  if (existingRows && existingRows.length > 0) {
+    const { data, error } = await supabase
+      .from("seo_settings")
+      .update(updateData)
+      .eq("id", existingRows[0].id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating existing seo_settings row in Supabase:", error.message || error);
       throw error;
     }
 

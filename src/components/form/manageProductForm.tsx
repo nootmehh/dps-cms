@@ -37,13 +37,16 @@ export default function ManageProductForm({ id }: ManageProductFormProps) {
   const [categoryVariant, setCategoryVariant] = useState<string>("green");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageRemoved, setImageRemoved] = useState(false);
+  const [removedImageUrls, setRemovedImageUrls] = useState<string[]>([]);
 
   // Highlight Image (Cocok Untuk) - single image only
   const [highlightImageUrl, setHighlightImageUrl] = useState<string | null>(null);
   const [highlightImageFile, setHighlightImageFile] = useState<File | null>(null);
   const [highlightImageRemoved, setHighlightImageRemoved] = useState(false);
+  const [removedHighlightUrls, setRemovedHighlightUrls] = useState<string[]>([]);
 
   // Dynamic Specification / Detail Product (Key-Value)
   const [details, setDetails] = useState<ProductDetailItem[]>([
@@ -127,8 +130,18 @@ export default function ManageProductForm({ id }: ManageProductFormProps) {
             product.categoryVariant || CATEGORY_VARIANT_MAP[product.category] || "green"
           );
           setDescription(product.description || "");
-          setImageUrl(product.imageUrl || null);
+          const loadedUrls = product.imageUrls && product.imageUrls.length > 0
+            ? product.imageUrls
+            : product.imageUrl
+            ? [product.imageUrl]
+            : [];
+          setImageUrls(loadedUrls);
+          setImageUrl(loadedUrls[0] || null);
+          setImageFiles([]);
+          setImageRemoved(false);
+          setRemovedImageUrls([]);
           setHighlightImageUrl(product.highlightImgUrl || null);
+          setRemovedHighlightUrls([]);
 
           if (product.detailProduct && product.detailProduct.length > 0) {
             setDetails(product.detailProduct);
@@ -239,6 +252,11 @@ export default function ManageProductForm({ id }: ManageProductFormProps) {
       return;
     }
 
+    if (imageUrls.length === 0 && imageFiles.length === 0) {
+      showNotif("Foto / Gambar produk wajib diunggah minimal 1 gambar.", "error");
+      return;
+    }
+
     if (!description.trim()) {
       showNotif("Deskripsi produk wajib diisi.", "error");
       return;
@@ -257,7 +275,8 @@ export default function ManageProductForm({ id }: ManageProductFormProps) {
         category: category.trim(),
         categoryVariant: categoryVariant || CATEGORY_VARIANT_MAP[category.trim()] || "green",
         description: description.trim(),
-        imageUrl: imageUrl,
+        imageUrl: imageUrls[0] || null,
+        imageUrls: imageUrls,
         highlightImgUrl: highlightImageUrl,
         detailProduct: cleanedDetails,
         suitableFor: cleanedSuitable,
@@ -269,14 +288,15 @@ export default function ManageProductForm({ id }: ManageProductFormProps) {
         await editProduct(
           id,
           payload,
-          imageFile,
-          imageRemoved,
+          imageFiles,
+          imageRemoved && imageUrls.length === 0,
           highlightImageFile,
-          highlightImageRemoved
+          highlightImageRemoved,
+          [...removedImageUrls, ...removedHighlightUrls]
         );
         showNotif(`Produk "${title.trim()}" berhasil diperbarui!`, "success");
       } else {
-        await addProduct(payload, imageFile, highlightImageFile);
+        await addProduct(payload, imageFiles, highlightImageFile);
         showNotif(`Produk "${title.trim()}" berhasil ditambahkan!`, "success");
       }
 
@@ -302,7 +322,7 @@ export default function ManageProductForm({ id }: ManageProductFormProps) {
       />
 
       {/* Main Body */}
-      <main className="w-full max-w-[1440px] px-6 lg:px-12 py-8 flex flex-col md:flex-row justify-center items-start gap-6">
+      <main className="w-full max-w-360 px-6 lg:px-12 py-6 flex flex-col md:flex-row justify-center items-start gap-6">
         {/* Sidebar Component */}
         <Sidebar activeId="products" className="md:sticky md:top-8 shrink-0" />
 
@@ -338,27 +358,34 @@ export default function ManageProductForm({ id }: ManageProductFormProps) {
 
                   {/* Product Image Upload with Large Preview */}
                   <UploadFile
-                    label="Foto / Gambar Produk"
+                    label="Foto / Gambar Produk *"
+                    labelInfo="(Bisa Upload 4 Gambar)"
                     descriptionPrefix="Ukuran Disarankan"
                     descriptionValue="(800px * 600px)"
                     previewLayout="large"
-                    multiple={false}
-                    defaultImageUrl={imageUrl || undefined}
-                    defaultImageLabel="Gambar Produk Saat Ini"
-                    onRemoveDefaultImage={() => {
-                      setImageUrl(null);
-                      setImageFile(null);
-                      setImageRemoved(true);
+                    multiple={true}
+                    maxFiles={4}
+                    existingImageUrls={imageUrls}
+                    onRemoveExistingImage={(removedUrl) => {
+                      setImageUrls((prev) => {
+                        const updated = prev.filter((u) => u !== removedUrl);
+                        if (updated.length === 0) setImageRemoved(true);
+                        return updated;
+                      });
+                      setRemovedImageUrls((prev) => [...prev, removedUrl]);
+                    }}
+                    onAddExistingUrl={(newUrl) => {
+                      setImageUrls((prev) => {
+                        if (prev.includes(newUrl)) return prev;
+                        if (prev.length + imageFiles.length >= 4) return prev;
+                        return [...prev, newUrl];
+                      });
+                      setImageRemoved(false);
                     }}
                     onFilesSelected={(files: File[]) => {
+                      setImageFiles(files);
                       if (files.length > 0) {
-                        setImageFile(files[0]);
-                        setImageUrl(URL.createObjectURL(files[0]));
                         setImageRemoved(false);
-                      } else {
-                        setImageFile(null);
-                        setImageUrl(null);
-                        setImageRemoved(true);
                       }
                     }}
                     className="max-w-none w-full"
@@ -673,9 +700,20 @@ export default function ManageProductForm({ id }: ManageProductFormProps) {
                         defaultImageUrl={highlightImageUrl || undefined}
                         defaultImageLabel="Highlight Image Saat Ini"
                         onRemoveDefaultImage={() => {
+                          if (highlightImageUrl) {
+                            setRemovedHighlightUrls((prev) => [...prev, highlightImageUrl]);
+                          }
                           setHighlightImageUrl(null);
                           setHighlightImageFile(null);
                           setHighlightImageRemoved(true);
+                        }}
+                        onSelectMediaUrl={(url) => {
+                          if (highlightImageUrl && highlightImageUrl !== url) {
+                            setRemovedHighlightUrls((prev) => [...prev, highlightImageUrl]);
+                          }
+                          setHighlightImageUrl(url);
+                          setHighlightImageFile(null);
+                          setHighlightImageRemoved(false);
                         }}
                         onFilesSelected={(files: File[]) => {
                           if (files.length > 0) {
@@ -947,7 +985,7 @@ export default function ManageProductForm({ id }: ManageProductFormProps) {
                   disabled={submitting}
                   text={submitting ? "Menyimpan..." : id ? "Perbarui Produk" : "Simpan Produk"}
                   variant="fill"
-                  rightIcon="Add"
+                  rightIcon={id ? "Pen" : "Add"}
                   className="w-full sm:w-48 cursor-pointer"
                 />
               </div>

@@ -20,35 +20,18 @@ export function sanitizeApiUrl(rawUrl?: string): string {
 }
 
 /**
- * Determine the best endpoint URL to send uploads to.
+ * Determine the endpoint URL to send uploads to.
+ * Targets the dedicated dps-server on VPS (http://103.127.135.206:3000/api/upload).
  */
 export function getUploadEndpoint(): string {
   const envUrl = sanitizeApiUrl(process.env.NEXT_PUBLIC_API_URL);
 
-  // If running in browser
-  if (typeof window !== "undefined") {
-    const isLocalhost =
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1";
-
-    // If on localhost and env points to remote VPS that might not be running yet,
-    // default to local relative /api/upload to avoid network timeout errors.
-    if (isLocalhost && envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
-      return "/api/upload";
-    }
-
-    if (envUrl) {
-      return envUrl.endsWith("/api/upload") ? envUrl : `${envUrl}/api/upload`;
-    }
-
-    return "/api/upload";
-  }
-
-  // Server-side default
   if (envUrl) {
     return envUrl.endsWith("/api/upload") ? envUrl : `${envUrl}/api/upload`;
   }
-  return "/api/upload";
+
+  // Fallback to VPS dps-server
+  return "http://103.127.135.206:3000/api/upload";
 }
 
 export interface UploadResult {
@@ -178,6 +161,43 @@ export async function uploadMultipleFilesToServer(
     results.push(url);
   }
   return results;
+}
+
+/**
+ * Check if an image URL was a manual upload (e.g. products, services, articles)
+ * and NOT an asset managed by the Media Library or external URL.
+ */
+export function isManualUploadUrl(fileUrl?: string | null): boolean {
+  if (!fileUrl) return false;
+  const trimmed = fileUrl.trim();
+
+  // Ignore local blob/data URLs and external placeholder URLs
+  if (
+    trimmed.startsWith("blob:") ||
+    trimmed.startsWith("data:") ||
+    trimmed.includes("images.unsplash.com")
+  ) {
+    return false;
+  }
+
+  // Never delete media library items when unlinked from products or services
+  if (trimmed.includes("/uploads/media/") || trimmed.includes("/media/")) {
+    return false;
+  }
+
+  // Dedicated manual upload folders
+  if (
+    trimmed.includes("/uploads/products/") ||
+    trimmed.includes("/uploads/services/") ||
+    trimmed.includes("/uploads/articles/") ||
+    trimmed.includes("/products/") ||
+    trimmed.includes("/services/") ||
+    trimmed.includes("/articles/")
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 /**

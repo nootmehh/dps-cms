@@ -1,9 +1,11 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Button from "../ui/button";
 import LordIcon from "../common/lordIcon";
+import { getAuthSession, clearAuthSession } from "@/services/authApi";
 
 export interface NavbarProps {
   brandTitle?: string;
@@ -25,13 +27,41 @@ export default function Navbar({
   logoutText = "Logout Sistem",
   className = "",
 }: NavbarProps) {
+  const router = useRouter();
+  const [displayName, setDisplayName] = useState(userName);
+  const [displayRole, setDisplayRole] = useState(userRole);
+
+  useEffect(() => {
+    const session = getAuthSession();
+    if (session) {
+      if (userName === "Username") {
+        setDisplayName(session.user.username || "Super Admin");
+      }
+      if (userRole === "Super Admin" && session.user.role) {
+        setDisplayRole(session.user.role);
+      }
+    }
+  }, [userName, userRole]);
+
+  const handleLogout = () => {
+    if (onLogout) {
+      try {
+        onLogout();
+      } catch (err) {
+        console.error("onLogout error:", err);
+      }
+    }
+    clearAuthSession();
+    router.replace("/?logout=1");
+  };
+
   return (
     <header
       className={`w-full px-6 md:px-12 py-4 bg-white border-b border-white-80 inline-flex justify-between items-center gap-4 select-none ${className}`}
     >
       {/* Left Section: Brand Logo (from Compro) */}
       <Link
-        href="/"
+        href="/dashboard"
         className="flex items-center cursor-pointer select-none shrink-0"
       >
         {/* Full Logo on >= 420px */}
@@ -54,10 +84,10 @@ export default function Navbar({
         <div className="flex justify-start items-center gap-3 sm:gap-4">
           <div className="inline-flex flex-col justify-start items-end">
             <div className="self-stretch text-right justify-start text-g1 text-sm md:text-base font-bold font-sans">
-              {userName}
+              {displayName}
             </div>
             <div className="text-right justify-start text-dark/75 text-xs md:text-sm font-normal font-sans">
-              {userRole}
+              {displayRole}
             </div>
           </div>
 
@@ -76,7 +106,7 @@ export default function Navbar({
           text={logoutText}
           variant="unique-red"
           rightIcon="Logout"
-          onClick={onLogout}
+          onClick={handleLogout}
         />
       </div>
     </header>

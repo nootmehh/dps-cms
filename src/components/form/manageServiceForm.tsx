@@ -39,8 +39,10 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
   const [categoryVariant, setCategoryVariant] = useState<string>("green");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageRemoved, setImageRemoved] = useState(false);
+  const [removedImageUrls, setRemovedImageUrls] = useState<string[]>([]);
 
   // Dynamic Keunggulan
   const [keunggulan, setKeunggulan] = useState<ServiceKeunggulanItem[]>([
@@ -152,16 +154,35 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
             service.categoryVariant || SERVICE_CATEGORY_VARIANT_MAP[service.category] || "green"
           );
           setDescription(service.description || "");
-          setImageUrl(service.imageUrl || null);
+          const loadedUrls = service.imageUrls && service.imageUrls.length > 0
+            ? service.imageUrls
+            : service.imageUrl
+            ? [service.imageUrl]
+            : [];
+          setImageUrls(loadedUrls);
+          setImageUrl(loadedUrls[0] || null);
+          setImageFiles([]);
+          setImageRemoved(false);
+          setRemovedImageUrls([]);
 
           if (service.keunggulan && service.keunggulan.length > 0) {
-            setKeunggulan(service.keunggulan);
+            setKeunggulan(
+              service.keunggulan.map((k: any) => ({
+                title: k?.title || "",
+                description: k?.description || k?.value || "",
+              }))
+            );
           }
           if (service.materialPeralatan && service.materialPeralatan.length > 0) {
             setMaterialPeralatan(service.materialPeralatan);
           }
           if (service.faq && service.faq.length > 0) {
-            setFaq(service.faq);
+            setFaq(
+              service.faq.map((f: any) => ({
+                question: f?.question || "",
+                answer: f?.answer || "",
+              }))
+            );
           }
 
           if (service.category && !availableCategories.includes(service.category)) {
@@ -181,6 +202,34 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
     loadService();
   }, [id]);
 
+  // Synchronize materialPeralatan details when catalogProducts finishes loading
+  useEffect(() => {
+    if (catalogProducts.length === 0) return;
+    setMaterialPeralatan((prev) => {
+      let changed = false;
+      const updated = prev.map((item) => {
+        if (!item.productId) return item;
+        const found = catalogProducts.find((p) => String(p.id) === String(item.productId));
+        if (found) {
+          const newName = item.name && !item.name.startsWith("Produk #") ? item.name : found.title;
+          const newCategory = item.category && item.category !== "Produk Katalog" ? item.category : found.category;
+          const newImage = item.imageUrl || found.imageUrl || null;
+          if (newName !== item.name || newCategory !== item.category || newImage !== item.imageUrl) {
+            changed = true;
+            return {
+              ...item,
+              name: newName,
+              category: newCategory,
+              imageUrl: newImage,
+            };
+          }
+        }
+        return item;
+      });
+      return changed ? updated : prev;
+    });
+  }, [catalogProducts]);
+
   // Keunggulan handlers
   const handleAddKeunggulan = () => {
     setKeunggulan((prev) => [...prev, { title: "", description: "" }]);
@@ -197,61 +246,30 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
   };
 
   // Material & Peralatan handlers (Linked to Katalog Produk)
-  const handleAddMaterial = (productId?: string) => {
-    if (productId) {
-      const found = catalogProducts.find((p) => String(p.id) === String(productId));
-      if (found) {
-        setMaterialPeralatan((prev) => [
-          ...prev,
-          {
-            productId: String(found.id),
-            category: found.category,
-            name: found.title,
-            imageUrl: found.imageUrl || null,
-          },
-        ]);
-        return;
-      }
-    }
+  const handleAddMaterial = () => {
     setMaterialPeralatan((prev) => [
       ...prev,
-      { productId: undefined, category: "", name: "", imageUrl: null },
+      { productId: "", category: "", name: "", imageUrl: null },
     ]);
   };
 
   const handleSelectProductForMaterial = (index: number, selectedId: string) => {
-    if (!selectedId || selectedId === "manual") {
-      setMaterialPeralatan((prev) => {
-        const next = [...prev];
-        next[index] = {
-          ...next[index],
-          productId: undefined,
-        };
-        return next;
-      });
-      return;
-    }
-
     const found = catalogProducts.find((p) => String(p.id) === String(selectedId));
-    if (found) {
-      setMaterialPeralatan((prev) => {
-        const next = [...prev];
+    setMaterialPeralatan((prev) => {
+      const next = [...prev];
+      if (found) {
         next[index] = {
-          ...next[index],
           productId: String(found.id),
           category: found.category,
           name: found.title,
           imageUrl: found.imageUrl || null,
         };
-        return next;
-      });
-    }
-  };
-
-  const handleUpdateMaterial = (index: number, field: "category" | "name", val: string) => {
-    setMaterialPeralatan((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], [field]: val };
+      } else {
+        next[index] = {
+          ...next[index],
+          productId: selectedId,
+        };
+      }
       return next;
     });
   };
@@ -288,14 +306,24 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
       return;
     }
 
+    if (imageUrls.length === 0 && imageFiles.length === 0) {
+      showNotif("Foto / Banner layanan wajib diunggah minimal 1 gambar.", "error");
+      return;
+    }
+
     // Clean data
-    const cleanedKeunggulan = keunggulan.filter((k) => k.title.trim() || k.description.trim());
+    const cleanedKeunggulan = keunggulan
+      .filter((k) => k.title.trim() || (k.description || (k as any).value || "").trim())
+      .map((k) => ({
+        title: k.title.trim(),
+        description: (k.description || (k as any).value || "").trim(),
+      }));
     const cleanedMaterial = materialPeralatan
-      .filter((m) => m.category.trim() || m.name.trim() || m.productId)
+      .filter((m) => m.productId && String(m.productId).trim() !== "")
       .map((m) => ({
-        productId: m.productId ? String(m.productId) : undefined,
-        category: m.category.trim(),
-        name: m.name.trim(),
+        productId: String(m.productId),
+        category: m.category ? m.category.trim() : "",
+        name: m.name ? m.name.trim() : "",
         imageUrl: m.imageUrl || null,
       }));
     const cleanedFaq = faq.filter((f) => f.question.trim() || f.answer.trim());
@@ -307,17 +335,24 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
         category: category.trim(),
         categoryVariant: categoryVariant || SERVICE_CATEGORY_VARIANT_MAP[category.trim()] || "green",
         description: description.trim(),
-        imageUrl: imageUrl,
+        imageUrl: imageUrls[0] || null,
+        imageUrls: imageUrls,
         keunggulan: cleanedKeunggulan,
         materialPeralatan: cleanedMaterial,
         faq: cleanedFaq,
       };
 
       if (id) {
-        await editService(id, payload, imageFile, imageRemoved);
+        await editService(
+          id,
+          payload,
+          imageFiles,
+          imageRemoved && imageUrls.length === 0,
+          removedImageUrls
+        );
         showNotif(`Layanan "${title.trim()}" berhasil diperbarui!`, "success");
       } else {
-        await addService(payload, imageFile);
+        await addService(payload, imageFiles);
         showNotif(`Layanan "${title.trim()}" berhasil ditambahkan!`, "success");
       }
 
@@ -343,7 +378,7 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
       />
 
       {/* Main Body */}
-      <main className="w-full max-w-360 px-6 lg:px-12 py-8 flex flex-col md:flex-row justify-center items-start gap-6">
+      <main className="w-full max-w-360 px-6 lg:px-12 py-6 flex flex-col md:flex-row justify-center items-start gap-6">
         {/* Sidebar Component */}
         <Sidebar activeId="services" className="md:sticky md:top-8 shrink-0" />
 
@@ -352,7 +387,7 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
           {/* Header Block */}
           <div className="self-stretch flex flex-col justify-start items-start gap-1">
             <div className="text-dark/40 text-xs md:text-sm font-normal font-sans tracking-wider uppercase">
-              FORMULIR LAYANAN
+              LAYANAN
             </div>
             <h1 className="text-g1 text-2xl md:text-3xl font-bold font-sans">
               {id ? "Edit Layanan" : "Tambah Layanan Baru"}
@@ -379,27 +414,34 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
 
                   {/* Service Image Upload with Large Preview */}
                   <UploadFile
-                    label="Foto / Banner Layanan"
+                    label="Foto / Banner Layanan *"
+                    labelInfo="(Bisa Upload 4 Gambar)"
                     descriptionPrefix="Ukuran Disarankan"
                     descriptionValue="(800px * 600px)"
                     previewLayout="large"
-                    multiple={false}
-                    defaultImageUrl={imageUrl || undefined}
-                    defaultImageLabel="Foto Layanan Saat Ini"
-                    onRemoveDefaultImage={() => {
-                      setImageUrl(null);
-                      setImageFile(null);
-                      setImageRemoved(true);
+                    multiple={true}
+                    maxFiles={4}
+                    existingImageUrls={imageUrls}
+                    onRemoveExistingImage={(removedUrl) => {
+                      setImageUrls((prev) => {
+                        const updated = prev.filter((u) => u !== removedUrl);
+                        if (updated.length === 0) setImageRemoved(true);
+                        return updated;
+                      });
+                      setRemovedImageUrls((prev) => [...prev, removedUrl]);
+                    }}
+                    onAddExistingUrl={(newUrl) => {
+                      setImageUrls((prev) => {
+                        if (prev.includes(newUrl)) return prev;
+                        if (prev.length + imageFiles.length >= 4) return prev;
+                        return [...prev, newUrl];
+                      });
+                      setImageRemoved(false);
                     }}
                     onFilesSelected={(files: File[]) => {
+                      setImageFiles(files);
                       if (files.length > 0) {
-                        setImageFile(files[0]);
-                        setImageUrl(URL.createObjectURL(files[0]));
                         setImageRemoved(false);
-                      } else {
-                        setImageFile(null);
-                        setImageUrl(null);
-                        setImageRemoved(true);
                       }
                     }}
                     className="max-w-none w-full"
@@ -466,17 +508,12 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
 
                   {/* Service Description */}
                   <DescriptionBox
-                    label={
-                      <span>
-                        Deskripsi Lengkap Layanan <span className="text-red-state">*</span>
-                      </span>
-                    }
+                    label="Deskripsi Lengkap Layanan (Opsional)"
                     placeholder="Tuliskan deskripsi lengkap mengenai ruang lingkup, metode pengerjaan, dan standar layanan..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    rows={5}
+                    rows={4}
                     containerClassName="max-w-none"
-                    required
                   />
                 </div>
 
@@ -647,7 +684,7 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
                                   </span>
                                 }
                                 placeholder="cth. Menggunakan cat coldplastic bersertifikat TKDN..."
-                                value={item.description}
+                                value={item.description || (item as any).value || ""}
                                 onChange={(e) => handleUpdateKeunggulan(index, "description", e.target.value)}
                                 rows={2}
                                 containerClassName="flex-1 max-w-none"
@@ -682,16 +719,13 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
                             <span className="text-g1 text-sm md:text-base font-semibold font-sans">
                               Material & Peralatan
                             </span>
-                            <span className="text-dark/50 text-xs md:text-sm font-normal font-sans hidden sm:inline ml-2">
-                              (Tautkan ID Katalog Produk atau manual)
-                            </span>
                           </div>
                         </div>
 
                         {/* Add Material Button */}
                         <Button
                           type="button"
-                          onClick={() => handleAddMaterial()}
+                          onClick={handleAddMaterial}
                           text="Tambah Material"
                           variant="fill"
                           size="sm"
@@ -707,120 +741,70 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
                       ) : (
                         <div className="flex flex-col divide-y divide-g1/10 w-full">
                           {materialPeralatan.map((item, index) => {
-                            const linkedProduct = item.productId
-                              ? catalogProducts.find((p) => String(p.id) === String(item.productId))
-                              : undefined;
+                            const productOptions = [
+                              ...catalogProducts.map((p) => ({
+                                value: String(p.id),
+                                label: (
+                                  <div className="flex items-center justify-between w-full gap-2">
+                                    <span className="font-medium text-dark truncate">{p.title}</span>
+                                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-g1/10 text-g1 font-semibold shrink-0">
+                                      {p.category}
+                                    </span>
+                                  </div>
+                                ),
+                                searchLabel: `${p.title} ${p.category}`,
+                              })),
+                            ];
+
+                            if (
+                              item.productId &&
+                              !catalogProducts.some((p) => String(p.id) === String(item.productId))
+                            ) {
+                              productOptions.unshift({
+                                value: String(item.productId),
+                                label: (
+                                  <div className="flex items-center justify-between w-full gap-2">
+                                    <span className="font-medium text-dark truncate">
+                                      {item.name || `Produk #${String(item.productId).slice(0, 8)}`}
+                                    </span>
+                                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-g1/10 text-g1 font-semibold shrink-0">
+                                      {item.category || "Katalog"}
+                                    </span>
+                                  </div>
+                                ),
+                                searchLabel: `${item.name || ""} ${item.category || ""}`,
+                              });
+                            }
+
                             return (
                               <div
                                 key={index}
-                                className="flex flex-col gap-3 w-full py-4 first:pt-1 last:pb-1"
+                                className="flex flex-col md:flex-row items-stretch md:items-start gap-3 w-full py-4 first:pt-1 last:pb-1"
                               >
-                                {/* Header line with index, badge & remove */}
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-g1 font-mono">#{index + 1}</span>
-                                    {item.productId ? (
-                                      <Badge
-                                        text={`ID Produk: #${String(item.productId).length > 12 ? String(item.productId).slice(0, 8) + "..." : item.productId}`}
-                                        variant="green"
-                                        showDot={true}
-                                      />
-                                    ) : (
-                                      <Badge text="Input Manual" variant="gray" showDot={false} />
-                                    )}
-                                  </div>
+                                <Dropdown
+                                  label={
+                                    <span>
+                                      Pilih Produk <span className="text-g1">#{index + 1}</span>
+                                    </span>
+                                  }
+                                  placeholder="Pilih produk dari katalog..."
+                                  searchPlaceholder="Cari produk atau kategori..."
+                                  options={productOptions}
+                                  value={item.productId ? String(item.productId) : ""}
+                                  onChange={(val) => handleSelectProductForMaterial(index, val)}
+                                  multiple={false}
+                                  containerClassName="flex-1 max-w-none"
+                                />
+
+                                <div className="h-11 md:mt-7 flex items-center shrink-0 justify-end">
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveMaterial(index)}
-                                    className="size-9 bg-red-state hover:bg-red-state/90 border border-red-300 hover:border-red-400 text-white rounded-full flex items-center justify-center hover:opacity-80 active:opacity-60 active:scale-95 transition-all duration-200 cursor-pointer shadow-xs shrink-0"
+                                    className="size-9 bg-red-state hover:bg-red-state/90 border border-red-300 hover:border-red-400 text-white rounded-full flex justify-center items-center hover:opacity-80 active:opacity-60 active:scale-95 transition-all duration-200 cursor-pointer shadow-xs shrink-0"
                                     title="Hapus Material"
                                   >
                                     <LordIcon name="Delete" size={16} primaryColor="#FFFFFF" />
                                   </button>
-                                </div>
-
-                                {/* Catalog Picker */}
-                                <Dropdown
-                                  label={
-                                    <span className="flex items-center gap-1.5">
-                                      <span>Ambil dari Katalog Produk</span>
-                                      <span className="text-xs font-normal text-dark/50">(pilih ID → nama & kategori otomatis terisi)</span>
-                                    </span>
-                                  }
-                                  placeholder="Pilih atau cari produk dari katalog..."
-                                  options={[
-                                    {
-                                      value: "manual",
-                                      label: (
-                                        <div className="flex items-center gap-2 py-1 text-dark/70">
-                                          <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-700">Manual</span>
-                                          <span>Input Manual (Tanpa Tautan Katalog)</span>
-                                        </div>
-                                      ),
-                                      searchLabel: "Input Manual Kustom Tanpa Tautan Katalog",
-                                    },
-                                    ...catalogProducts.map((p) => ({
-                                      value: String(p.id),
-                                      label: (
-                                        <div className="flex items-center gap-2.5 py-1">
-                                          <span className="px-2 py-0.5 rounded-full bg-g1/10 text-g1 text-xs font-bold font-mono shrink-0">
-                                            ID: #{String(p.id).length > 12 ? String(p.id).slice(0, 8) + "..." : p.id}
-                                          </span>
-                                          <span className="text-dark font-medium truncate">{p.title}</span>
-                                          <span className="text-dark/40 text-xs truncate">({p.category})</span>
-                                        </div>
-                                      ),
-                                      searchLabel: `[ID #${p.id}] ${p.title} ${p.category}`,
-                                    })),
-                                  ]}
-                                  value={item.productId ? String(item.productId) : "manual"}
-                                  onChange={(val) => handleSelectProductForMaterial(index, val)}
-                                  multiple={false}
-                                  containerClassName="w-full max-w-none"
-                                />
-
-                                {/* Linked Product Preview */}
-                                {linkedProduct && (
-                                  <div className="flex items-center gap-3 p-2.5 bg-g1/10 rounded-2xl border border-g1/20">
-                                    {linkedProduct.imageUrl ? (
-                                      <img src={linkedProduct.imageUrl} alt={linkedProduct.title} className="size-10 rounded-xl object-cover border border-g1/20 shrink-0" />
-                                    ) : (
-                                      <div className="size-10 rounded-xl bg-g1/15 text-g1 flex items-center justify-center text-xs font-bold shrink-0">#{linkedProduct.id}</div>
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-xs font-semibold text-dark truncate">{linkedProduct.title}</div>
-                                      <div className="text-xs text-dark/50 truncate">{linkedProduct.category}</div>
-                                    </div>
-                                    <span className="text-[11px] text-g1 bg-white px-2.5 py-0.5 rounded-full border border-g1/20 font-medium shrink-0">
-                                      Tersinkron ✓
-                                    </span>
-                                  </div>
-                                )}
-
-                                {/* Category + Name fields */}
-                                <div className="flex flex-col md:flex-row items-stretch gap-3 w-full">
-                                  <InputBox
-                                    label={
-                                      <span>
-                                        Kategori Material <span className="text-g1">#{index + 1}</span>
-                                      </span>
-                                    }
-                                    placeholder="cth. Cat Marka Jalan"
-                                    value={item.category}
-                                    onChange={(e) => handleUpdateMaterial(index, "category", e.target.value)}
-                                    containerClassName="w-full md:w-80 shrink-0 max-w-none"
-                                  />
-                                  <InputBox
-                                    label={
-                                      <span>
-                                        Nama Material / Peralatan <span className="text-g1">#{index + 1}</span>
-                                      </span>
-                                    }
-                                    placeholder="cth. Cat Coldplastic Merk DPS"
-                                    value={item.name}
-                                    onChange={(e) => handleUpdateMaterial(index, "name", e.target.value)}
-                                    containerClassName="flex-1 max-w-none"
-                                  />
                                 </div>
                               </div>
                             );
@@ -929,7 +913,7 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
                   disabled={submitting}
                   text={submitting ? "Menyimpan..." : id ? "Perbarui Layanan" : "Simpan Layanan"}
                   variant="fill"
-                  rightIcon="Add"
+                  rightIcon={id ? "Pen" : "Add"}
                   className="w-full sm:w-48 cursor-pointer"
                 />
               </div>

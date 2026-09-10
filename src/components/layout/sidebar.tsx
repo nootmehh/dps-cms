@@ -21,7 +21,7 @@ export interface SidebarProps {
 }
 
 export const DEFAULT_SIDEBAR_ITEMS: SidebarMenuItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: "Dashboard", href: "/" },
+  { id: "dashboard", label: "Dashboard", icon: "Dashboard", href: "/dashboard" },
   { id: "users", label: "Kelola Pengguna", icon: "User", href: "/kelola-pengguna" },
   { id: "seo", label: "Kelola SEO", icon: "Global", href: "/kelola-seo" },
   { id: "content", label: "Kelola Konten", icon: "Document", href: "/kelola-konten" },
