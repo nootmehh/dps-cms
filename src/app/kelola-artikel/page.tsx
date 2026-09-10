@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/layout/navbar";
 import Sidebar from "@/components/layout/sidebar";
@@ -47,7 +46,6 @@ const SORT_OPTIONS: DropdownOption[] = [
 ];
 
 export default function KelolaArtikelPage() {
-  const router = useRouter();
   const [articles, setArticles] = useState<ArticleItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("all");
@@ -201,7 +199,6 @@ export default function KelolaArtikelPage() {
       return 0;
     });
 
-  const totalPages = Math.ceil(filteredArticles.length / itemsPerPage) || 1;
   const paginatedArticles = filteredArticles.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage

@@ -419,7 +419,7 @@ export default function ComponentsShowcasePage() {
           <div>
             <h2 className="text-xl font-bold text-dark">9. Sidebar Component (Figma Menu Bar)</h2>
             <p className="text-sm text-slate-500">
-              Interactive menu navigation using <code>variant="fill"</code> for active item and <code>variant="ghost-green"</code> for inactive items.
+              Interactive menu navigation using <code>variant=&quot;fill&quot;</code> for active item and <code>variant=&quot;ghost-green&quot;</code> for inactive items.
             </p>
           </div>
 

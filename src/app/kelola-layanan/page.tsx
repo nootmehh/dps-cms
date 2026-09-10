@@ -17,7 +17,6 @@ import {
   getStoredServices,
   deleteService,
   SERVICE_CATEGORY_VARIANT_MAP,
-  type ServicePayload,
 } from "@/shared/api/service";
 import { getServices } from "@/services/serviceApi";
 

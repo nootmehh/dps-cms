@@ -23,8 +23,6 @@ export interface ArticlePayload {
 
 const STORAGE_KEY = "dps_articles_data";
 
-const DEFAULT_ARTICLES: ArticlePayload[] = [];
-
 function getStoredArticles(): ArticlePayload[] {
   if (typeof window === "undefined") return [];
   try {

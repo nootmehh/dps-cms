@@ -203,7 +203,7 @@ export default function KelolaSeoPage() {
                         const uploadedUrl = await uploadFileToServer(files[0], "site");
                         setSettings((prev) => ({ ...prev, favicon_url: uploadedUrl }));
                         triggerNotif("Favicon berhasil diunggah!", "default");
-                      } catch (err: any) {
+                      } catch {
                         const blobUrl = URL.createObjectURL(files[0]);
                         setSettings((prev) => ({ ...prev, favicon_url: blobUrl }));
                         triggerNotif("Favicon disimpan secara lokal", "default");

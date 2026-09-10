@@ -11,23 +11,12 @@ import Dropdown from "../ui/dropdown";
 import Badge from "../ui/badge";
 import ArticleEditor from "../ui/articleEditor";
 import Notification from "../ui/notification";
-import LordIcon from "../common/lordIcon";
 import {
   getArticleById,
   addArticle,
   editArticle,
   getConsistingCategories,
 } from "../../shared/api/article";
-
-const DEFAULT_CATEGORIES = [
-  "Keselamatan Jalan",
-  "Konstruksi",
-  "Inovasi Marka",
-  "Perlengkapan Jalan",
-  "Teknologi Hijau",
-  "Penerangan",
-  "Kabar Proyek",
-];
 
 export interface ManageArticleFormProps {
   id?: string;

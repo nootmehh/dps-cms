@@ -283,7 +283,7 @@ export default function Dropdown({
               onClick={() => handleSelect(searchQuery.trim())}
               className="px-4 py-2.5 rounded-full flex items-center justify-between text-sm font-medium font-sans text-g1 hover:bg-g1/10 cursor-pointer border-t border-g1/10 transition-colors"
             >
-              <span className="truncate">Add "{searchQuery.trim()}"</span>
+              <span className="truncate">Add &quot;{searchQuery.trim()}&quot;</span>
               <div className="shrink-0 ml-2 flex items-center">
                 <LordIcon name="Add" size={16} primaryColor="#0A9863" />
               </div>

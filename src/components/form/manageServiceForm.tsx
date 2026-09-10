@@ -38,7 +38,7 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
   const [category, setCategory] = useState<string>(DEFAULT_SERVICE_CATEGORIES[0]);
   const [categoryVariant, setCategoryVariant] = useState<string>("green");
   const [description, setDescription] = useState("");
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [_imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageRemoved, setImageRemoved] = useState(false);
@@ -185,8 +185,10 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
             );
           }
 
-          if (service.category && !availableCategories.includes(service.category)) {
-            setAvailableCategories((prev) => Array.from(new Set([...prev, service.category])));
+          if (service.category) {
+            setAvailableCategories((prev) =>
+              prev.includes(service.category) ? prev : [...prev, service.category]
+            );
           }
         } else {
           showNotif("Layanan tidak ditemukan.", "error");

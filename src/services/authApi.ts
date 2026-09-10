@@ -146,7 +146,7 @@ export async function loginUser(
     ) {
       // Seed the initial Super Admin into Supabase
       const hashed = await hashPassword(cleanPassword);
-      const { data: created, error: createErr } = await supabase
+      const { data: created, error: _createErr } = await supabase
         .from("users")
         .insert([
           {

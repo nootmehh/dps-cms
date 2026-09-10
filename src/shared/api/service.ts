@@ -253,7 +253,7 @@ export async function addService(
     now.getHours()
   ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-  let finalImageUrls: string[] = Array.isArray((data as any).imageUrls)
+  const finalImageUrls: string[] = Array.isArray((data as any).imageUrls)
     ? [...(data as any).imageUrls]
     : data.imageUrl
     ? [data.imageUrl]
@@ -325,7 +325,7 @@ export async function editService(
   const existingService = services.find((s) => String(s.id) === String(id));
   let updatedService: ServicePayload | null = null;
 
-  let uploadedUrls: string[] = [];
+  const uploadedUrls: string[] = [];
   if (imageFile) {
     const filesToUpload = Array.isArray(imageFile) ? imageFile : [imageFile];
     for (const f of filesToUpload) {
@@ -343,7 +343,7 @@ export async function editService(
 
   let computedFinalBannerUrls: string[] = [];
 
-  const updated = services.map((service) => {
+  const updatedServices = services.map((service) => {
     if (String(service.id) === String(id)) {
       let finalImageUrls: string[] = [];
       if (!imageRemoved) {
@@ -402,7 +402,7 @@ export async function editService(
       createdAt: new Date().toISOString(),
       ...data,
     };
-    services.unshift(updatedService);
+    updatedServices.unshift(updatedService);
   }
 
   // Delete obsolete manual upload images from server disk
@@ -424,7 +424,7 @@ export async function editService(
   }
 
   const targetService: ServicePayload = updatedService;
-  saveStoredServices(services);
+  saveStoredServices(updatedServices);
 
   // Sync to Supabase
   try {

@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import MediaCard from "@/components/ui/mediaCard";
 import Pagination from "@/components/ui/pagination";
 import InputBox from "@/components/ui/inputBox";
 import { fetchMediaList } from "@/shared/api/media";
@@ -70,7 +69,6 @@ export default function MediaSelectModal({
     }, [mediaList, searchQuery]);
 
     const totalItems = filteredMedia.length;
-    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
     const paginatedMedia = useMemo(() => {
         const start = (currentPage - 1) * itemsPerPage;

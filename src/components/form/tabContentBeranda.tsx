@@ -187,7 +187,6 @@ export default function TabContentBeranda({
                   key={idx}
                   className="relative p-3 bg-white rounded-2xl border border-white-80 shadow-xs flex items-center justify-center h-20 group hover:border-g1/40 transition-all hover:shadow-sm"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={url}
                     alt={`Partner ${idx + 1}`}
@@ -413,7 +412,6 @@ export default function TabContentBeranda({
               className="group relative rounded-2xl overflow-hidden bg-white border border-white-80 shadow-xs flex flex-col hover:border-g1/30 transition-all hover:shadow-sm"
             >
               <div className="aspect-video w-full overflow-hidden bg-gray-100 relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={item.url}
                   alt={item.title || "Gallery"}

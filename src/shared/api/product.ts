@@ -105,7 +105,7 @@ export async function getConsistingProductCategories(): Promise<string[]> {
     supabaseProducts.forEach((p) => {
       if (p.category) cats.add(p.category);
     });
-  } catch (e) {
+  } catch {
     // ignore
   }
   const products = getStoredProducts();
@@ -180,7 +180,7 @@ export async function addProduct(
     now.getHours()
   ).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-  let finalImageUrls: string[] = Array.isArray((data as any).imageUrls)
+  const finalImageUrls: string[] = Array.isArray((data as any).imageUrls)
     ? [...(data as any).imageUrls]
     : data.imageUrl
     ? [data.imageUrl]
@@ -258,7 +258,7 @@ export async function editProduct(
   const existingProduct = products.find((p) => String(p.id) === String(id));
   let updatedProduct: ProductPayload | null = null;
 
-  let uploadedUrls: string[] = [];
+  const uploadedUrls: string[] = [];
   if (imageFile) {
     const filesToUpload = Array.isArray(imageFile) ? imageFile : [imageFile];
     for (const f of filesToUpload) {

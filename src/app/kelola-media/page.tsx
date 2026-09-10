@@ -12,7 +12,6 @@ import EmptyState from "@/components/common/emptyState";
 import DeleteConfirmationModal from "@/components/modal/deleteConfirmation";
 import {
   type MediaItem,
-  fetchMediaList,
   uploadImage,
   deleteImage,
   processZipFile,
@@ -26,7 +25,7 @@ export default function KelolaMediaPage() {
   const batchInputRef = useRef<HTMLInputElement>(null);
 
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadingBatch, setUploadingBatch] = useState(false);
   const [mediaToDelete, setMediaToDelete] = useState<MediaItem | null>(null);
@@ -188,7 +187,6 @@ export default function KelolaMediaPage() {
     );
   }, [mediaList, searchQuery]);
 
-  const totalPages = Math.ceil(filteredMedia.length / itemsPerPage) || 1;
   const paginatedMedia = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredMedia.slice(start, start + itemsPerPage);

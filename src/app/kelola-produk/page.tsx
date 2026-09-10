@@ -17,7 +17,6 @@ import {
   getStoredProducts,
   deleteProduct,
   CATEGORY_VARIANT_MAP,
-  type ProductPayload,
 } from "@/shared/api/product";
 import { getProducts } from "@/services/productApi";
 

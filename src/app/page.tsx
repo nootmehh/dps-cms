@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/ui/button";
 import InputBox from "@/components/ui/inputBox";
 import Notification, { type NotificationType } from "@/components/ui/notification";
 import { loginUser, getAuthSession } from "@/services/authApi";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -172,5 +172,13 @@ export default function LoginPage() {
         onClose={() => setNotification((prev) => ({ ...prev, isOpen: false }))}
       />
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="w-full min-h-screen bg-stone-100" />}>
+      <LoginContent />
+    </Suspense>
   );
 }

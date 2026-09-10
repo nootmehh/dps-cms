@@ -36,7 +36,7 @@ export default function ManageProductForm({ id }: ManageProductFormProps) {
   const [category, setCategory] = useState<string>(DEFAULT_PRODUCT_CATEGORIES[0]);
   const [categoryVariant, setCategoryVariant] = useState<string>("green");
   const [description, setDescription] = useState("");
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [_imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imageRemoved, setImageRemoved] = useState(false);
@@ -162,8 +162,10 @@ export default function ManageProductForm({ id }: ManageProductFormProps) {
             setKekurangan(product.kekurangan);
           }
 
-          if (product.category && !availableCategories.includes(product.category)) {
-            setAvailableCategories((prev) => Array.from(new Set([...prev, product.category])));
+          if (product.category) {
+            setAvailableCategories((prev) =>
+              prev.includes(product.category) ? prev : [...prev, product.category]
+            );
           }
         } else {
           showNotif("Produk tidak ditemukan.", "error");

@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Button from "@/components/ui/button";
 import InputBox from "@/components/ui/inputBox";
 import DescriptionBox from "@/components/ui/descriptionBox";
-import LordIcon from "@/components/common/lordIcon";
 import { type PageMetaRow } from "@/services/seoApi";
 
 export interface EditPageMetaModalProps {

@@ -10,7 +10,7 @@ export interface AuthGuardProps {
 
 export default function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
-  const [session, setSession] = useState<AuthSession | null>(null);
+  const [_session, setSession] = useState<AuthSession | null>(null);
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
