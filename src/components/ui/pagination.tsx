@@ -60,22 +60,22 @@ export default function Pagination({
 
   return (
     <div
-      className={`self-stretch inline-flex flex-col md:flex-row justify-between items-center gap-4 w-full font-sans ${className}`}
+      className={`self-stretch flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 w-full font-sans ${className}`}
     >
       {/* Items Range Info */}
-      <div className="justify-start text-dark/60 text-sm font-normal font-sans">
+      <div className="text-center sm:text-left text-dark/60 text-xs sm:text-sm font-normal font-sans">
         <span>Menampilkan </span>
-        <span className="text-g1 text-sm font-semibold font-sans">
+        <span className="text-g1 text-xs sm:text-sm font-semibold font-sans">
           {displayedCount}
         </span>
         <span> dari </span>
-        <span className="text-g1 text-sm font-semibold font-sans">
+        <span className="text-g1 text-xs sm:text-sm font-semibold font-sans">
           {totalItems} {itemLabel}
         </span>
       </div>
 
       {/* Navigation Controls */}
-      <div className="flex flex-wrap items-center gap-4 md:gap-6">
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 md:gap-6">
         {/* Previous Button (Unique Stroke) */}
         <Button
           type="button"

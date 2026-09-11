@@ -380,12 +380,12 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
       />
 
       {/* Main Body */}
-      <main className="w-full max-w-360 px-6 lg:px-12 py-6 flex flex-col md:flex-row justify-center items-start gap-6">
+      <main className="w-full max-w-360 px-4 sm:px-6 lg:px-12 py-4 sm:py-6 flex flex-col md:flex-row justify-center items-start gap-6">
         {/* Sidebar Component */}
         <Sidebar activeId="services" className="md:sticky md:top-8 shrink-0" />
 
         {/* Main Content Card */}
-        <div className="flex-1 p-6 md:p-8 bg-white rounded-4xl border border-white-80 shadow-xs flex flex-col justify-start items-start gap-6 w-full overflow-hidden">
+        <div className="flex-1 p-4 sm:p-6 md:p-8 bg-white rounded-3xl sm:rounded-4xl border border-white-80 shadow-xs flex flex-col justify-start items-start gap-6 w-full overflow-hidden">
           {/* Header Block */}
           <div className="self-stretch flex flex-col justify-start items-start gap-1">
             <div className="text-dark/40 text-xs md:text-sm font-normal font-sans tracking-wider uppercase">

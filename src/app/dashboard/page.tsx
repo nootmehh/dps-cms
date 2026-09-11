@@ -37,36 +37,34 @@ export default function DashboardPage() {
         />
 
         {/* Main Body */}
-        <main className="flex-1 w-full max-w-[1440px] mx-auto p-4 md:p-6 lg:p-8 flex flex-col md:flex-row gap-6">
+        <main className="flex-1 w-full max-w-[1440px] mx-auto p-4 sm:p-6 lg:p-8 flex flex-col md:flex-row gap-4 sm:gap-6">
           {/* Sidebar */}
-          <div className="w-full md:w-64 shrink-0">
-            <Sidebar activeId="dashboard" />
-          </div>
+          <Sidebar activeId="dashboard" />
 
           {/* Empty Dashboard Content Area */}
-          <section className="flex-1 flex flex-col gap-6">
+          <section className="flex-1 flex flex-col gap-4 sm:gap-6 min-w-0">
             {/* Header Card */}
-            <div className="bg-white p-6 rounded-4xl border border-white-80 shadow-xs flex flex-col gap-1">
-              <h1 className="text-2xl font-bold text-g1 font-sans">
+            <div className="bg-white p-4 sm:p-6 rounded-3xl sm:rounded-4xl border border-white-80 shadow-xs flex flex-col gap-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-g1 font-sans">
                 Dashboard
               </h1>
-              <p className="text-sm text-dark/60 font-sans">
+              <p className="text-xs sm:text-sm text-dark/60 font-sans">
                 Ringkasan sistem Content Management System (CMS) Dua Putra Srikandi.
               </p>
             </div>
 
             {/* Empty State Card */}
-            <div className="bg-white rounded-4xl border border-white-80 shadow-xs p-8 flex flex-col items-center justify-center min-h-[420px]">
+            <div className="bg-white rounded-3xl sm:rounded-4xl border border-white-80 shadow-xs p-6 sm:p-8 flex flex-col items-center justify-center min-h-[360px] sm:min-h-[420px]">
               <EmptyState
                 iconName="Dashboard"
                 iconSize={72}
                 primaryColor="#0A9863"
                 secondaryColor="#ffc738"
                 text="Halaman Dashboard Siap Dikembangkan"
-                className="pt-8 pb-4"
+                className="pt-6 sm:pt-8 pb-4"
               >
-                <p className="text-sm text-dark/50 max-w-md mx-auto mt-2 font-sans leading-relaxed">
-                  Modul analitik dan ringkasan performa akan segera hadir di sini. Anda dapat menggunakan menu di sidebar untuk mengelola data sistem.
+                <p className="text-xs sm:text-sm text-dark/50 max-w-md mx-auto mt-2 font-sans leading-relaxed text-center">
+                  Modul analitik dan ringkasan performa akan segera hadir di sini. Anda dapat menggunakan menu navigasi untuk mengelola data sistem.
                 </p>
               </EmptyState>
             </div>

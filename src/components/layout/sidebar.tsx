@@ -56,15 +56,16 @@ export default function Sidebar({
   return (
     <aside
       aria-label="Sidebar Navigation"
-      className={`w-64 p-6 bg-white rounded-4xl border border-white-80 shadow-xs inline-flex flex-col justify-start items-center gap-4 ${className}`}
+      className={`hidden md:inline-flex md:w-18 lg:w-64 md:p-3 lg:p-6 bg-white rounded-3xl lg:rounded-4xl border border-white-80 shadow-xs flex-col justify-start items-center gap-3 lg:gap-4 shrink-0 transition-all ${className}`}
     >
       {/* Menu Bar Title */}
-      <div className="self-stretch justify-start text-dark/40 text-sm font-normal font-sans tracking-wider uppercase select-none">
-        {title}
+      <div className="self-stretch text-center lg:text-left justify-start text-dark/40 text-xs lg:text-sm font-normal font-sans tracking-wider uppercase select-none">
+        <span className="hidden lg:inline">{title}</span>
+        <span className="lg:hidden text-[10px] font-bold">MENU</span>
       </div>
 
       {/* Navigation Buttons List */}
-      <nav className="self-stretch flex flex-col justify-start items-start gap-2 w-full">
+      <nav className="self-stretch flex flex-col justify-start items-center lg:items-start gap-2 w-full">
         {items.map((item) => {
           const isActive = item.id === activeId;
           const btn = (
@@ -73,13 +74,14 @@ export default function Sidebar({
               leftIcon={item.icon}
               variant={isActive ? "fill" : "ghost-green"}
               onClick={() => handleItemClick(item)}
-              className="w-full justify-start text-left px-4 cursor-pointer"
+              title={item.label}
+              className="w-full justify-center lg:justify-start text-left md:px-0 lg:px-4 cursor-pointer [&>span:not(.pill-segment)]:hidden lg:[&>span:not(.pill-segment)]:inline min-h-[44px]"
             />
           );
 
           if (item.href && !onSelect) {
             return (
-              <Link key={item.id} href={item.href} className="w-full block">
+              <Link key={item.id} href={item.href} className="w-full block" title={item.label}>
                 {btn}
               </Link>
             );
@@ -91,3 +93,4 @@ export default function Sidebar({
     </aside>
   );
 }
+

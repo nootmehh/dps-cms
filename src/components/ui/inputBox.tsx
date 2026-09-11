@@ -108,7 +108,7 @@ export default function InputBox({
     );
   };
 
-  const defaultMaxWidth = containerClassName.includes("max-w-") ? "" : "max-w-116.5";
+  const defaultMaxWidth = containerClassName.includes("max-w-") ? "" : "max-w-full lg:max-w-116.5";
 
   return (
     <div className={`w-full ${defaultMaxWidth} inline-flex flex-col justify-start items-start gap-1 ${containerClassName}`}>

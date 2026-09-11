@@ -42,11 +42,11 @@ export default function DeleteConfirmationModal({
     return (
         <div
             onClick={onClose}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in"
         >
             <div
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-125 p-6 bg-white rounded-4xl outline -outline-offset-1 outline-slate-200 inline-flex flex-col justify-start items-start gap-6 shadow-2xl animate-scale-in"
+                className="w-full sm:max-w-125 p-5 sm:p-6 bg-white rounded-t-[32px] sm:rounded-4xl outline -outline-offset-1 outline-slate-200 flex flex-col justify-start items-start gap-5 sm:gap-6 shadow-2xl animate-scale-in"
             >
                 {/* Title Bar */}
                 <div className="self-stretch inline-flex justify-between items-center">
@@ -75,13 +75,14 @@ export default function DeleteConfirmationModal({
                 <div className="self-stretch h-px bg-slate-200" />
 
                 {/* Action Buttons */}
-                <div className="self-stretch inline-flex justify-end items-center gap-3">
+                <div className="self-stretch flex flex-col-reverse sm:flex-row justify-end items-stretch sm:items-center gap-3">
                     <Button
                         type="button"
                         onClick={onClose}
                         disabled={submitting}
                         text="Batal"
                         variant="ghost-green"
+                        className="w-full sm:w-auto cursor-pointer"
                     />
                     <Button
                         type="button"
@@ -89,6 +90,7 @@ export default function DeleteConfirmationModal({
                         disabled={submitting}
                         text={submitting ? "Menghapus..." : "Ya, Hapus"}
                         variant="fill"
+                        className="w-full sm:w-auto cursor-pointer"
                     />
                 </div>
             </div>

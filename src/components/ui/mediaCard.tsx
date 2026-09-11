@@ -63,11 +63,13 @@ export default function MediaCard({
                     className="relative max-w-4xl max-h-[88vh] flex flex-col items-center justify-center cursor-default"
                 >
                     {/* Full Image with NO outline / border */}
-                    <img
-                        src={imageUrl}
-                        alt={fileName}
-                        className="max-h-[80vh] w-auto max-w-full object-contain rounded-2xl shadow-2xl"
-                    />
+                    {imageUrl ? (
+                        <img
+                            src={imageUrl}
+                            alt={fileName}
+                            className="max-h-[80vh] w-auto max-w-full object-contain rounded-2xl shadow-2xl"
+                        />
+                    ) : null}
 
                     {/* Subtle caption */}
                     <div className="mt-3 px-4 py-1.5 bg-black/60 backdrop-blur-md rounded-full text-white/90 text-xs sm:text-sm font-medium truncate max-w-md text-center">
@@ -88,7 +90,7 @@ export default function MediaCard({
                 >
                     <div className="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
                         <div className="size-14 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200/60 flex items-center justify-center">
-                            {!imageError ? (
+                            {!imageError && imageUrl ? (
                                 <img
                                     src={imageUrl}
                                     alt={fileName}
@@ -138,7 +140,7 @@ export default function MediaCard({
             >
                 {/* Image Preview Box */}
                 <div className="w-full aspect-square rounded-2xl bg-slate-100 overflow-hidden border border-slate-200/60 relative flex items-center justify-center group-hover:opacity-95 transition-opacity">
-                    {!imageError ? (
+                    {!imageError && imageUrl ? (
                         <img
                             src={imageUrl}
                             alt={fileName}

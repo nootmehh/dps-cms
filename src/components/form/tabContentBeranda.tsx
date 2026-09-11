@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import InputBox from "@/components/ui/inputBox";
 import DescriptionBox from "@/components/ui/descriptionBox";
 import Button from "@/components/ui/button";
@@ -12,10 +12,12 @@ import type {
   TestimonialItem,
 } from "@/services/siteContentApi";
 import { uploadFileToServer } from "@/shared/api/upload";
+import MediaSelectModal, { MediaSelectModalItem } from "@/components/modal/mediaSelectModal";
 
 interface TabContentBerandaProps {
   data: SiteContentRow;
   onChange: (updater: (prev: SiteContentRow) => SiteContentRow) => void;
+  onError?: (message: string) => void;
 }
 
 import SectionHeading from "@/components/ui/sectionHeading";
@@ -23,6 +25,7 @@ import SectionHeading from "@/components/ui/sectionHeading";
 export default function TabContentBeranda({
   data,
   onChange,
+  onError,
 }: TabContentBerandaProps) {
   // Local state for new gallery item
   const [newGalleryUrl, setNewGalleryUrl] = useState("");
@@ -34,6 +37,90 @@ export default function TabContentBeranda({
   const [newTestiRole, setNewTestiRole] = useState("");
   const [newTestiCompany, setNewTestiCompany] = useState("");
   const [newTestiContent, setNewTestiContent] = useState("");
+
+  // Media library modal states
+  const [isPartnerMediaModalOpen, setIsPartnerMediaModalOpen] = useState(false);
+  const [isGalleryMediaModalOpen, setIsGalleryMediaModalOpen] = useState(false);
+
+  // Local file input ref for partner images
+  const partnerFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePartnerLocalFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    for (const file of files) {
+      try {
+        const uploadedUrl = await uploadFileToServer(file, "site");
+        onChange((prev) => ({
+          ...prev,
+          partner_img_url: [...(prev.partner_img_url || []), uploadedUrl],
+        }));
+      } catch (err: any) {
+        onError?.(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.");
+      }
+    }
+    e.target.value = "";
+  };
+
+  // Local file input ref for gallery images
+  const galleryFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleGalleryLocalFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    for (const file of files) {
+      try {
+        const uploadedUrl = await uploadFileToServer(file, "site");
+        const cleanTitle = file.name ? file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ") : "Foto Proyek";
+        const newItem: GalleryItem = {
+          url: uploadedUrl,
+          title: newGalleryTitle.trim() || cleanTitle || "Foto Proyek",
+          category: newGalleryCategory.trim() || "Konstruksi",
+        };
+        onChange((prev) => ({
+          ...prev,
+          gallery: [...(prev.gallery || []), newItem],
+        }));
+      } catch (err: any) {
+        onError?.(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.");
+      }
+    }
+    setNewGalleryTitle("");
+    setNewGalleryCategory("");
+    setNewGalleryUrl("");
+    e.target.value = "";
+  };
+
+  const handleSelectPartnerMedia = (item: MediaSelectModalItem) => {
+    onChange((prev) => {
+      const current = prev.partner_img_url || [];
+      if (current.includes(item.url)) return prev;
+      return {
+        ...prev,
+        partner_img_url: [...current, item.url],
+      };
+    });
+    setIsPartnerMediaModalOpen(false);
+  };
+
+  const handleSelectGalleryMedia = (item: MediaSelectModalItem) => {
+    const cleanTitle = item.fileName
+      ? item.fileName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ")
+      : "Foto Proyek";
+    const newItem: GalleryItem = {
+      url: item.url,
+      title: newGalleryTitle.trim() || cleanTitle || "Foto Proyek",
+      category: newGalleryCategory.trim() || "Konstruksi",
+    };
+    onChange((prev) => ({
+      ...prev,
+      gallery: [...(prev.gallery || []), newItem],
+    }));
+    setNewGalleryTitle("");
+    setNewGalleryCategory("");
+    setNewGalleryUrl("");
+    setIsGalleryMediaModalOpen(false);
+  };
 
   const handleRemovePartner = (index: number) => {
     onChange((prev) => ({
@@ -95,19 +182,19 @@ export default function TabContentBeranda({
   return (
     <div className="flex flex-col gap-6 w-full animate-fadeIn">
       {/* 1. Hero Section */}
-      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+      <section className="flex flex-col gap-5 p-4 sm:p-6 bg-white rounded-2xl sm:rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
         <SectionHeading
           number={1}
           title="Hero Section"
-          info="Gambar latar belakang utama yang tampil di bagian paling atas halaman beranda situs. Disarankan rasio 16:9 atau resolusi minimal 1920×1080px."
+          info="Gambar latar belakang utama yang tampil di bagian paling atas halaman beranda situs. Disarankan rasio 16:9 atau resolusi minimal 1440px x 800px."
         />
 
         <UploadFile
           label="Foto Hero Banner *"
           descriptionPrefix="Ukuran Disarankan"
-          descriptionValue="(1920px × 1080px / Rasio 16:9)"
+          descriptionValue="(1440px × 800px)"
           previewLayout="large"
-          defaultImageUrl={data.hero_img_url || undefined}
+          defaultImageUrl={data.hero_img_url && data.hero_img_url.trim() ? data.hero_img_url.trim() : undefined}
           onSelectMediaUrl={(url) =>
             onChange((prev) => ({ ...prev, hero_img_url: url }))
           }
@@ -116,9 +203,8 @@ export default function TabContentBeranda({
               try {
                 const uploadedUrl = await uploadFileToServer(files[0], "site");
                 onChange((prev) => ({ ...prev, hero_img_url: uploadedUrl }));
-              } catch {
-                const blobUrl = URL.createObjectURL(files[0]);
-                onChange((prev) => ({ ...prev, hero_img_url: blobUrl }));
+              } catch (err: any) {
+                onError?.(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.");
               }
             }
           }}
@@ -129,7 +215,7 @@ export default function TabContentBeranda({
       </section>
 
       {/* 2. Partner Section */}
-      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+      <section className="flex flex-col gap-5 p-4 sm:p-6 bg-white rounded-2xl sm:rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
         <SectionHeading
           number={2}
           title="Partner Section"
@@ -138,8 +224,8 @@ export default function TabContentBeranda({
 
         <UploadFile
           label="Logo Mitra & Rekanan *"
-          descriptionPrefix="Format Disarankan"
-          descriptionValue="PNG / SVG Transparan"
+          descriptionPrefix="Ukuran Disarankan"
+          descriptionValue="(100px x 60px)"
           previewLayout="compact"
           multiple={true}
           maxFiles={30}
@@ -164,16 +250,46 @@ export default function TabContentBeranda({
                   ...prev,
                   partner_img_url: [...(prev.partner_img_url || []), uploadedUrl],
                 }));
-              } catch {
-                const blobUrl = URL.createObjectURL(file);
-                onChange((prev) => ({
-                  ...prev,
-                  partner_img_url: [...(prev.partner_img_url || []), blobUrl],
-                }));
+              } catch (err: any) {
+                onError?.(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.");
               }
             }
           }}
         />
+
+        {/* Hidden file input for partner local selection */}
+        <input
+          ref={partnerFileInputRef}
+          type="file"
+          multiple
+          accept="image/*"
+          className="hidden"
+          onChange={handlePartnerLocalFiles}
+        />
+
+        {/* Buttons: Tambah dari folder lokal & Media Library */}
+        {(data.partner_img_url || []).length > 0 && (
+          <div className="flex flex-wrap items-center justify-start gap-2.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              leftIcon="Image 2"
+              text="Unggah Gambar Lainnya"
+              onClick={() => partnerFileInputRef.current?.click()}
+              className="cursor-pointer"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              leftIcon="Image 2"
+              text="Pilih Lainnya dari Media Library"
+              onClick={() => setIsPartnerMediaModalOpen(true)}
+              className="cursor-pointer"
+            />
+          </div>
+        )}
 
         {/* Grid preview logo mitra aktif */}
         {data.partner_img_url && data.partner_img_url.length > 0 && (
@@ -182,20 +298,24 @@ export default function TabContentBeranda({
               Logo Terpasang ({data.partner_img_url.length}):
             </span>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
-              {data.partner_img_url.map((url, idx) => (
-                <div
-                  key={idx}
-                  className="relative p-3 bg-white rounded-2xl border border-white-80 shadow-xs flex items-center justify-center h-20 group hover:border-g1/40 transition-all hover:shadow-sm"
-                >
-                  <img
-                    src={url}
-                    alt={`Partner ${idx + 1}`}
-                    className="max-h-12 max-w-full object-contain"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        "https://placehold.co/120x40/png?text=Partner";
-                    }}
-                  />
+              {(data.partner_img_url || [])
+                .filter((url): url is string => typeof url === "string" && url.trim().length > 0)
+                .map((url, idx) => (
+                  <div
+                    key={idx}
+                    className="relative p-3 bg-white rounded-2xl border border-white-80 shadow-xs flex items-center justify-center h-20 group hover:border-g1/40 transition-all hover:shadow-sm"
+                  >
+                    {url ? (
+                      <img
+                        src={url}
+                        alt={`Partner ${idx + 1}`}
+                        className="max-h-12 max-w-full object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            "https://placehold.co/120x40/png?text=Partner";
+                        }}
+                      />
+                    ) : null}
                   <button
                     type="button"
                     onClick={() => handleRemovePartner(idx)}
@@ -212,7 +332,7 @@ export default function TabContentBeranda({
       </section>
 
       {/* 3. Why Us Section */}
-      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+      <section className="flex flex-col gap-5 p-4 sm:p-6 bg-white rounded-2xl sm:rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
         <SectionHeading
           number={3}
           title="Why Us Section"
@@ -331,7 +451,7 @@ export default function TabContentBeranda({
       </section>
 
       {/* 4. Gallery Section */}
-      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+      <section className="flex flex-col gap-5 p-4 sm:p-6 bg-white rounded-2xl sm:rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
         <SectionHeading
           number={4}
           title="Gallery Section"
@@ -358,21 +478,54 @@ export default function TabContentBeranda({
             descriptionPrefix="Ukuran Disarankan"
             descriptionValue="(800px × 600px)"
             previewLayout="compact"
-            defaultImageUrl={newGalleryUrl || undefined}
+            defaultImageUrl={newGalleryUrl && newGalleryUrl.trim() ? newGalleryUrl.trim() : undefined}
             onSelectMediaUrl={(url) => setNewGalleryUrl(url)}
             onFilesSelected={async (files) => {
               if (files[0]) {
                 try {
                   const uploadedUrl = await uploadFileToServer(files[0], "site");
                   setNewGalleryUrl(uploadedUrl);
-                } catch {
-                  const blobUrl = URL.createObjectURL(files[0]);
-                  setNewGalleryUrl(blobUrl);
+                } catch (err: any) {
+                  onError?.(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.");
                 }
               }
             }}
             onRemoveDefaultImage={() => setNewGalleryUrl("")}
           />
+
+          {/* Hidden file input for gallery local selection */}
+          <input
+            ref={galleryFileInputRef}
+            type="file"
+            multiple
+            accept="image/*"
+            className="hidden"
+            onChange={handleGalleryLocalFiles}
+          />
+
+          {/* Buttons: Tambah dari folder lokal & Media Library */}
+          {Boolean(newGalleryUrl && newGalleryUrl.trim()) && (
+            <div className="flex flex-wrap items-center justify-start gap-2.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                leftIcon="Image 2"
+                text="Unggah Gambar Lainnya"
+                onClick={() => galleryFileInputRef.current?.click()}
+                className="cursor-pointer"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                leftIcon="Image 2"
+                text="Pilih Lainnya dari Media Library"
+                onClick={() => setIsGalleryMediaModalOpen(true)}
+                className="cursor-pointer"
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <InputBox
@@ -406,21 +559,25 @@ export default function TabContentBeranda({
 
         {/* Grid item galeri */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {(data.gallery || []).map((item, idx) => (
+          {(data.gallery || [])
+            .filter((item): item is GalleryItem => typeof item?.url === "string" && item.url.trim().length > 0)
+            .map((item, idx) => (
             <div
               key={item.id || idx}
               className="group relative rounded-2xl overflow-hidden bg-white border border-white-80 shadow-xs flex flex-col hover:border-g1/30 transition-all hover:shadow-sm"
             >
               <div className="aspect-video w-full overflow-hidden bg-gray-100 relative">
-                <img
-                  src={item.url}
-                  alt={item.title || "Gallery"}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src =
-                      "https://placehold.co/400x250/png?text=Proyek+DPS";
-                  }}
-                />
+                {item.url ? (
+                  <img
+                    src={item.url}
+                    alt={item.title || "Gallery"}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        "https://placehold.co/400x250/png?text=Proyek+DPS";
+                    }}
+                  />
+                ) : null}
                 <button
                   type="button"
                   onClick={() => handleRemoveGallery(idx)}
@@ -450,7 +607,7 @@ export default function TabContentBeranda({
       </section>
 
       {/* 5. Testimonial Section */}
-      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+      <section className="flex flex-col gap-5 p-4 sm:p-6 bg-white rounded-2xl sm:rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
         <SectionHeading
           number={5}
           title="Testimonial Section"
@@ -551,6 +708,20 @@ export default function TabContentBeranda({
           )}
         </div>
       </section>
+
+      {/* Media Select Modal for Partner Section */}
+      <MediaSelectModal
+        isOpen={isPartnerMediaModalOpen}
+        onClose={() => setIsPartnerMediaModalOpen(false)}
+        onSelect={handleSelectPartnerMedia}
+      />
+
+      {/* Media Select Modal for Gallery Section */}
+      <MediaSelectModal
+        isOpen={isGalleryMediaModalOpen}
+        onClose={() => setIsGalleryMediaModalOpen(false)}
+        onSelect={handleSelectGalleryMedia}
+      />
     </div>
   );
 }

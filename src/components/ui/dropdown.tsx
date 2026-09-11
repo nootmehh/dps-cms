@@ -154,7 +154,7 @@ export default function Dropdown({
   return (
     <div
       ref={containerRef}
-      className={`w-full max-w-116.5 inline-flex flex-col justify-start items-start gap-1 relative ${containerClassName}`}
+      className={`w-full ${containerClassName.includes("max-w-") ? "" : "max-w-full lg:max-w-116.5"} inline-flex flex-col justify-start items-start gap-1 relative ${containerClassName}`}
     >
       {label && (
         <label className={`self-stretch justify-start text-dark text-sm font-semibold font-sans ${labelClassName}`}>

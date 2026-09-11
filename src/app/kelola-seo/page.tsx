@@ -131,7 +131,7 @@ export default function KelolaSeoPage() {
   }, [settings.keywords]);
 
   return (
-    <div className="h-screen max-h-screen bg-white-90 flex flex-col items-center overflow-hidden">
+    <div className="min-h-screen lg:h-screen lg:max-h-screen bg-white-90 flex flex-col items-center lg:overflow-hidden">
       {/* Top Navbar */}
       <Navbar
         brandTitle="Dua Putra Srikandi"
@@ -141,19 +141,19 @@ export default function KelolaSeoPage() {
       />
 
       {/* Main Body */}
-      <main className="w-full max-w-360 px-6 lg:px-12 py-6 flex-1 flex flex-col md:flex-row justify-center items-start gap-6 overflow-hidden min-h-0 h-full">
+      <main className="w-full max-w-360 px-4 sm:px-6 lg:px-12 py-4 sm:py-6 flex-1 flex flex-col md:flex-row justify-center items-start gap-4 sm:gap-6 min-h-0 lg:overflow-hidden lg:h-full">
         {/* Sidebar Component */}
         <Sidebar activeId="seo" className="shrink-0 h-fit" />
 
         {/* Content Card */}
-        <div className="flex-1 h-full p-6 md:p-8 bg-white rounded-4xl border border-white-80 hover:border-g1 transition-colors flex flex-col justify-start items-start gap-5 w-full overflow-hidden min-h-0">
+        <div className="flex-1 w-full p-4 sm:p-6 md:p-8 bg-white rounded-3xl sm:rounded-4xl border border-white-80 hover:border-g1 transition-colors flex flex-col justify-start items-start gap-4 sm:gap-5 overflow-hidden min-h-0 lg:h-full">
           {/* Header Row */}
-          <div className="self-stretch flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+          <div className="self-stretch flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 shrink-0">
             <div className="flex-1 flex flex-col justify-start items-start gap-1">
-              <h1 className="self-stretch justify-start text-g1 text-2xl md:text-3xl font-bold font-sans">
+              <h1 className="self-stretch justify-start text-g1 text-xl sm:text-2xl md:text-3xl font-bold font-sans">
                 Kelola SEO
               </h1>
-              <p className="text-dark text-sm font-normal font-sans">
+              <p className="text-dark text-xs sm:text-sm font-normal font-sans">
                 Kelola konfigurasi SEO situs, favicon, kata kunci, dan integrasi analitik di halaman ini.
               </p>
             </div>
@@ -166,7 +166,7 @@ export default function KelolaSeoPage() {
               rightIcon="Pen"
               onClick={handleSaveSettings}
               disabled={isSaving || isLoading}
-              className="shrink-0 cursor-pointer"
+              className="shrink-0 cursor-pointer w-full sm:w-auto"
             />
           </div>
 
@@ -295,7 +295,7 @@ export default function KelolaSeoPage() {
               />
 
               {/* Integration Item: Google Analytics */}
-              <div className="self-stretch px-6 py-3.5 bg-white-90/60 border border-white-80 hover:border-g1 transition-colors rounded-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="self-stretch px-4 sm:px-6 py-3.5 bg-white-90/60 border border-white-80 hover:border-g1 transition-colors rounded-2xl sm:rounded-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-3.5">
                   <LordIcon
                     name="Dashboard"

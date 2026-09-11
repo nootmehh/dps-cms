@@ -86,9 +86,9 @@ export default function MediaSelectModal({
         <div
             role="dialog"
             aria-modal="true"
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark/40 backdrop-blur-xs animate-fade-in"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-dark/40 backdrop-blur-xs animate-fade-in"
         >
-            <div className="w-full max-w-4xl max-h-[90vh] bg-white rounded-3xl border border-white-80 shadow-2xl flex flex-col justify-start items-start gap-5 p-6 md:p-8 overflow-hidden animate-scale-in">
+            <div className="w-full max-w-4xl max-h-[92vh] sm:max-h-[90vh] bg-white rounded-t-[32px] sm:rounded-3xl border border-white-80 shadow-2xl flex flex-col justify-start items-start gap-4 sm:gap-5 p-4 sm:p-6 md:p-8 overflow-hidden animate-scale-in">
                 {/* Modal Header */}
                 <div className="self-stretch flex justify-between items-center w-full">
                     <div className="flex-1 text-g1 text-2xl font-bold font-sans">
@@ -158,11 +158,15 @@ export default function MediaSelectModal({
                                         }`}
                                     >
                                         <div className="w-full aspect-square rounded-xl bg-slate-100 overflow-hidden border border-slate-200/60 relative flex items-center justify-center group-hover:opacity-95 transition-opacity">
-                                            <img
-                                                src={item.url}
-                                                alt={item.fileName}
-                                                className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
-                                            />
+                                            {item.url ? (
+                                                <img
+                                                    src={item.url}
+                                                    alt={item.fileName}
+                                                    className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                                                />
+                                            ) : (
+                                                <LordIcon name="Image 2" size={32} primaryColor="#cbd5e1" />
+                                            )}
                                             {isSelected && (
                                                 <div className="absolute top-2 right-2 size-7 bg-g1 border-2 border-white text-white rounded-full flex items-center justify-center shadow-md">
                                                     <LordIcon name="CheckCircleTick" size={16} primaryColor="#FFFFFF" secondaryColor="#FFFFFF" />

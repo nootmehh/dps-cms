@@ -59,6 +59,18 @@ export default function KelolaKontenPage() {
     loadContent();
   }, []);
 
+  // Listen for global upload errors (e.g. timeout / abort error) to display toast notification
+  useEffect(() => {
+    const handleUploadError = (e: Event) => {
+      const customEvent = e as CustomEvent<{ message?: string; type?: NotificationType }>;
+      if (customEvent.detail?.message) {
+        triggerNotif(customEvent.detail.message, customEvent.detail.type || "error");
+      }
+    };
+    window.addEventListener("dps-upload-error", handleUploadError);
+    return () => window.removeEventListener("dps-upload-error", handleUploadError);
+  }, []);
+
   // Save changes to Supabase
   const handleSave = async () => {
     setIsSaving(true);
@@ -88,12 +100,12 @@ export default function KelolaKontenPage() {
       />
 
       {/* Main Body */}
-      <main className="w-full max-w-360 px-6 lg:px-12 py-6 flex flex-col md:flex-row justify-center items-start gap-6">
+      <main className="w-full max-w-360 px-4 sm:px-6 lg:px-12 py-4 sm:py-6 flex flex-col md:flex-row justify-center items-start gap-6">
         {/* Sidebar Component */}
         <Sidebar activeId="content" className="md:sticky md:top-8 shrink-0" />
 
         {/* Content Card */}
-        <div className="flex-1 p-6 md:p-8 bg-white rounded-[32px] border border-white-80 shadow-xs flex flex-col justify-start items-start gap-6 w-full overflow-hidden">
+        <div className="flex-1 p-4 sm:p-6 md:p-8 bg-white rounded-3xl sm:rounded-[32px] border border-white-80 shadow-xs flex flex-col justify-start items-start gap-6 w-full overflow-hidden">
           {/* Header Row */}
           <div className="self-stretch flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex-1 flex flex-col justify-start items-start gap-1">
@@ -113,7 +125,7 @@ export default function KelolaKontenPage() {
               rightIcon="Pen"
               onClick={handleSave}
               disabled={isSaving || isLoading}
-              className="shrink-0 cursor-pointer"
+              className="w-full sm:w-auto shrink-0 cursor-pointer"
             />
           </div>
 
@@ -207,6 +219,7 @@ export default function KelolaKontenPage() {
                 <TabContentBeranda
                   data={siteContent}
                   onChange={setSiteContent}
+                  onError={(msg) => triggerNotif(msg, "error")}
                 />
               )}
 
@@ -214,6 +227,7 @@ export default function KelolaKontenPage() {
                 <TabContentTentang
                   data={siteContent}
                   onChange={setSiteContent}
+                  onError={(msg) => triggerNotif(msg, "error")}
                 />
               )}
 

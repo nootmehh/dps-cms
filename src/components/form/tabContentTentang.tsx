@@ -12,6 +12,7 @@ import { uploadFileToServer } from "@/shared/api/upload";
 interface TabContentTentangProps {
   data: SiteContentRow;
   onChange: (updater: (prev: SiteContentRow) => SiteContentRow) => void;
+  onError?: (message: string) => void;
 }
 
 import SectionHeading from "@/components/ui/sectionHeading";
@@ -19,6 +20,7 @@ import SectionHeading from "@/components/ui/sectionHeading";
 export default function TabContentTentang({
   data,
   onChange,
+  onError,
 }: TabContentTentangProps) {
   // Local state for new mission point
   const [newMissionItem, setNewMissionItem] = useState("");
@@ -90,7 +92,7 @@ export default function TabContentTentang({
   return (
     <div className="flex flex-col gap-6 w-full animate-fadeIn">
       {/* 1. About Section */}
-      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+      <section className="flex flex-col gap-5 p-4 sm:p-6 bg-white rounded-2xl sm:rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
         <SectionHeading
           number={1}
           title="About Section"
@@ -113,9 +115,8 @@ export default function TabContentTentang({
               try {
                 const uploadedUrl = await uploadFileToServer(files[0], "site");
                 onChange((prev) => ({ ...prev, about_image_url: uploadedUrl }));
-              } catch {
-                const blobUrl = URL.createObjectURL(files[0]);
-                onChange((prev) => ({ ...prev, about_image_url: blobUrl }));
+              } catch (err: any) {
+                onError?.(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.");
               }
             }
           }}
@@ -154,7 +155,7 @@ export default function TabContentTentang({
       </section>
 
       {/* 2. Vision & Mission Section */}
-      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+      <section className="flex flex-col gap-5 p-4 sm:p-6 bg-white rounded-2xl sm:rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
         <SectionHeading
           number={2}
           title="Vision & Mission Section"
@@ -177,9 +178,8 @@ export default function TabContentTentang({
               try {
                 const uploadedUrl = await uploadFileToServer(files[0], "site");
                 onChange((prev) => ({ ...prev, vision_img_url: uploadedUrl }));
-              } catch {
-                const blobUrl = URL.createObjectURL(files[0]);
-                onChange((prev) => ({ ...prev, vision_img_url: blobUrl }));
+              } catch (err: any) {
+                onError?.(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.");
               }
             }
           }}
@@ -272,7 +272,7 @@ export default function TabContentTentang({
       </section>
 
       {/* 3. Legality Section */}
-      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+      <section className="flex flex-col gap-5 p-4 sm:p-6 bg-white rounded-2xl sm:rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
         <SectionHeading
           number={3}
           title="Legality Section"

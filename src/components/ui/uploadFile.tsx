@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, ReactNode } from "react";
+import { useState, useRef, useEffect, useMemo, ReactNode } from "react";
 import Button from "./button";
 import MediaSelectModal, { MediaSelectModalItem } from "@/components/modal/mediaSelectModal";
 import Notification, { NotificationType } from "./notification";
@@ -41,6 +41,42 @@ interface DisplayImageItem {
     existingUrl?: string;
 }
 
+const getFileNameFromUrl = (url: string) => {
+    try {
+        const parts = url.split("/");
+        return parts[parts.length - 1].split("?")[0] || "image.png";
+    } catch {
+        return "image.png";
+    }
+};
+
+const normalizeName = (name: string) => {
+    return name
+        .toLowerCase()
+        .replace(/\.[^/.]+$/, "") // strip extension
+        .replace(/^[\d_-]+/, "") // strip timestamp/random prefix
+        .replace(/[^a-z0-9]/g, ""); // strip non-alphanumerics
+};
+
+// Helper to check if a local file has already been uploaded/converted and exists in existingImageUrls or defaultImageUrl
+const isFileAlreadyUploaded = (file: File, urls: string[]) => {
+    const normFile = normalizeName(file.name);
+    if (!normFile) return false;
+
+    return urls.some((url) => {
+        if (!url || typeof url !== "string") return false;
+        try {
+            const urlFileName = getFileNameFromUrl(url);
+            const normUrl = normalizeName(urlFileName);
+            if (!normUrl) return false;
+
+            return normUrl === normFile || normUrl.endsWith(normFile) || normUrl.includes(normFile);
+        } catch {
+            return false;
+        }
+    });
+};
+
 export default function UploadFile({
     label = "Unggah Berkas",
     info,
@@ -67,7 +103,6 @@ export default function UploadFile({
 }: UploadFileProps) {
     const [dragActive, setDragActive] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<File[]>(initialFiles);
-    const [previews, setPreviews] = useState<string[]>([]);
     const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
     const [isReplaceHovered, setIsReplaceHovered] = useState(false);
     const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
@@ -101,59 +136,141 @@ export default function UploadFile({
         }
     }, [initialFiles]);
 
-    // Handle previews for newly selected local files
-    useEffect(() => {
-        const newPreviews = selectedFiles.map((file) => {
+    // Compute object URLs synchronously for selected files so previews are immediately available
+    const filePreviews = useMemo(() => {
+        return selectedFiles.map((file) => {
             if (file.type.startsWith("image/")) {
-                return URL.createObjectURL(file);
+                try {
+                    return URL.createObjectURL(file);
+                } catch {
+                    return "";
+                }
             }
             return "";
         });
-        setPreviews(newPreviews);
-
-        return () => {
-            newPreviews.forEach((url) => {
-                if (url) URL.revokeObjectURL(url);
-            });
-        };
     }, [selectedFiles]);
 
-    const getFileNameFromUrl = (url: string) => {
-        try {
-            const parts = url.split("/");
-            return parts[parts.length - 1].split("?")[0] || "image.png";
-        } catch {
-            return "image.png";
-        }
-    };
+    // Clean up revoked URLs when filePreviews change or on unmount
+    useEffect(() => {
+        return () => {
+            filePreviews.forEach((url) => {
+                if (url) {
+                    try {
+                        URL.revokeObjectURL(url);
+                    } catch {
+                        // ignore
+                    }
+                }
+            });
+        };
+    }, [filePreviews]);
 
-    // Build unified display images list
-    const allImages: DisplayImageItem[] = [
-        ...existingImageUrls.map((url, idx) => ({
+    const validExistingUrls = useMemo(() => {
+        return (existingImageUrls || []).filter(
+            (url): url is string => typeof url === "string" && url.trim().length > 0
+        );
+    }, [existingImageUrls]);
+
+    const validDefaultUrl =
+        typeof defaultImageUrl === "string" && defaultImageUrl.trim().length > 0
+            ? defaultImageUrl.trim()
+            : null;
+
+    const allKnownUrls = useMemo(() => {
+        return [
+            ...validExistingUrls,
+            ...(validDefaultUrl ? [validDefaultUrl] : []),
+        ];
+    }, [validExistingUrls, validDefaultUrl]);
+
+    // Keep selectedFiles clean of any files that have already been converted/uploaded to the server
+    useEffect(() => {
+        if (selectedFiles.length === 0) return;
+        const remaining = selectedFiles.filter((file) => !isFileAlreadyUploaded(file, allKnownUrls));
+        if (remaining.length !== selectedFiles.length) {
+            setSelectedFiles(remaining);
+        }
+    }, [allKnownUrls, selectedFiles]);
+
+    // Filter local files: only show ones that are not already present in the existing/default URLs
+    const pendingSelectedFiles = useMemo(() => {
+        return selectedFiles.filter((file) => !isFileAlreadyUploaded(file, allKnownUrls));
+    }, [selectedFiles, allKnownUrls]);
+
+    // Build unified display images list, ensuring only non-empty, non-duplicate URLs are included
+    const allImages: DisplayImageItem[] = useMemo(() => {
+        const existingItems: DisplayImageItem[] = validExistingUrls.map((url, idx) => ({
             id: `existing-${idx}-${url}`,
             type: "existing" as const,
             url,
             name: getFileNameFromUrl(url),
             existingUrl: url,
-        })),
-        ...(defaultImageUrl && !existingImageUrls.includes(defaultImageUrl)
-            ? [{
-                id: `default-${defaultImageUrl}`,
-                type: "existing" as const,
-                url: defaultImageUrl,
-                name: defaultImageLabel || getFileNameFromUrl(defaultImageUrl),
-                existingUrl: defaultImageUrl,
-            }]
-            : []),
-        ...selectedFiles.map((f, idx) => ({
-            id: `file-${idx}-${f.name}-${f.lastModified}`,
-            type: "file" as const,
-            url: previews[idx] || "",
-            name: f.name,
-            file: f,
-            fileIndex: idx,
-        })),
-    ];
+        }));
+
+        if (!multiple) {
+            // In single file mode, at most 1 image can be displayed
+            if (pendingSelectedFiles.length > 0) {
+                const f = pendingSelectedFiles[0];
+                const fileIdx = selectedFiles.indexOf(f);
+                return [{
+                    id: `file-0-${f.name}-${f.lastModified}`,
+                    type: "file" as const,
+                    url: filePreviews[fileIdx] || "",
+                    name: f.name,
+                    file: f,
+                    fileIndex: fileIdx >= 0 ? fileIdx : 0,
+                }].filter((img) => typeof img.url === "string" && img.url.trim().length > 0);
+            }
+
+            if (validDefaultUrl) {
+                return [{
+                    id: `default-${validDefaultUrl}`,
+                    type: "existing" as const,
+                    url: validDefaultUrl,
+                    name: defaultImageLabel || getFileNameFromUrl(validDefaultUrl),
+                    existingUrl: validDefaultUrl,
+                }];
+            }
+
+            return existingItems.slice(0, 1);
+        }
+
+        // In multiple mode: combine existing uploaded URLs with any local files that haven't been uploaded yet
+        const defaultItem: DisplayImageItem[] =
+            validDefaultUrl && !validExistingUrls.includes(validDefaultUrl)
+                ? [{
+                    id: `default-${validDefaultUrl}`,
+                    type: "existing" as const,
+                    url: validDefaultUrl,
+                    name: defaultImageLabel || getFileNameFromUrl(validDefaultUrl),
+                    existingUrl: validDefaultUrl,
+                }]
+                : [];
+
+        const pendingItems: DisplayImageItem[] = pendingSelectedFiles.map((f) => {
+            const idx = selectedFiles.indexOf(f);
+            return {
+                id: `file-${idx}-${f.name}-${f.lastModified}`,
+                type: "file" as const,
+                url: filePreviews[idx] || "",
+                name: f.name,
+                file: f,
+                fileIndex: idx,
+            };
+        });
+
+        return [...existingItems, ...defaultItem, ...pendingItems].filter(
+            (img) => typeof img.url === "string" && img.url.trim().length > 0
+        );
+    }, [
+        validExistingUrls,
+        validDefaultUrl,
+        defaultImageLabel,
+        multiple,
+        pendingSelectedFiles,
+        selectedFiles,
+        filePreviews,
+    ]);
 
     const safeActiveIndex = allImages.length > 0
         ? Math.min(Math.max(0, activeImageIndex), allImages.length - 1)
@@ -334,7 +451,11 @@ export default function UploadFile({
         }
     };
 
-    const hasActiveImage = allImages.length > 0;
+    const hasActiveImage =
+        allImages.length > 0 &&
+        !!currentActive &&
+        typeof currentActive.url === "string" &&
+        currentActive.url.trim().length > 0;
     const showDropzone = previewLayout === "large"
         ? allImages.length === 0
         : multiple
@@ -437,13 +558,13 @@ export default function UploadFile({
             {/* Upload Area container */}
             <div className="self-stretch flex flex-col justify-start items-start gap-3 w-full">
                 {/* LARGE PREVIEW LAYOUT */}
-                {previewLayout === "large" && hasActiveImage && currentActive && (
+                {previewLayout === "large" && hasActiveImage && currentActive && currentActive.url && (
                     <div className="self-stretch flex flex-col gap-3 w-full">
                         {/* Main Large Image Card */}
                         <div className="relative w-full h-64 sm:h-80 md:h-96 rounded-3xl overflow-hidden bg-brand-background group flex items-center justify-center border border-white-80 shadow-xs">
                             <img
                                 src={currentActive.url}
-                                alt={currentActive.name}
+                                alt={currentActive.name || "Preview"}
                                 className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
                             />
 
@@ -513,11 +634,17 @@ export default function UploadFile({
                                                     : "border-white-80 hover:border-g1/50 opacity-70 hover:opacity-100"
                                             }`}
                                         >
-                                            <img
-                                                src={img.url}
-                                                alt={img.name}
-                                                className="w-full h-full object-cover"
-                                            />
+                                            {img.url ? (
+                                                <img
+                                                    src={img.url}
+                                                    alt={img.name || "Thumbnail"}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center bg-slate-100">
+                                                    <LordIcon name="Image 2" size={24} primaryColor="#94a3b8" />
+                                                </div>
+                                            )}
                                             <button
                                                 type="button"
                                                 onClick={(e) => {

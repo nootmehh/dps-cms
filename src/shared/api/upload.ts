@@ -43,6 +43,29 @@ export interface UploadResult {
   mimeType?: string;
 }
 
+export const UPLOAD_TIMEOUT_MS = 30000; // 30-second timeout
+export const UPLOAD_TIMEOUT_MESSAGE = "Upload gagal: koneksi terlalu lama, coba lagi.";
+
+/**
+ * Dispatches a global event for upload errors so notification toasts can display it anywhere.
+ */
+export function notifyUploadError(message: string = UPLOAD_TIMEOUT_MESSAGE): void {
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(
+        new CustomEvent("dps-upload-error", {
+          detail: {
+            message,
+            type: "error",
+          },
+        })
+      );
+    } catch {
+      // ignore
+    }
+  }
+}
+
 /**
  * Upload single file to server.
  * Automatically tries primary endpoint, with fallback to local /api/upload or base64.
@@ -74,13 +97,22 @@ export async function uploadFileToServer(
   }
 
   let lastError: any = null;
+  let isAbortOrTimeout = false;
 
   for (const url of candidateEndpoints) {
-    try {
-      const controller = new AbortController();
-      // 10-second timeout for upload
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const controller = new AbortController();
+    let timedOut = false;
+    // 30-second timeout for upload
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      try {
+        controller.abort(new Error(UPLOAD_TIMEOUT_MESSAGE));
+      } catch {
+        controller.abort();
+      }
+    }, UPLOAD_TIMEOUT_MS);
 
+    try {
       const res = await fetch(url, {
         method: "POST",
         body: formData,
@@ -107,10 +139,31 @@ export async function uploadFileToServer(
 
       throw new Error("Invalid response format from upload API");
     } catch (err: any) {
-      lastError = err;
-      console.warn(`Attempt to upload via ${url} failed:`, err?.message || err);
-      // Try next candidate endpoint in loop
+      clearTimeout(timeoutId);
+      const isAbort =
+        timedOut ||
+        err?.name === "AbortError" ||
+        err?.message?.includes("aborted") ||
+        err?.message === UPLOAD_TIMEOUT_MESSAGE ||
+        controller.signal.aborted;
+
+      if (isAbort) {
+        isAbortOrTimeout = true;
+        lastError = new Error(UPLOAD_TIMEOUT_MESSAGE);
+        console.warn(`Attempt to upload via ${url} aborted/timed out after 30s:`, UPLOAD_TIMEOUT_MESSAGE);
+        // Break so we don't wait another 30 seconds on fallback
+        break;
+      } else {
+        lastError = err;
+        console.warn(`Attempt to upload via ${url} failed:`, err?.message || err);
+      }
     }
+  }
+
+  // Handle abort/timeout error with explicit user notification
+  if (isAbortOrTimeout || lastError?.message === UPLOAD_TIMEOUT_MESSAGE) {
+    notifyUploadError(UPLOAD_TIMEOUT_MESSAGE);
+    throw new Error(UPLOAD_TIMEOUT_MESSAGE);
   }
 
   // Graceful fallback for local development if server routes are completely unreachable:
@@ -138,11 +191,25 @@ export async function uploadMultipleFilesToServer(
 
   const endpoint = getUploadEndpoint();
 
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    try {
+      controller.abort(new Error(UPLOAD_TIMEOUT_MESSAGE));
+    } catch {
+      controller.abort();
+    }
+  }, UPLOAD_TIMEOUT_MS);
+
   try {
     const res = await fetch(endpoint, {
       method: "POST",
       body: formData,
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (res.ok) {
       const json = await res.json();
@@ -150,7 +217,18 @@ export async function uploadMultipleFilesToServer(
         return json.data.map((item: any) => item.url || item.relativeUrl);
       }
     }
-  } catch (err) {
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    const isAbort =
+      timedOut ||
+      err?.name === "AbortError" ||
+      err?.message?.includes("aborted") ||
+      err?.message === UPLOAD_TIMEOUT_MESSAGE;
+
+    if (isAbort) {
+      notifyUploadError(UPLOAD_TIMEOUT_MESSAGE);
+      throw new Error(UPLOAD_TIMEOUT_MESSAGE);
+    }
     console.warn("Batch upload endpoint failed, falling back to sequential single upload:", err);
   }
 

@@ -55,11 +55,11 @@ export default function EditPageMetaModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg p-6 bg-white rounded-4xl outline -outline-offset-1 outline-slate-200 flex flex-col justify-start items-start gap-6 shadow-2xl animate-scale-in"
+        className="w-full sm:max-w-lg p-5 sm:p-6 bg-white rounded-t-[32px] sm:rounded-4xl outline -outline-offset-1 outline-slate-200 flex flex-col justify-start items-start gap-5 sm:gap-6 shadow-2xl animate-scale-in max-h-[92vh] sm:max-h-[90vh] overflow-y-auto"
       >
         {/* Title Bar */}
         <div className="self-stretch flex justify-between items-start">
@@ -129,19 +129,21 @@ export default function EditPageMetaModal({
           <div className="self-stretch h-px bg-slate-200 mt-2" />
 
           {/* Action Buttons */}
-          <div className="self-stretch flex justify-end items-center gap-3 pt-2">
+          <div className="self-stretch flex flex-col-reverse sm:flex-row justify-end items-stretch sm:items-center gap-3 pt-2">
             <Button
               type="button"
               text="Batal"
               variant="ghost-green"
               onClick={onClose}
               disabled={isSubmitting}
+              className="w-full sm:w-auto cursor-pointer"
             />
             <Button
               type="submit"
               text={isSubmitting ? "Menyimpan..." : "Simpan Meta"}
               variant="fill"
               disabled={isSubmitting}
+              className="w-full sm:w-auto cursor-pointer"
             />
           </div>
         </form>

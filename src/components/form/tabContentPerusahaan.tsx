@@ -64,7 +64,7 @@ export default function TabContentPerusahaan({
   return (
     <div className="flex flex-col gap-6 w-full animate-fadeIn">
       {/* 1. Detail Perusahaan */}
-      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+      <section className="flex flex-col gap-5 p-4 sm:p-6 bg-white rounded-2xl sm:rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
         <SectionHeading
           number={1}
           title="Detail Perusahaan"
@@ -120,7 +120,7 @@ export default function TabContentPerusahaan({
       </section>
 
       {/* 2. Social Media */}
-      <section className="flex flex-col gap-5 p-6 bg-white rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
+      <section className="flex flex-col gap-5 p-4 sm:p-6 bg-white rounded-2xl sm:rounded-3xl border border-white-80 hover:border-g1 transition-colors duration-200">
         <SectionHeading
           number={2}
           title="Social Media"
