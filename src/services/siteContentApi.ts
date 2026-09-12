@@ -115,6 +115,18 @@ export async function getSiteContent(): Promise<SiteContentRow> {
   }
 }
 
+export const sanitizeInteger = (val: any): number | null => {
+  if (val === null || val === undefined || val === "") return null;
+  if (typeof val === "number") return isNaN(val) ? null : Math.round(val);
+  if (typeof val === "string") {
+    const cleaned = val.replace(/[^0-9]/g, "");
+    if (!cleaned) return null;
+    const parsed = parseInt(cleaned, 10);
+    return isNaN(parsed) ? null : parsed;
+  }
+  return null;
+};
+
 export async function updateSiteContent(
   payload: Partial<SiteContentRow>,
   contentId?: string
@@ -122,6 +134,20 @@ export async function updateSiteContent(
   const cleanPayload: Record<string, any> = { ...payload };
   delete cleanPayload.created_at;
   delete cleanPayload.edited_at;
+
+  // Ensure PostgreSQL integer fields in site_content receive number or null
+  if ("value_satisfy_customer" in cleanPayload) {
+    cleanPayload.value_satisfy_customer = sanitizeInteger(cleanPayload.value_satisfy_customer);
+  }
+  if ("value_finished_services" in cleanPayload) {
+    cleanPayload.value_finished_services = sanitizeInteger(cleanPayload.value_finished_services);
+  }
+  if ("value_product_produced" in cleanPayload) {
+    cleanPayload.value_product_produced = sanitizeInteger(cleanPayload.value_product_produced);
+  }
+  if ("value_years_experience" in cleanPayload) {
+    cleanPayload.value_years_experience = sanitizeInteger(cleanPayload.value_years_experience);
+  }
 
   const executeSave = async (dataToSave: Record<string, any>): Promise<SiteContentRow> => {
     // If we have an existing content ID, update it

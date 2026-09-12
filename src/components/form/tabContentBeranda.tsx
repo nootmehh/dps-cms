@@ -271,18 +271,22 @@ export default function TabContentBeranda({
               <span className="text-sm font-semibold text-dark font-sans truncate">
                 Pelanggan Puas <span className="text-red-state">*</span>
               </span>
-              <input
-                type="text"
-                placeholder="99%"
-                value={data.value_satisfy_customer ?? ""}
-                onChange={(e) =>
-                  onChange((prev) => ({
-                    ...prev,
-                    value_satisfy_customer: e.target.value,
-                  }))
-                }
-                className="w-full text-xl font-bold text-dark border-b border-g1/20 focus:border-g1 outline-none bg-transparent py-0.5 font-sans placeholder:text-dark/25 placeholder:font-normal placeholder:text-base"
-              />
+              <div className="flex items-center border-b border-g1/20 focus-within:border-g1 py-0.5">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="99"
+                  value={data.value_satisfy_customer ?? ""}
+                  onChange={(e) =>
+                    onChange((prev) => ({
+                      ...prev,
+                      value_satisfy_customer: e.target.value.replace(/[^0-9]/g, ""),
+                    }))
+                  }
+                  className="w-full text-xl font-bold text-dark outline-none bg-transparent font-sans placeholder:text-dark/25 placeholder:font-normal placeholder:text-base"
+                />
+                <span className="text-lg font-bold text-g1 select-none pr-1">%</span>
+              </div>
             </div>
           </div>
 
@@ -299,18 +303,22 @@ export default function TabContentBeranda({
               <span className="text-sm font-semibold text-dark font-sans truncate">
                 Layanan Selesai <span className="text-red-state">*</span>
               </span>
-              <input
-                type="text"
-                placeholder="50+"
-                value={data.value_finished_services ?? ""}
-                onChange={(e) =>
-                  onChange((prev) => ({
-                    ...prev,
-                    value_finished_services: e.target.value,
-                  }))
-                }
-                className="w-full text-xl font-bold text-dark border-b border-g1/20 focus:border-g1 outline-none bg-transparent py-0.5 font-sans placeholder:text-dark/25 placeholder:font-normal placeholder:text-base"
-              />
+              <div className="flex items-center border-b border-g1/20 focus-within:border-g1 py-0.5">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="50"
+                  value={data.value_finished_services ?? ""}
+                  onChange={(e) =>
+                    onChange((prev) => ({
+                      ...prev,
+                      value_finished_services: e.target.value.replace(/[^0-9]/g, ""),
+                    }))
+                  }
+                  className="w-full text-xl font-bold text-dark outline-none bg-transparent font-sans placeholder:text-dark/25 placeholder:font-normal placeholder:text-base"
+                />
+                <span className="text-lg font-bold text-g1 select-none pr-1">+</span>
+              </div>
             </div>
           </div>
 
@@ -325,18 +333,22 @@ export default function TabContentBeranda({
               <span className="text-sm font-semibold text-dark font-sans truncate">
                 Produk Diproduksi <span className="text-red-state">*</span>
               </span>
-              <input
-                type="text"
-                placeholder="300+"
-                value={data.value_product_produced ?? ""}
-                onChange={(e) =>
-                  onChange((prev) => ({
-                    ...prev,
-                    value_product_produced: e.target.value,
-                  }))
-                }
-                className="w-full text-xl font-bold text-dark border-b border-g1/20 focus:border-g1 outline-none bg-transparent py-0.5 font-sans placeholder:text-dark/25 placeholder:font-normal placeholder:text-base"
-              />
+              <div className="flex items-center border-b border-g1/20 focus-within:border-g1 py-0.5">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="300"
+                  value={data.value_product_produced ?? ""}
+                  onChange={(e) =>
+                    onChange((prev) => ({
+                      ...prev,
+                      value_product_produced: e.target.value.replace(/[^0-9]/g, ""),
+                    }))
+                  }
+                  className="w-full text-xl font-bold text-dark outline-none bg-transparent font-sans placeholder:text-dark/25 placeholder:font-normal placeholder:text-base"
+                />
+                <span className="text-lg font-bold text-g1 select-none pr-1">+</span>
+              </div>
             </div>
           </div>
 
@@ -351,18 +363,22 @@ export default function TabContentBeranda({
               <span className="text-sm font-semibold text-dark font-sans truncate">
                 Tahun Pengalaman <span className="text-red-state">*</span>
               </span>
-              <input
-                type="text"
-                placeholder="5+"
-                value={data.value_years_experience ?? ""}
-                onChange={(e) =>
-                  onChange((prev) => ({
-                    ...prev,
-                    value_years_experience: e.target.value,
-                  }))
-                }
-                className="w-full text-xl font-bold text-dark border-b border-g1/20 focus:border-g1 outline-none bg-transparent py-0.5 font-sans placeholder:text-dark/25 placeholder:font-normal placeholder:text-base"
-              />
+              <div className="flex items-center border-b border-g1/20 focus-within:border-g1 py-0.5">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="5"
+                  value={data.value_years_experience ?? ""}
+                  onChange={(e) =>
+                    onChange((prev) => ({
+                      ...prev,
+                      value_years_experience: e.target.value.replace(/[^0-9]/g, ""),
+                    }))
+                  }
+                  className="w-full text-xl font-bold text-dark outline-none bg-transparent font-sans placeholder:text-dark/25 placeholder:font-normal placeholder:text-base"
+                />
+                <span className="text-lg font-bold text-g1 select-none pr-1">+</span>
+              </div>
             </div>
           </div>
         </div>
