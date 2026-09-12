@@ -104,7 +104,7 @@ export default function TabContentTentang({
           label="Foto Ilustrasi *"
           descriptionPrefix="Format Disarankan"
           descriptionValue="(Rasio 3:2 atau 16:9 • Gambar atau Video)"
-          previewLayout="large"
+          previewLayout="compact"
           accept="image/*,video/*"
           defaultImageUrl={data.about_image_url || undefined}
           onSelectMediaUrl={(url) =>
@@ -168,7 +168,7 @@ export default function TabContentTentang({
           label="Ilustrasi Visi & Misi *"
           descriptionPrefix="Ukuran Disarankan"
           descriptionValue="(520px × 320px / Rasio 16:10)"
-          previewLayout="large"
+          previewLayout="compact"
           defaultImageUrl={data.vision_img_url || undefined}
           onSelectMediaUrl={(url) =>
             onChange((prev) => ({ ...prev, vision_img_url: url }))

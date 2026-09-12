@@ -25,6 +25,7 @@ import {
 } from "../../shared/api/service";
 import { getStoredProducts, type ProductPayload } from "../../shared/api/product";
 import { getProducts } from "@/services/productApi";
+import { uploadFileToServer } from "@/shared/api/upload";
 
 export interface ManageServiceFormProps {
   id?: string;
@@ -66,6 +67,7 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
   const [activeTab, setActiveTab] = useState<ServiceDetailTab>("keunggulan");
 
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
   const [loading, setLoading] = useState(false);
   const [availableCategories, setAvailableCategories] = useState<string[]>(DEFAULT_SERVICE_CATEGORIES);
 
@@ -86,6 +88,18 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
       type,
     });
   };
+
+  // Listen for global upload errors (e.g. timeout / abort error) to display toast notification
+  useEffect(() => {
+    const handleUploadError = (e: Event) => {
+      const customEvent = e as CustomEvent<{ message?: string; type?: NotificationType }>;
+      if (customEvent.detail?.message) {
+        showNotif(customEvent.detail.message, customEvent.detail.type || "error");
+      }
+    };
+    window.addEventListener("dps-upload-error", handleUploadError);
+    return () => window.removeEventListener("dps-upload-error", handleUploadError);
+  }, []);
 
   // Load catalog products from Supabase
   useEffect(() => {
@@ -420,7 +434,7 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
                     labelInfo="(Bisa Upload 4 Gambar)"
                     descriptionPrefix="Ukuran Disarankan"
                     descriptionValue="(800px * 600px)"
-                    previewLayout="large"
+                    previewLayout="compact"
                     multiple={true}
                     maxFiles={4}
                     existingImageUrls={imageUrls}
@@ -435,17 +449,30 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
                     onAddExistingUrl={(newUrl) => {
                       setImageUrls((prev) => {
                         if (prev.includes(newUrl)) return prev;
-                        if (prev.length + imageFiles.length >= 4) return prev;
+                        if (prev.length >= 4) return prev;
                         return [...prev, newUrl];
                       });
                       setImageRemoved(false);
                     }}
-                    onFilesSelected={(files: File[]) => {
-                      setImageFiles(files);
-                      if (files.length > 0) {
-                        setImageRemoved(false);
+                    onFilesSelected={async (files: File[]) => {
+                      if (files.length === 0) return;
+                      setUploadingImages(true);
+                      for (const file of files) {
+                        try {
+                          const uploadedUrl = await uploadFileToServer(file, "services");
+                          setImageUrls((prev) => {
+                            if (prev.includes(uploadedUrl)) return prev;
+                            if (prev.length >= 4) return prev;
+                            return [...prev, uploadedUrl];
+                          });
+                          setImageRemoved(false);
+                        } catch (err: any) {
+                          showNotif(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.", "error");
+                        }
                       }
+                      setUploadingImages(false);
                     }}
+                    onError={(msg) => showNotif(msg, "error")}
                     className="max-w-none w-full"
                   />
 
@@ -912,8 +939,16 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
                 />
                 <Button
                   type="submit"
-                  disabled={submitting}
-                  text={submitting ? "Menyimpan..." : id ? "Perbarui Layanan" : "Simpan Layanan"}
+                  disabled={submitting || uploadingImages}
+                  text={
+                    submitting
+                      ? "Menyimpan..."
+                      : uploadingImages
+                      ? "Mengunggah..."
+                      : id
+                      ? "Perbarui Layanan"
+                      : "Simpan Layanan"
+                  }
                   variant="fill"
                   rightIcon={id ? "Pen" : "Add"}
                   className="w-full sm:w-48 cursor-pointer"

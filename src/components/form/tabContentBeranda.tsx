@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import InputBox from "@/components/ui/inputBox";
 import DescriptionBox from "@/components/ui/descriptionBox";
 import Button from "@/components/ui/button";
@@ -42,54 +42,6 @@ export default function TabContentBeranda({
   const [isPartnerMediaModalOpen, setIsPartnerMediaModalOpen] = useState(false);
   const [isGalleryMediaModalOpen, setIsGalleryMediaModalOpen] = useState(false);
 
-  // Local file input ref for partner images
-  const partnerFileInputRef = useRef<HTMLInputElement>(null);
-
-  const handlePartnerLocalFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-    for (const file of files) {
-      try {
-        const uploadedUrl = await uploadFileToServer(file, "site");
-        onChange((prev) => ({
-          ...prev,
-          partner_img_url: [...(prev.partner_img_url || []), uploadedUrl],
-        }));
-      } catch (err: any) {
-        onError?.(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.");
-      }
-    }
-    e.target.value = "";
-  };
-
-  // Local file input ref for gallery images
-  const galleryFileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleGalleryLocalFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-    for (const file of files) {
-      try {
-        const uploadedUrl = await uploadFileToServer(file, "site");
-        const cleanTitle = file.name ? file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ") : "Foto Proyek";
-        const newItem: GalleryItem = {
-          url: uploadedUrl,
-          title: newGalleryTitle.trim() || cleanTitle || "Foto Proyek",
-          category: newGalleryCategory.trim() || "Konstruksi",
-        };
-        onChange((prev) => ({
-          ...prev,
-          gallery: [...(prev.gallery || []), newItem],
-        }));
-      } catch (err: any) {
-        onError?.(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.");
-      }
-    }
-    setNewGalleryTitle("");
-    setNewGalleryCategory("");
-    setNewGalleryUrl("");
-    e.target.value = "";
-  };
 
   const handleSelectPartnerMedia = (item: MediaSelectModalItem) => {
     onChange((prev) => {
@@ -193,7 +145,7 @@ export default function TabContentBeranda({
           label="Foto Hero Banner *"
           descriptionPrefix="Ukuran Disarankan"
           descriptionValue="(1440px × 800px)"
-          previewLayout="large"
+          previewLayout="compact"
           defaultImageUrl={data.hero_img_url && data.hero_img_url.trim() ? data.hero_img_url.trim() : undefined}
           onSelectMediaUrl={(url) =>
             onChange((prev) => ({ ...prev, hero_img_url: url }))
@@ -256,40 +208,6 @@ export default function TabContentBeranda({
             }
           }}
         />
-
-        {/* Hidden file input for partner local selection */}
-        <input
-          ref={partnerFileInputRef}
-          type="file"
-          multiple
-          accept="image/*"
-          className="hidden"
-          onChange={handlePartnerLocalFiles}
-        />
-
-        {/* Buttons: Tambah dari folder lokal & Media Library */}
-        {(data.partner_img_url || []).length > 0 && (
-          <div className="flex flex-wrap items-center justify-start gap-2.5">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              leftIcon="Image 2"
-              text="Unggah Gambar Lainnya"
-              onClick={() => partnerFileInputRef.current?.click()}
-              className="cursor-pointer"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              leftIcon="Image 2"
-              text="Pilih Lainnya dari Media Library"
-              onClick={() => setIsPartnerMediaModalOpen(true)}
-              className="cursor-pointer"
-            />
-          </div>
-        )}
 
         {/* Grid preview logo mitra aktif */}
         {data.partner_img_url && data.partner_img_url.length > 0 && (
@@ -492,40 +410,6 @@ export default function TabContentBeranda({
             }}
             onRemoveDefaultImage={() => setNewGalleryUrl("")}
           />
-
-          {/* Hidden file input for gallery local selection */}
-          <input
-            ref={galleryFileInputRef}
-            type="file"
-            multiple
-            accept="image/*"
-            className="hidden"
-            onChange={handleGalleryLocalFiles}
-          />
-
-          {/* Buttons: Tambah dari folder lokal & Media Library */}
-          {Boolean(newGalleryUrl && newGalleryUrl.trim()) && (
-            <div className="flex flex-wrap items-center justify-start gap-2.5">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                leftIcon="Image 2"
-                text="Unggah Gambar Lainnya"
-                onClick={() => galleryFileInputRef.current?.click()}
-                className="cursor-pointer"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                leftIcon="Image 2"
-                text="Pilih Lainnya dari Media Library"
-                onClick={() => setIsGalleryMediaModalOpen(true)}
-                className="cursor-pointer"
-              />
-            </div>
-          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <InputBox

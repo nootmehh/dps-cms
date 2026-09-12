@@ -17,6 +17,7 @@ import {
   editArticle,
   getConsistingCategories,
 } from "../../shared/api/article";
+import { uploadFileToServer } from "@/shared/api/upload";
 
 export interface ManageArticleFormProps {
   id?: string;
@@ -36,6 +37,7 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
   const [contentIndonesia, setContentIndonesia] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const [loading, setLoading] = useState(false);
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
@@ -56,6 +58,18 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
       type,
     });
   };
+
+  // Listen for global upload errors (e.g. timeout / abort error) to display toast notification
+  useEffect(() => {
+    const handleUploadError = (e: Event) => {
+      const customEvent = e as CustomEvent<{ message?: string; type?: "success" | "error" | "default" }>;
+      if (customEvent.detail?.message) {
+        showNotif(customEvent.detail.message, customEvent.detail.type || "error");
+      }
+    };
+    window.addEventListener("dps-upload-error", handleUploadError);
+    return () => window.removeEventListener("dps-upload-error", handleUploadError);
+  }, []);
 
   // Load categories on mount
   useEffect(() => {
@@ -211,26 +225,37 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
                 <UploadFile
                   label="Banner Artikel *"
                   descriptionPrefix="Ukuran Disarankan"
-                  descriptionValue="(736px * 448px)"
+                  descriptionValue="(736px × 448px)"
+                  previewLayout="compact"
                   multiple={false}
-                  defaultImageUrl={bannerUrl || undefined}
+                  defaultImageUrl={bannerUrl && bannerUrl.trim() ? bannerUrl.trim() : undefined}
                   defaultImageLabel="Banner Artikel Saat Ini"
+                  onSelectMediaUrl={(url) => {
+                    setBannerUrl(url);
+                    setBannerFile(null);
+                    setBannerRemoved(false);
+                  }}
+                  onFilesSelected={async (files: File[]) => {
+                    if (files[0]) {
+                      setUploadingBanner(true);
+                      try {
+                        const uploadedUrl = await uploadFileToServer(files[0], "articles");
+                        setBannerUrl(uploadedUrl);
+                        setBannerFile(null);
+                        setBannerRemoved(false);
+                      } catch (err: any) {
+                        showNotif(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.", "error");
+                      } finally {
+                        setUploadingBanner(false);
+                      }
+                    }
+                  }}
                   onRemoveDefaultImage={() => {
                     setBannerUrl(null);
                     setBannerFile(null);
                     setBannerRemoved(true);
                   }}
-                  onFilesSelected={(files: File[]) => {
-                    if (files.length > 0) {
-                      setBannerFile(files[0]);
-                      setBannerUrl(URL.createObjectURL(files[0]));
-                      setBannerRemoved(false);
-                    } else {
-                      setBannerFile(null);
-                      setBannerUrl(null);
-                      setBannerRemoved(true);
-                    }
-                  }}
+                  onError={(msg) => showNotif(msg, "error")}
                 />
 
                 {/* Article Title */}
@@ -316,8 +341,16 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
                 />
                 <Button
                   type="submit"
-                  disabled={submitting}
-                  text={submitting ? "Menyimpan..." : id ? "Perbarui Artikel" : "Simpan Artikel"}
+                  disabled={submitting || uploadingBanner}
+                  text={
+                    submitting
+                      ? "Menyimpan..."
+                      : uploadingBanner
+                      ? "Mengunggah..."
+                      : id
+                      ? "Perbarui Artikel"
+                      : "Simpan Artikel"
+                  }
                   variant="fill"
                   rightIcon={id ? "Pen" : "Add"}
                   className="w-full sm:w-48 cursor-pointer"

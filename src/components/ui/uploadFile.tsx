@@ -39,7 +39,15 @@ interface DisplayImageItem {
     file?: File;
     fileIndex?: number;
     existingUrl?: string;
+    fileSize?: string;
 }
+
+const formatFileSize = (bytes?: number): string => {
+    if (!bytes || bytes <= 0) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const getFileNameFromUrl = (url: string) => {
     try {
@@ -197,6 +205,41 @@ export default function UploadFile({
         return selectedFiles.filter((file) => !isFileAlreadyUploaded(file, allKnownUrls));
     }, [selectedFiles, allKnownUrls]);
 
+    const [urlSizes, setUrlSizes] = useState<Record<string, number>>({});
+
+    // Fetch Content-Length or blob size for existing server URLs so we can display their exact size
+    useEffect(() => {
+        allKnownUrls.forEach((url) => {
+            if (!url || urlSizes[url]) return;
+            fetch(url, { method: "HEAD" })
+                .then((res) => {
+                    const cl = res.headers.get("content-length");
+                    if (cl) {
+                        const bytes = parseInt(cl, 10);
+                        if (!isNaN(bytes) && bytes > 0) {
+                            setUrlSizes((prev) => ({ ...prev, [url]: bytes }));
+                            return;
+                        }
+                    }
+                    return fetch(url).then((r) => r.blob()).then((b) => {
+                        if (b && b.size > 0) {
+                            setUrlSizes((prev) => ({ ...prev, [url]: b.size }));
+                        }
+                    });
+                })
+                .catch(() => {
+                    // ignore if fetch fails
+                });
+        });
+    }, [allKnownUrls, urlSizes]);
+
+    const getFormattedSizeLabel = (bytes?: number): string => {
+        if (bytes && bytes > 0) {
+            return `${formatFileSize(bytes)} • Tersimpan`;
+        }
+        return "Tersimpan";
+    };
+
     // Build unified display images list, ensuring only non-empty, non-duplicate URLs are included
     const allImages: DisplayImageItem[] = useMemo(() => {
         const existingItems: DisplayImageItem[] = validExistingUrls.map((url, idx) => ({
@@ -205,6 +248,7 @@ export default function UploadFile({
             url,
             name: getFileNameFromUrl(url),
             existingUrl: url,
+            fileSize: getFormattedSizeLabel(urlSizes[url]),
         }));
 
         if (!multiple) {
@@ -219,6 +263,7 @@ export default function UploadFile({
                     name: f.name,
                     file: f,
                     fileIndex: fileIdx >= 0 ? fileIdx : 0,
+                    fileSize: getFormattedSizeLabel(f.size),
                 }].filter((img) => typeof img.url === "string" && img.url.trim().length > 0);
             }
 
@@ -229,10 +274,14 @@ export default function UploadFile({
                     url: validDefaultUrl,
                     name: defaultImageLabel || getFileNameFromUrl(validDefaultUrl),
                     existingUrl: validDefaultUrl,
+                    fileSize: getFormattedSizeLabel(urlSizes[validDefaultUrl]),
                 }];
             }
 
-            return existingItems.slice(0, 1);
+            return existingItems.slice(0, 1).map((item) => ({
+                ...item,
+                fileSize: item.fileSize || getFormattedSizeLabel(urlSizes[item.url]),
+            }));
         }
 
         // In multiple mode: combine existing uploaded URLs with any local files that haven't been uploaded yet
@@ -244,6 +293,7 @@ export default function UploadFile({
                     url: validDefaultUrl,
                     name: defaultImageLabel || getFileNameFromUrl(validDefaultUrl),
                     existingUrl: validDefaultUrl,
+                    fileSize: getFormattedSizeLabel(urlSizes[validDefaultUrl]),
                 }]
                 : [];
 
@@ -256,12 +306,16 @@ export default function UploadFile({
                 name: f.name,
                 file: f,
                 fileIndex: idx,
+                fileSize: getFormattedSizeLabel(f.size),
             };
         });
 
-        return [...existingItems, ...defaultItem, ...pendingItems].filter(
-            (img) => typeof img.url === "string" && img.url.trim().length > 0
-        );
+        return [...existingItems, ...defaultItem, ...pendingItems]
+            .map((item) => ({
+                ...item,
+                fileSize: item.fileSize || getFormattedSizeLabel(item.file ? item.file.size : urlSizes[item.url]),
+            }))
+            .filter((img) => typeof img.url === "string" && img.url.trim().length > 0);
     }, [
         validExistingUrls,
         validDefaultUrl,
@@ -270,6 +324,7 @@ export default function UploadFile({
         pendingSelectedFiles,
         selectedFiles,
         filePreviews,
+        urlSizes,
     ]);
 
     const safeActiveIndex = allImages.length > 0
@@ -278,15 +333,25 @@ export default function UploadFile({
     const currentActive = allImages[safeActiveIndex] || null;
 
     const handleFiles = (files: FileList | null) => {
-        if (!files) return;
+        if (!files || files.length === 0) return;
 
-        let newFiles = Array.from(files);
+        const newFiles = Array.from(files);
 
         if (!multiple) {
-            newFiles = [newFiles[0]];
-            setSelectedFiles(newFiles);
-            onFilesSelected?.(newFiles);
+            const newFile = newFiles[0];
+
+            // Clear previous existing/default images in single mode so it replaces cleanly
+            if (validDefaultUrl && onRemoveDefaultImage) {
+                onRemoveDefaultImage();
+            }
+            if (validExistingUrls.length > 0 && onRemoveExistingImage) {
+                validExistingUrls.forEach((url) => onRemoveExistingImage(url));
+            }
+
+            setSelectedFiles([newFile]);
+            onFilesSelected?.([newFile]);
             setActiveImageIndex(0);
+            if (inputRef.current) inputRef.current.value = "";
             return;
         }
 
@@ -355,10 +420,17 @@ export default function UploadFile({
             if (img.url === defaultImageUrl) {
                 onRemoveDefaultImage?.();
             }
-        } else if (img.type === "file" && typeof img.fileIndex === "number") {
-            const updated = selectedFiles.filter((_, i) => i !== img.fileIndex);
-            setSelectedFiles(updated);
-            onFilesSelected?.(updated);
+            setSelectedFiles([]);
+            onFilesSelected?.([]);
+        } else if (img.type === "file") {
+            if (!multiple) {
+                setSelectedFiles([]);
+                onFilesSelected?.([]);
+            } else if (typeof img.fileIndex === "number") {
+                const updated = selectedFiles.filter((_, i) => i !== img.fileIndex);
+                setSelectedFiles(updated);
+                onFilesSelected?.(updated);
+            }
         }
 
         if (safeActiveIndex >= index && safeActiveIndex > 0) {
@@ -373,6 +445,9 @@ export default function UploadFile({
                 "error"
             );
             return;
+        }
+        if (inputRef.current) {
+            inputRef.current.value = "";
         }
         inputRef.current?.click();
     };
@@ -408,8 +483,34 @@ export default function UploadFile({
 
     const handleMediaLibrarySelect = async (item: MediaSelectModalItem) => {
         try {
+            if (!multiple) {
+                // In single mode: replace existing image
+                if (validDefaultUrl && onRemoveDefaultImage) {
+                    onRemoveDefaultImage();
+                }
+                if (validExistingUrls.length > 0 && onRemoveExistingImage) {
+                    validExistingUrls.forEach((url) => onRemoveExistingImage(url));
+                }
+
+                if (onSelectMediaUrl) {
+                    onSelectMediaUrl(item.url);
+                    setSelectedFiles([]);
+                    setActiveImageIndex(0);
+                    return;
+                }
+
+                const response = await fetch(item.url);
+                const blob = await response.blob();
+                const file = new File([blob], item.fileName, { type: blob.type || "image/jpeg" });
+                setSelectedFiles([file]);
+                onFilesSelected?.([file]);
+                setActiveImageIndex(0);
+                return;
+            }
+
+            // In multiple mode
             const currentTotal = allImages.length;
-            if (multiple && currentTotal >= maxFiles) {
+            if (currentTotal >= maxFiles) {
                 showNotification(
                     `Maksimal ${maxFiles} gambar telah tercapai. Hapus salah satu gambar terlebih dahulu jika ingin menambahkan dari Media Library.`,
                     "error"
@@ -417,15 +518,9 @@ export default function UploadFile({
                 return;
             }
 
-            if (multiple && onAddExistingUrl) {
+            if (onAddExistingUrl) {
                 onAddExistingUrl(item.url);
                 setActiveImageIndex(allImages.length);
-                return;
-            }
-
-            if (!multiple && onSelectMediaUrl) {
-                onSelectMediaUrl(item.url);
-                setActiveImageIndex(0);
                 return;
             }
 
@@ -433,18 +528,10 @@ export default function UploadFile({
             const blob = await response.blob();
             const file = new File([blob], item.fileName, { type: blob.type || "image/jpeg" });
 
-            if (!multiple) {
-                setSelectedFiles([file]);
-                onFilesSelected?.([file]);
-                setActiveImageIndex(0);
-            } else {
-                if (currentTotal < maxFiles) {
-                    const updated = [...selectedFiles, file];
-                    setSelectedFiles(updated);
-                    onFilesSelected?.(updated);
-                    setActiveImageIndex(allImages.length);
-                }
-            }
+            const updated = [...selectedFiles, file];
+            setSelectedFiles(updated);
+            onFilesSelected?.(updated);
+            setActiveImageIndex(allImages.length);
         } catch (error) {
             console.error("Error creating File from media selection:", error);
             showNotification("Gagal memuat gambar dari Media Library.", "error");
@@ -456,11 +543,7 @@ export default function UploadFile({
         !!currentActive &&
         typeof currentActive.url === "string" &&
         currentActive.url.trim().length > 0;
-    const showDropzone = previewLayout === "large"
-        ? allImages.length === 0
-        : multiple
-        ? allImages.length < maxFiles
-        : allImages.length === 0;
+    const showDropzone = allImages.length === 0;
 
     const renderLabel = () => {
         if (!label) return null;
@@ -481,17 +564,13 @@ export default function UploadFile({
             }
         }
 
-        if (info || labelInfo) {
+        if (info) {
             return (
                 <div className="inline-flex items-center gap-1.5">
                     <label className="text-dark text-sm font-semibold font-sans">
                         {labelContent}
                     </label>
-                    {info ? (
-                        <InfoButton info={info} title={labelText.replace(/\*/g, "").trim()} />
-                    ) : (
-                        labelInfo
-                    )}
+                    <InfoButton info={info} title={labelText.replace(/\*/g, "").trim()} />
                 </div>
             );
         }
@@ -515,7 +594,7 @@ export default function UploadFile({
     return (
         <div className={`w-full inline-flex flex-col justify-start items-start gap-1 relative ${className}`}>
             {/* Label header */}
-            {(label || (enableMediaLibrary && !hasActiveImage)) && (
+            {(label || enableMediaLibrary) && (
                 <div className="self-stretch flex justify-between items-center mb-1 flex-wrap gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
                         {renderLabel()}
@@ -525,14 +604,20 @@ export default function UploadFile({
                             </span>
                         )}
                     </div>
-                    {enableMediaLibrary && !hasActiveImage && (
+                    {enableMediaLibrary && (
                         <Button
                             type="button"
                             variant="ghost-green"
                             size="sm"
                             leftIcon="Image 2"
                             text="Pilih dari Media Library"
-                            onClick={() => setIsMediaModalOpen(true)}
+                            onClick={() => {
+                                if (multiple && allImages.length >= maxFiles) {
+                                    showNotification(`Maksimal ${maxFiles} gambar telah tercapai.`, "error");
+                                } else {
+                                    setIsMediaModalOpen(true);
+                                }
+                            }}
                         />
                     )}
                 </div>
@@ -702,7 +787,7 @@ export default function UploadFile({
                     </div>
                 )}
 
-                {/* Dropzone Box: Shown when no active image (or in compact mode when slots available) */}
+                {/* Dropzone Box: Shown only when no active image (State 1) */}
                 {showDropzone && (
                     <div
                         onDragEnter={handleDrag}
@@ -742,47 +827,70 @@ export default function UploadFile({
 
                 {/* COMPACT File list preview (default when previewLayout is "compact") */}
                 {previewLayout === "compact" && hasActiveImage && (
-                    <div className="self-stretch flex flex-col gap-2 bg-brand-background p-4 rounded-3xl">
-                        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1 font-sans">
-                            Berkas Terpilih ({allImages.length})
-                        </div>
-
-                        {allImages.map((img, idx) => (
-                            <div
-                                key={img.id}
-                                className="flex items-center justify-between p-2.5 bg-white border border-white-70 rounded-2xl shadow-xs"
-                            >
-                                <div className="flex items-center gap-3 overflow-hidden">
-                                    {img.url ? (
-                                        <img
-                                            src={img.url}
-                                            alt={img.name}
-                                            className="size-10 rounded-lg object-cover border border-slate-200"
-                                        />
-                                    ) : (
-                                        <div className="size-10 rounded-lg bg-g1/10 text-g1 flex items-center justify-center border border-g1/20">
-                                            <LordIcon name="Attachment" size={20} primaryColor="#0A9863" />
+                    <div className="self-stretch flex flex-col gap-3.5 w-full animate-fadeIn">
+                        {/* List File Terpilih */}
+                        <div className="flex flex-col gap-2.5 w-full">
+                            {allImages.map((img, idx) => (
+                                <div
+                                    key={img.id}
+                                    className="flex items-center justify-between p-3 bg-white border border-white-80 hover:border-g1/40 rounded-2xl shadow-2xs transition-all duration-200"
+                                >
+                                    <div className="flex items-center gap-3 min-w-0 flex-1 pr-3">
+                                        {/* Thumbnail kecil */}
+                                        <div className="size-12 rounded-xl overflow-hidden bg-brand-background border border-white-80 shrink-0 flex items-center justify-center">
+                                            {img.url ? (
+                                                <img
+                                                    src={img.url}
+                                                    alt={img.name || "Thumbnail"}
+                                                    className="size-full object-cover"
+                                                />
+                                            ) : (
+                                                <LordIcon name="Image 2" size={24} primaryColor="#0A9863" />
+                                            )}
                                         </div>
-                                    )}
-                                    <div className="flex flex-col text-left overflow-hidden">
-                                        <div className="text-sm font-medium text-slate-800 truncate max-w-100 font-sans">
-                                            {img.name}
+
+                                        {/* Nama file + Ukuran */}
+                                        <div className="flex flex-col min-w-0 flex-1 text-left">
+                                            <span
+                                                className="text-sm font-semibold text-dark truncate font-sans"
+                                                title={img.name}
+                                            >
+                                                {img.name}
+                                            </span>
+                                            <span className="text-xs text-dark/60 font-medium font-sans mt-0.5">
+                                                {img.fileSize || "Gambar WebP • Tersimpan"}
+                                            </span>
                                         </div>
                                     </div>
+
+                                    {/* Button hapus gambar */}
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRemoveImage(img, idx);
+                                        }}
+                                        className="size-8 sm:size-9 rounded-full bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 flex items-center justify-center transition-all cursor-pointer shrink-0 active:scale-95 border border-red-100"
+                                        title="Hapus gambar"
+                                    >
+                                        <LordIcon name="Delete" size={16} primaryColor="#f94c4c" />
+                                    </button>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRemoveImage(img, idx);
-                                    }}
-                                    className="size-8 rounded-full border border-transparent hover:border-red-state/30 bg-transparent hover:bg-red-state/10 text-slate-400 hover:text-red-state flex items-center justify-center hover:opacity-80 active:opacity-60 active:scale-95 transition-all cursor-pointer"
-                                    title="Hapus gambar"
-                                >
-                                    <LordIcon name="Delete" size={16} primaryColor="#f94c4c" />
-                                </button>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
+
+                        {/* Di bawah list, tampilkan tombol "Upload Image" full width */}
+                        <div className="flex flex-col gap-2 w-full pt-1">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="md"
+                                leftIcon="Image 2"
+                                text="Upload Image"
+                                onClick={triggerBrowse}
+                                className="w-full justify-center text-center cursor-pointer shadow-2xs font-semibold"
+                            />
+                        </div>
                     </div>
                 )}
             </div>
