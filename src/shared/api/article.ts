@@ -73,7 +73,7 @@ export async function getArticleById(id: string | number): Promise<ArticlePayloa
     try {
       const row = await getSupabaseArticleById(strId);
       if (row) {
-        return {
+        const fetchedArticle: ArticlePayload = {
           id: row.id,
           title: row.title,
           category: row.category ? [row.category] : ["Umum"],
@@ -82,6 +82,13 @@ export async function getArticleById(id: string | number): Promise<ArticlePayloa
           createdAt: row.created_at,
           author: "Admin",
         };
+
+        const stored = getStoredArticles();
+        if (!stored.some((a) => String(a.id) === strId)) {
+          saveStoredArticles([fetchedArticle, ...stored]);
+        }
+
+        return fetchedArticle;
       }
     } catch (e) {
       console.warn("Supabase fetch article by id failed:", e);
@@ -189,7 +196,26 @@ export async function editArticle(
   });
 
   if (!updatedArticle) {
-    throw new Error(`Article with id ${id} not found.`);
+    let finalImageUrl = data.imageUrl !== undefined ? data.imageUrl : null;
+    if (bannerRemoved) {
+      finalImageUrl = null;
+    }
+    if (bannerFile && uploadedBannerUrl) {
+      finalImageUrl = uploadedBannerUrl;
+    }
+
+    updatedArticle = {
+      id: String(id),
+      title: data.title || "",
+      category: data.category || ["Umum"],
+      categoryColor: data.categoryColor || ["green"],
+      content: data.content || "",
+      imageUrl: finalImageUrl,
+      createdAt: new Date().toISOString(),
+      author: "Admin",
+      ...data,
+    };
+    updated.unshift(updatedArticle);
   }
 
   const targetArticle: ArticlePayload = updatedArticle;

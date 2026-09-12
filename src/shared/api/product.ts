@@ -134,7 +134,7 @@ export async function getProductById(id: string | number): Promise<ProductPayloa
           }
         }
 
-        return {
+        const fetchedProduct: ProductPayload = {
           id: row.id,
           title: row.title,
           category: row.category || "Umum",
@@ -155,6 +155,14 @@ export async function getProductById(id: string | number): Promise<ProductPayloa
           kekurangan: row.kekurangan || [],
           createdAt: row.created_at,
         };
+
+        // Cache into local storage if not already there
+        const stored = getStoredProducts();
+        if (!stored.some((p) => String(p.id) === strId)) {
+          saveStoredProducts([fetchedProduct, ...stored]);
+        }
+
+        return fetchedProduct;
       }
     } catch (e) {
       console.warn("Supabase fetch product by id failed:", e);
@@ -330,7 +338,46 @@ export async function editProduct(
   });
 
   if (!updatedProduct) {
-    throw new Error(`Product with id ${id} not found.`);
+    let finalImageUrls: string[] = [];
+    if (!imageRemoved) {
+      if (Array.isArray(data.imageUrls)) {
+        finalImageUrls = [...data.imageUrls];
+      } else if (data.imageUrl) {
+        finalImageUrls = [data.imageUrl];
+      }
+    }
+    finalImageUrls = [...finalImageUrls, ...uploadedUrls];
+    computedFinalBannerUrls = finalImageUrls;
+
+    let finalHighlightImgUrl: string | null = null;
+    if (highlightImageRemoved) {
+      finalHighlightImgUrl = null;
+    } else if (highlightImageFile && uploadedHighlightUrl) {
+      finalHighlightImgUrl = uploadedHighlightUrl;
+    } else if (data.highlightImgUrl !== undefined) {
+      finalHighlightImgUrl = data.highlightImgUrl || null;
+    }
+    computedFinalHighlightUrl = finalHighlightImgUrl;
+
+    const nextCategory = data.category || "Umum";
+    updatedProduct = {
+      id: String(id),
+      title: data.title || "",
+      category: nextCategory,
+      categoryVariant:
+        data.categoryVariant || CATEGORY_VARIANT_MAP[nextCategory] || "green",
+      imageUrl: finalImageUrls[0] || null,
+      imageUrls: finalImageUrls,
+      highlightImgUrl: finalHighlightImgUrl,
+      description: data.description || "",
+      detailProduct: data.detailProduct || [],
+      suitableFor: data.suitableFor || [],
+      kelebihan: data.kelebihan || [],
+      kekurangan: data.kekurangan || [],
+      createdAt: new Date().toISOString(),
+      ...data,
+    };
+    updated.unshift(updatedProduct);
   }
 
   // Identify manual upload URLs that are no longer in finalImageUrls and delete from server
