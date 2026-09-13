@@ -5,7 +5,7 @@ import InputBox from "@/components/ui/inputBox";
 import DescriptionBox from "@/components/ui/descriptionBox";
 import Button from "@/components/ui/button";
 import LordIcon from "@/components/common/lordIcon";
-import UploadFile from "@/components/ui/uploadFile";
+import UploadFile, { isVideoUrl } from "@/components/ui/uploadFile";
 import type {
   SiteContentRow,
   GalleryItem,
@@ -13,14 +13,15 @@ import type {
 } from "@/services/siteContentApi";
 import { uploadFileToServer } from "@/shared/api/upload";
 import MediaSelectModal, { MediaSelectModalItem } from "@/components/modal/mediaSelectModal";
+import SectionHeading from "@/components/ui/sectionHeading";
+import GalleryCard from "@/components/card/galleryCard";
+import TestimonialCard from "@/components/card/testimonialCard";
 
 interface TabContentBerandaProps {
   data: SiteContentRow;
   onChange: (updater: (prev: SiteContentRow) => SiteContentRow) => void;
   onError?: (message: string) => void;
 }
-
-import SectionHeading from "@/components/ui/sectionHeading";
 
 export default function TabContentBeranda({
   data,
@@ -44,6 +45,10 @@ export default function TabContentBeranda({
 
 
   const handleSelectPartnerMedia = (item: MediaSelectModalItem) => {
+    if (isVideoUrl(item.url, item.fileName)) {
+      onError?.("Berkas video tidak diizinkan untuk Logo Mitra. Hanya berkas gambar yang diperbolehkan.");
+      return;
+    }
     onChange((prev) => {
       const current = prev.partner_img_url || [];
       if (current.includes(item.url)) return prev;
@@ -56,6 +61,10 @@ export default function TabContentBeranda({
   };
 
   const handleSelectGalleryMedia = (item: MediaSelectModalItem) => {
+    if (isVideoUrl(item.url, item.fileName)) {
+      onError?.("Berkas video tidak diizinkan untuk Galeri. Hanya berkas gambar yang diperbolehkan.");
+      return;
+    }
     const cleanTitle = item.fileName
       ? item.fileName.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ")
       : "Foto Proyek";
@@ -142,10 +151,12 @@ export default function TabContentBeranda({
         />
 
         <UploadFile
-          label="Foto Hero Banner *"
-          descriptionPrefix="Ukuran Disarankan"
-          descriptionValue="(1440px × 800px)"
+          label="Foto / Video Hero *"
+          descriptionPrefix="Format & Ukuran Disarankan"
+          descriptionValue="(1440px × 800px • Format Gambar atau Video)"
           previewLayout="compact"
+          allowVideo={true}
+          accept="image/*,video/*"
           defaultImageUrl={data.hero_img_url && data.hero_img_url.trim() ? data.hero_img_url.trim() : undefined}
           onSelectMediaUrl={(url) =>
             onChange((prev) => ({ ...prev, hero_img_url: url }))
@@ -462,41 +473,14 @@ export default function TabContentBeranda({
           {(data.gallery || [])
             .filter((item): item is GalleryItem => typeof item?.url === "string" && item.url.trim().length > 0)
             .map((item, idx) => (
-            <div
-              key={item.id || idx}
-              className="group relative rounded-2xl overflow-hidden bg-white border border-white-80 shadow-xs flex flex-col hover:border-g1/30 transition-all hover:shadow-sm"
-            >
-              <div className="aspect-video w-full overflow-hidden bg-gray-100 relative">
-                {item.url ? (
-                  <img
-                    src={item.url}
-                    alt={item.title || "Gallery"}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        "https://placehold.co/400x250/png?text=Proyek+DPS";
-                    }}
-                  />
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveGallery(idx)}
-                  className="absolute top-2.5 right-2.5 size-8 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer opacity-0 group-hover:opacity-100 shadow-sm text-white"
-                  title="Hapus item galeri"
-                >
-                  <LordIcon name="Delete" size={16} primaryColor="#FFFFFF" secondaryColor="#FFFFFF" />
-                </button>
-              </div>
-              <div className="p-3.5 flex flex-col gap-0.5">
-                <span className="text-xs font-bold text-dark line-clamp-1 font-sans">
-                  {item.title || "Tanpa Judul"}
-                </span>
-                <span className="text-[11px] text-g1 font-semibold font-sans">
-                  {item.category || "Umum"}
-                </span>
-              </div>
-            </div>
-          ))}
+              <GalleryCard
+                key={item.id || idx}
+                imageSrc={item.url}
+                title={item.title || "Tanpa Judul"}
+                location={item.category || ""}
+                onDelete={() => handleRemoveGallery(idx)}
+              />
+            ))}
 
           {(!data.gallery || data.gallery.length === 0) && (
             <div className="col-span-full py-6 text-center text-xs text-dark/50 font-sans border border-dashed border-white-80 rounded-2xl">
@@ -564,45 +548,20 @@ export default function TabContentBeranda({
         </div>
 
         {/* List testimoni */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {(data.testimonials || []).map((t, idx) => (
-            <div
+            <TestimonialCard
               key={t.id || idx}
-              className="relative p-5 rounded-2xl bg-white border border-white-80 shadow-xs flex flex-col justify-between gap-3 group hover:border-g1/30 transition-all"
-            >
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <LordIcon name="Quote" size={24} primaryColor="#0A9863" />
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTestimonial(idx)}
-                    className="size-7 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer shadow-xs text-white"
-                    title="Hapus testimoni"
-                  >
-                    <LordIcon name="Delete" size={14} primaryColor="#FFFFFF" secondaryColor="#FFFFFF" />
-                  </button>
-                </div>
-                <p className="text-sm text-dark/85 italic font-sans leading-relaxed">
-                  &ldquo;{t.content}&rdquo;
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 pt-3 border-t border-white-80">
-                <div className="w-0.5 h-8 bg-g1 rounded-full shrink-0" />
-                <div className="flex-1 flex flex-col justify-start items-start min-w-0">
-                  <span className="text-xs font-bold text-dark font-sans truncate w-full">
-                    {t.name}
-                  </span>
-                  <span className="text-[11px] text-dark/60 font-sans truncate w-full">
-                    {t.role} {t.company ? `• ${t.company}` : ""}
-                  </span>
-                </div>
-              </div>
-            </div>
+              quote={t.content}
+              name={t.name}
+              role={t.role}
+              company={t.company}
+              onDelete={() => handleRemoveTestimonial(idx)}
+            />
           ))}
 
           {(!data.testimonials || data.testimonials.length === 0) && (
-            <div className="col-span-full py-6 text-center text-xs text-dark/50 font-sans">
+            <div className="col-span-full py-6 text-center text-xs text-dark/50 font-sans border border-dashed border-white-80 rounded-2xl">
               Belum ada testimoni klien tersimpan.
             </div>
           )}
@@ -614,6 +573,7 @@ export default function TabContentBeranda({
         isOpen={isPartnerMediaModalOpen}
         onClose={() => setIsPartnerMediaModalOpen(false)}
         onSelect={handleSelectPartnerMedia}
+        allowedType="image"
       />
 
       {/* Media Select Modal for Gallery Section */}
@@ -621,6 +581,7 @@ export default function TabContentBeranda({
         isOpen={isGalleryMediaModalOpen}
         onClose={() => setIsGalleryMediaModalOpen(false)}
         onSelect={handleSelectGalleryMedia}
+        allowedType="image"
       />
     </div>
   );

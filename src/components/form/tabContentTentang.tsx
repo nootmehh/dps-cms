@@ -99,12 +99,13 @@ export default function TabContentTentang({
           info="Foto ilustrasi, deskripsi singkat, dan narasi lengkap profil perusahaan yang tampil di halaman Tentang Kami."
         />
 
-        {/* Foto Ilustrasi (Hanya 1 Image / Video) */}
+        {/* Foto / Video Ilustrasi (Hanya 1 Image / Video) */}
         <UploadFile
-          label="Foto Ilustrasi *"
+          label="Foto / Video Ilustrasi *"
           descriptionPrefix="Format Disarankan"
-          descriptionValue="(Rasio 3:2 atau 16:9 • Gambar atau Video)"
+          descriptionValue="(Rasio 3:2 atau 16:9 • Format Gambar atau Video)"
           previewLayout="compact"
+          allowVideo={true}
           accept="image/*,video/*"
           defaultImageUrl={data.about_image_url || undefined}
           onSelectMediaUrl={(url) =>
@@ -167,8 +168,10 @@ export default function TabContentTentang({
         <UploadFile
           label="Ilustrasi Visi & Misi *"
           descriptionPrefix="Ukuran Disarankan"
-          descriptionValue="(520px × 320px / Rasio 16:10)"
+          descriptionValue="(520px × 320px / Rasio 16:10 • Format Gambar)"
           previewLayout="compact"
+          allowVideo={false}
+          accept="image/*"
           defaultImageUrl={data.vision_img_url || undefined}
           onSelectMediaUrl={(url) =>
             onChange((prev) => ({ ...prev, vision_img_url: url }))
@@ -201,10 +204,6 @@ export default function TabContentTentang({
 
         {/* Misi (Poin-poin misi) */}
         <div className="flex flex-col gap-3">
-          <label className="text-xs font-semibold text-g1 font-sans">
-            Daftar Poin Misi *
-          </label>
-
           {/* Sub-form tambah poin misi */}
           <div className="p-4 md:p-5 rounded-2xl bg-white-90/50 border border-white-80 shadow-xs flex flex-col sm:flex-row gap-3 items-end">
             <div className="flex-1 w-full">
@@ -240,7 +239,7 @@ export default function TabContentTentang({
                 key={idx}
                 className="flex items-center gap-3 p-3.5 rounded-2xl bg-white-90/50 border border-white-80 group hover:border-g1/30 hover:bg-white transition-all shadow-xs"
               >
-                <span className="size-7 rounded-full bg-g1 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs font-sans">
+                <span className="size-8 rounded-full bg-g1 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs font-sans">
                   {idx + 1}
                 </span>
 
@@ -254,10 +253,10 @@ export default function TabContentTentang({
                 <button
                   type="button"
                   onClick={() => handleRemoveMission(idx)}
-                  className="size-7 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs text-white"
+                  className="size-9 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs text-white"
                   title="Hapus poin misi"
                 >
-                  <LordIcon name="Delete" size={14} primaryColor="#FFFFFF" secondaryColor="#FFFFFF" />
+                  <LordIcon name="Delete" size={16} primaryColor="#FFFFFF" secondaryColor="#FFFFFF" />
                 </button>
               </div>
             ))}
@@ -282,10 +281,6 @@ export default function TabContentTentang({
 
         {/* Sub-form tambah legalitas */}
         <div className="p-4 md:p-5 rounded-2xl bg-white-90/50 border border-white-80 shadow-xs flex flex-col gap-4">
-          <span className="text-xs font-semibold text-g1 font-sans">
-            Tambah Butir Legalitas Baru
-          </span>
-
           <InputBox
             label="Pertanyaan (Question) *"
             placeholder="Apakah PT. Dua Putra Srikandi merupakan badan usaha yang terdaftar resmi dan memiliki legalitas pajak?"
@@ -340,12 +335,12 @@ export default function TabContentTentang({
                 <button
                   type="button"
                   onClick={() => handleRemoveLegality(idx)}
-                  className="size-7 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs text-white"
+                  className="size-9 rounded-full bg-red-state border border-red-300 hover:border-red-400 hover:opacity-90 active:opacity-60 active:scale-95 flex items-center justify-center transition-all cursor-pointer shrink-0 shadow-xs text-white"
                   title="Hapus legalitas"
                 >
                   <LordIcon
                     name="Delete"
-                    size={14}
+                    size={16}
                     primaryColor="#FFFFFF"
                     secondaryColor="#FFFFFF"
                   />
@@ -353,13 +348,14 @@ export default function TabContentTentang({
               </div>
 
               <div className="pl-8.5">
-                <textarea
+                <DescriptionBox
+                  placeholder="Tuliskan jawaban lengkap terkait legalitas..."
                   value={item.answer}
                   onChange={(e) =>
                     handleUpdateLegality(idx, "answer", e.target.value)
                   }
                   rows={2}
-                  className="w-full text-xs text-dark/70 font-sans bg-brand-background rounded-xl p-3 border border-transparent hover:border-g1/30 focus:border-g1 outline-none resize-none leading-relaxed transition-all"
+                  containerClassName="max-w-none w-full"
                 />
               </div>
             </div>

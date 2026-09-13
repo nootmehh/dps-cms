@@ -10,6 +10,7 @@ export interface DescriptionBoxProps
   labelInfo?: ReactNode;
   placeholder?: string;
   containerClassName?: string;
+  descriptionWrapperClassName?: string;
 }
 
 export default function DescriptionBox({
@@ -19,6 +20,7 @@ export default function DescriptionBox({
   placeholder,
   className = "",
   containerClassName = "",
+  descriptionWrapperClassName = "",
   rows = 4,
   onFocus,
   onBlur,
@@ -66,21 +68,23 @@ export default function DescriptionBox({
     );
   };
 
+  const defaultMaxWidth = containerClassName.includes("max-w-") ? "" : "max-w-full lg:max-w-116.5";
+
   return (
     <div
-      className={`w-full max-w-116.5 inline-flex flex-col justify-start items-start gap-1 ${containerClassName}`}
+      className={`w-full ${defaultMaxWidth} inline-flex flex-col justify-start items-start gap-1 ${containerClassName}`}
     >
       {renderLabel()}
       <div
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`self-stretch px-4 py-3 bg-brand-background rounded-2xl border inline-flex justify-between items-start transition-all duration-200 gap-2 cursor-text ${
+        className={`self-stretch px-4 py-3 bg-stone-100 rounded-2xl border inline-flex justify-between items-start transition-all duration-200 gap-2 cursor-text ${
           isFocused
-            ? "border-g1 shadow-[0px_2px_6px_0px_rgba(6,137,81,0.2)]"
+            ? "border-g1 bg-white shadow-[0px_2px_6px_0px_rgba(6,137,81,0.2)]"
             : isHovered
             ? "border-g1 opacity-95"
             : "border-transparent hover:border-g1"
-        }`}
+        } ${descriptionWrapperClassName}`}
       >
         <textarea
           placeholder={placeholder}

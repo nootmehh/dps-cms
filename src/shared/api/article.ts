@@ -100,7 +100,8 @@ export async function getArticleById(id: string | number): Promise<ArticlePayloa
   return found || null;
 }
 
-import { uploadFileToServer } from "@/shared/api/upload";
+import { uploadFileToServer, checkVpsHealth, notifyUploadError } from "@/shared/api/upload";
+import { convertImageFileToWebP } from "@/shared/api/media";
 
 export async function addArticle(
   data: Omit<ArticlePayload, "id" | "createdAt">,
@@ -115,12 +116,14 @@ export async function addArticle(
 
   let imageUrl = data.imageUrl || null;
   if (bannerFile) {
-    try {
-      imageUrl = await uploadFileToServer(bannerFile, "articles");
-    } catch (err) {
-      console.warn("Upload article banner to server failed, falling back to local blob:", err);
-      imageUrl = URL.createObjectURL(bannerFile);
+    const isOnline = await checkVpsHealth();
+    if (!isOnline) {
+      const errorMsg = "Server VPS tidak aktif atau tidak merespons. Unggahan artikel dibatalkan.";
+      notifyUploadError(errorMsg);
+      throw new Error(errorMsg);
     }
+    const webpFile = await convertImageFileToWebP(bannerFile);
+    imageUrl = await uploadFileToServer(webpFile, "articles");
   }
 
   // Sync to Supabase
@@ -165,12 +168,14 @@ export async function editArticle(
 
   let uploadedBannerUrl: string | null = null;
   if (bannerFile) {
-    try {
-      uploadedBannerUrl = await uploadFileToServer(bannerFile, "articles");
-    } catch (err) {
-      console.warn("Upload article banner to server failed, falling back to local blob:", err);
-      uploadedBannerUrl = URL.createObjectURL(bannerFile);
+    const isOnline = await checkVpsHealth();
+    if (!isOnline) {
+      const errorMsg = "Server VPS tidak aktif atau tidak merespons. Pembaruan artikel dibatalkan.";
+      notifyUploadError(errorMsg);
+      throw new Error(errorMsg);
     }
+    const webpFile = await convertImageFileToWebP(bannerFile);
+    uploadedBannerUrl = await uploadFileToServer(webpFile, "articles");
   }
 
   const updated = articles.map((article) => {

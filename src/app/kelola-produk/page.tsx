@@ -275,7 +275,7 @@ export default function KelolaProdukPage() {
           {/* Table Container */}
           <div className="self-stretch flex-1 bg-white flex flex-col justify-start items-start gap-2 overflow-x-auto overflow-y-auto min-h-0 w-full pr-1">
             {/* Table Header */}
-            <div className="self-stretch min-w-[840px] h-11 bg-white-90 rounded-xl flex items-center px-4 overflow-hidden select-none sticky top-0 z-10 shrink-0">
+            <div className="self-stretch min-w-210 h-11 bg-white-90 rounded-xl flex items-center px-4 overflow-hidden select-none sticky top-0 z-10 shrink-0">
               <div className="w-14 text-g1 text-xs font-semibold font-sans">No.</div>
               <div className="flex-1 text-g1 text-xs font-semibold font-sans">Nama Produk</div>
               <div className="w-48 text-g1 text-xs font-semibold font-sans">Kategori</div>
@@ -297,7 +297,7 @@ export default function KelolaProdukPage() {
               paginatedProducts.map((product, idx) => (
                 <div
                   key={product.id}
-                  className="self-stretch min-w-[840px] min-h-[54px] border-b border-white-90 hover:bg-white-90/60 transition-colors flex items-center px-4 py-2"
+                  className="self-stretch min-w-210 min-h-13.5 border-b border-white-90 hover:bg-white-90/60 transition-colors flex items-center px-4 py-2"
                 >
                   {/* No. */}
                   <div className="w-14 text-dark/90 text-xs font-normal font-sans">

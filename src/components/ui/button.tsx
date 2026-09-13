@@ -108,6 +108,7 @@ export default function Button({
     return (
       <button
         disabled={disabled}
+        suppressHydrationWarning
         className={`btn-custom btn-variant-${normalizedVariant} ${sizeClasses} inline-flex items-center font-semibold font-sans cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed ${defaultJustify} ${className}`}
         {...props}
       >
@@ -122,6 +123,7 @@ export default function Button({
   return (
     <button
       disabled={disabled}
+      suppressHydrationWarning
       className={`group btn-custom btn-variant-${normalizedVariant} inline-flex items-center gap-0 p-0 bg-transparent border-none outline-none cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed transition-all ${className}`}
       {...props}
     >

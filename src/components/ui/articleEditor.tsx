@@ -168,7 +168,7 @@ export default function ArticleEditor({
       {renderLabel()}
 
       {/* Editor Box */}
-      <div className="w-full bg-brand-background rounded-3xl overflow-hidden outline outline-1 outline-transparent hover:outline-g1 focus-within:outline-g1 focus-within:ring-2 focus-within:ring-g1/20 transition-all duration-200">
+      <div className="w-full bg-brand-background rounded-3xl overflow-hidden outline outline-transparent hover:outline-g1 focus-within:outline-g1 focus-within:ring-2 focus-within:ring-g1/20 transition-all duration-200">
         {/* Hidden File Input for Image Upload */}
         <input
           ref={fileInputRef}

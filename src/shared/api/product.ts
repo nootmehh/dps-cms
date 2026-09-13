@@ -174,7 +174,14 @@ export async function getProductById(id: string | number): Promise<ProductPayloa
   return found || null;
 }
 
-import { uploadFileToServer, deleteFileFromServer, isManualUploadUrl } from "@/shared/api/upload";
+import {
+  uploadFileToServer,
+  deleteFileFromServer,
+  isManualUploadUrl,
+  checkVpsHealth,
+  notifyUploadError,
+} from "@/shared/api/upload";
+import { convertImageFileToWebP } from "@/shared/api/media";
 
 export async function addProduct(
   data: Omit<ProductPayload, "id" | "createdAt">,
@@ -194,29 +201,30 @@ export async function addProduct(
     ? [data.imageUrl]
     : [];
 
+  if (imageFile || highlightImageFile) {
+    const isOnline = await checkVpsHealth();
+    if (!isOnline) {
+      const errorMsg = "Server VPS tidak aktif atau tidak merespons. Unggahan produk dibatalkan.";
+      notifyUploadError(errorMsg);
+      throw new Error(errorMsg);
+    }
+  }
+
   if (imageFile) {
     const filesToUpload = Array.isArray(imageFile) ? imageFile : [imageFile];
     for (const f of filesToUpload) {
       if (f) {
-        try {
-          const url = await uploadFileToServer(f, "products");
-          finalImageUrls.push(url);
-        } catch (err) {
-          console.warn("Upload product image failed, falling back to blob:", err);
-          finalImageUrls.push(URL.createObjectURL(f));
-        }
+        const webpFile = await convertImageFileToWebP(f);
+        const url = await uploadFileToServer(webpFile, "products");
+        finalImageUrls.push(url);
       }
     }
   }
 
   let highlightImgUrl = data.highlightImgUrl || null;
   if (highlightImageFile) {
-    try {
-      highlightImgUrl = await uploadFileToServer(highlightImageFile, "products");
-    } catch (err) {
-      console.warn("Upload highlight image failed, falling back to blob:", err);
-      highlightImgUrl = URL.createObjectURL(highlightImageFile);
-    }
+    const webpHighlight = await convertImageFileToWebP(highlightImageFile);
+    highlightImgUrl = await uploadFileToServer(webpHighlight, "products");
   }
 
   // Sync to Supabase
@@ -266,30 +274,31 @@ export async function editProduct(
   const existingProduct = products.find((p) => String(p.id) === String(id));
   let updatedProduct: ProductPayload | null = null;
 
+  if (imageFile || highlightImageFile) {
+    const isOnline = await checkVpsHealth();
+    if (!isOnline) {
+      const errorMsg = "Server VPS tidak aktif atau tidak merespons. Pembaruan produk dibatalkan.";
+      notifyUploadError(errorMsg);
+      throw new Error(errorMsg);
+    }
+  }
+
   const uploadedUrls: string[] = [];
   if (imageFile) {
     const filesToUpload = Array.isArray(imageFile) ? imageFile : [imageFile];
     for (const f of filesToUpload) {
       if (f) {
-        try {
-          const url = await uploadFileToServer(f, "products");
-          uploadedUrls.push(url);
-        } catch (err) {
-          console.warn("Upload product image failed, falling back to blob:", err);
-          uploadedUrls.push(URL.createObjectURL(f));
-        }
+        const webpFile = await convertImageFileToWebP(f);
+        const url = await uploadFileToServer(webpFile, "products");
+        uploadedUrls.push(url);
       }
     }
   }
 
   let uploadedHighlightUrl: string | null = null;
   if (highlightImageFile) {
-    try {
-      uploadedHighlightUrl = await uploadFileToServer(highlightImageFile, "products");
-    } catch (err) {
-      console.warn("Upload highlight image failed, falling back to blob:", err);
-      uploadedHighlightUrl = URL.createObjectURL(highlightImageFile);
-    }
+    const webpHighlight = await convertImageFileToWebP(highlightImageFile);
+    uploadedHighlightUrl = await uploadFileToServer(webpHighlight, "products");
   }
 
   let computedFinalBannerUrls: string[] = [];

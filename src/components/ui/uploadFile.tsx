@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, ReactNode } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback, ReactNode } from "react";
 import Button from "./button";
 import MediaSelectModal, { MediaSelectModalItem } from "@/components/modal/mediaSelectModal";
 import Notification, { NotificationType } from "./notification";
@@ -12,6 +12,7 @@ export interface UploadFileProps {
     onFilesSelected?: (files: File[]) => void;
     multiple?: boolean;
     accept?: string;
+    allowVideo?: boolean;
     maxFiles?: number;
     initialFiles?: File[];
     existingImageUrls?: string[];
@@ -49,12 +50,37 @@ const formatFileSize = (bytes?: number): string => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+export const isVideoFile = (file: File): boolean => {
+    if (file.type && file.type.startsWith("video/")) return true;
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    return ["mp4", "webm", "ogg", "mov", "avi", "mkv", "wmv", "m4v", "flv", "3gp"].includes(ext || "");
+};
+
+export const isVideoUrl = (url?: string, name?: string): boolean => {
+    if (!url && !name) return false;
+    const cleanUrl = (url || "").trim().toLowerCase();
+    const cleanName = (name || "").trim().toLowerCase();
+
+    if (
+        cleanUrl.startsWith("data:video/") ||
+        cleanUrl.includes("video/mp4") ||
+        cleanUrl.includes("video/webm")
+    ) {
+        return true;
+    }
+
+    const videoExtPattern = /\.(mp4|webm|ogg|mov|avi|mkv|wmv|m4v|flv|3gp)($|\?|#|\/|\s)/i;
+    return videoExtPattern.test(cleanUrl) || videoExtPattern.test(cleanName);
+};
+
 const getFileNameFromUrl = (url: string) => {
     try {
         const parts = url.split("/");
-        return parts[parts.length - 1].split("?")[0] || "image.png";
+        const base = parts[parts.length - 1].split("?")[0];
+        if (base) return base;
+        return isVideoUrl(url) ? "video.mp4" : "image.png";
     } catch {
-        return "image.png";
+        return isVideoUrl(url) ? "video.mp4" : "image.png";
     }
 };
 
@@ -92,15 +118,16 @@ export default function UploadFile({
     onFilesSelected,
     descriptionPrefix,
     descriptionValue,
-    fileTypesHint = "(PNG, JPG, WebP)",
+    fileTypesHint,
     multiple = false,
-    accept = "image/*",
+    allowVideo = false,
+    accept,
     maxFiles = 4,
     initialFiles = [],
     existingImageUrls = [],
     onRemoveExistingImage,
     defaultImageUrl,
-    defaultImageLabel = "Saved Image",
+    defaultImageLabel,
     onRemoveDefaultImage,
     enableMediaLibrary = true,
     previewLayout = "compact",
@@ -109,6 +136,8 @@ export default function UploadFile({
     onError,
     className = "",
 }: UploadFileProps) {
+    const resolvedAccept = accept || (allowVideo ? "image/*,video/*" : "image/*");
+    const resolvedHint = fileTypesHint || (allowVideo ? "(PNG, JPG, WebP, MP4, WebM)" : "(PNG, JPG, WebP)");
     const [dragActive, setDragActive] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState<File[]>(initialFiles);
     const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
@@ -147,7 +176,7 @@ export default function UploadFile({
     // Compute object URLs synchronously for selected files so previews are immediately available
     const filePreviews = useMemo(() => {
         return selectedFiles.map((file) => {
-            if (file.type.startsWith("image/")) {
+            if (file.type.startsWith("image/") || (allowVideo && isVideoFile(file))) {
                 try {
                     return URL.createObjectURL(file);
                 } catch {
@@ -156,7 +185,7 @@ export default function UploadFile({
             }
             return "";
         });
-    }, [selectedFiles]);
+    }, [selectedFiles, allowVideo]);
 
     // Clean up revoked URLs when filePreviews change or on unmount
     useEffect(() => {
@@ -240,6 +269,15 @@ export default function UploadFile({
         return "Tersimpan";
     };
 
+    // Resolve label for default / saved file
+    const resolveDefaultLabel = useCallback((url?: string, file?: File): string => {
+        const isVideo = (url && isVideoUrl(url)) || (file && isVideoFile(file));
+        if (defaultImageLabel && defaultImageLabel !== "Saved Image" && defaultImageLabel !== "Saved Video") {
+            return defaultImageLabel;
+        }
+        return isVideo ? "Saved Video" : (defaultImageLabel || "Saved Image");
+    }, [defaultImageLabel]);
+
     // Build unified display images list, ensuring only non-empty, non-duplicate URLs are included
     const allImages: DisplayImageItem[] = useMemo(() => {
         const existingItems: DisplayImageItem[] = validExistingUrls.map((url, idx) => ({
@@ -272,7 +310,7 @@ export default function UploadFile({
                     id: `default-${validDefaultUrl}`,
                     type: "existing" as const,
                     url: validDefaultUrl,
-                    name: defaultImageLabel || getFileNameFromUrl(validDefaultUrl),
+                    name: resolveDefaultLabel(validDefaultUrl) || getFileNameFromUrl(validDefaultUrl),
                     existingUrl: validDefaultUrl,
                     fileSize: getFormattedSizeLabel(urlSizes[validDefaultUrl]),
                 }];
@@ -291,7 +329,7 @@ export default function UploadFile({
                     id: `default-${validDefaultUrl}`,
                     type: "existing" as const,
                     url: validDefaultUrl,
-                    name: defaultImageLabel || getFileNameFromUrl(validDefaultUrl),
+                    name: resolveDefaultLabel(validDefaultUrl) || getFileNameFromUrl(validDefaultUrl),
                     existingUrl: validDefaultUrl,
                     fileSize: getFormattedSizeLabel(urlSizes[validDefaultUrl]),
                 }]
@@ -319,12 +357,12 @@ export default function UploadFile({
     }, [
         validExistingUrls,
         validDefaultUrl,
-        defaultImageLabel,
         multiple,
         pendingSelectedFiles,
         selectedFiles,
         filePreviews,
         urlSizes,
+        resolveDefaultLabel,
     ]);
 
     const safeActiveIndex = allImages.length > 0
@@ -336,6 +374,19 @@ export default function UploadFile({
         if (!files || files.length === 0) return;
 
         const newFiles = Array.from(files);
+
+        // STRICT VALIDATION: If allowVideo is false, reject any video files immediately
+        if (!allowVideo) {
+            const hasVideo = newFiles.some(isVideoFile);
+            if (hasVideo) {
+                showNotification(
+                    "Format berkas video tidak diizinkan di bagian ini. Hanya format gambar yang diperbolehkan.",
+                    "error"
+                );
+                if (inputRef.current) inputRef.current.value = "";
+                return;
+            }
+        }
 
         if (!multiple) {
             const newFile = newFiles[0];
@@ -459,6 +510,17 @@ export default function UploadFile({
     const handleReplaceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0] && currentActive) {
             const newFile = e.target.files[0];
+
+            // STRICT VALIDATION: Reject video files if not allowed
+            if (!allowVideo && isVideoFile(newFile)) {
+                showNotification(
+                    "Format berkas video tidak diizinkan di bagian ini. Hanya format gambar yang diperbolehkan.",
+                    "error"
+                );
+                if (replaceInputRef.current) replaceInputRef.current.value = "";
+                return;
+            }
+
             if (currentActive.type === "existing") {
                 if (currentActive.existingUrl) {
                     onRemoveExistingImage?.(currentActive.existingUrl);
@@ -483,6 +545,14 @@ export default function UploadFile({
 
     const handleMediaLibrarySelect = async (item: MediaSelectModalItem) => {
         try {
+            // STRICT VALIDATION: Reject video from Media Library if not allowed
+            if (!allowVideo && isVideoUrl(item.url, item.fileName)) {
+                showNotification(
+                    "Berkas video tidak diizinkan di bagian ini. Silakan pilih berkas gambar dari Media Library.",
+                    "error"
+                );
+                return;
+            }
             if (!multiple) {
                 // In single mode: replace existing image
                 if (validDefaultUrl && onRemoveDefaultImage) {
@@ -628,14 +698,14 @@ export default function UploadFile({
                 ref={inputRef}
                 type="file"
                 multiple={multiple}
-                accept={accept}
+                accept={resolvedAccept}
                 onChange={handleChange}
                 className="hidden"
             />
             <input
                 ref={replaceInputRef}
                 type="file"
-                accept={accept}
+                accept={resolvedAccept}
                 onChange={handleReplaceFileChange}
                 className="hidden"
             />
@@ -647,11 +717,22 @@ export default function UploadFile({
                     <div className="self-stretch flex flex-col gap-3 w-full">
                         {/* Main Large Image Card */}
                         <div className="relative w-full h-64 sm:h-80 md:h-96 rounded-3xl overflow-hidden bg-brand-background group flex items-center justify-center border border-white-80 shadow-xs">
-                            <img
-                                src={currentActive.url}
-                                alt={currentActive.name || "Preview"}
-                                className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                            />
+                            {isVideoUrl(currentActive.url, currentActive.name) || (currentActive.file && isVideoFile(currentActive.file)) ? (
+                                <video
+                                    src={currentActive.url}
+                                    className="w-full h-full object-cover"
+                                    autoPlay
+                                    muted
+                                    loop
+                                    playsInline
+                                />
+                            ) : (
+                                <img
+                                    src={currentActive.url}
+                                    alt={currentActive.name || "Preview"}
+                                    className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                                />
+                            )}
 
                             {/* Gradient Overlay for controls */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 opacity-90 transition-opacity" />
@@ -668,7 +749,7 @@ export default function UploadFile({
                                             ? "bg-g1/15 text-g1 border-g1/40"
                                             : "bg-white text-dark/80 border-white-70"
                                     }`}
-                                    title="Ganti foto saat ini"
+                                    title={isVideoUrl(currentActive.url, currentActive.name) ? "Ganti video saat ini" : "Ganti foto saat ini"}
                                 >
                                     <LordIcon
                                         name="Edit"
@@ -676,16 +757,16 @@ export default function UploadFile({
                                         primaryColor={isReplaceHovered ? "#0A9863" : "#110D31"}
                                     />
                                     <span className={`transition-colors duration-150 ${isReplaceHovered ? "text-g1 font-semibold" : "text-dark/80 font-semibold"}`}>
-                                        Ganti Foto
+                                        {isVideoUrl(currentActive.url, currentActive.name) ? "Ganti Video" : "Ganti Foto"}
                                     </span>
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => handleRemoveImage(currentActive, safeActiveIndex)}
                                     className="size-8 bg-red-state hover:bg-red-state/90 border border-red-300 hover:border-red-400 text-white rounded-full shadow-md backdrop-blur-xs flex items-center justify-center hover:opacity-80 active:opacity-60 active:scale-95 transition-all cursor-pointer"
-                                    title="Hapus gambar"
+                                    title={isVideoUrl(currentActive.url, currentActive.name) ? "Hapus video" : "Hapus gambar"}
                                 >
-                                    <LordIcon name="Delete" size={16} primaryColor="#FFFFFF" />
+                                    <LordIcon name="Delete" size={16} primaryColor="#FFFFFF" secondaryColor="#FFFFFF" />
                                 </button>
                             </div>
 
@@ -697,7 +778,7 @@ export default function UploadFile({
                                     </span>
                                     {allImages.length > 1 && (
                                         <span className="text-xs text-white/80 font-medium font-sans">
-                                            Gambar {safeActiveIndex + 1} dari {allImages.length}
+                                            {isVideoUrl(currentActive.url, currentActive.name) ? "Video" : "Gambar"} {safeActiveIndex + 1} dari {allImages.length}
                                         </span>
                                     )}
                                 </div>
@@ -720,11 +801,28 @@ export default function UploadFile({
                                             }`}
                                         >
                                             {img.url ? (
-                                                <img
-                                                    src={img.url}
-                                                    alt={img.name || "Thumbnail"}
-                                                    className="w-full h-full object-cover"
-                                                />
+                                                isVideoUrl(img.url, img.name) || (img.file && isVideoFile(img.file)) ? (
+                                                    <div className="relative size-full flex items-center justify-center bg-dark/10">
+                                                        <video
+                                                            src={`${img.url}#t=0.001`}
+                                                            className="size-full object-cover"
+                                                            muted
+                                                            preload="metadata"
+                                                            playsInline
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/25 flex items-center justify-center pointer-events-none">
+                                                            <span className="size-6 rounded-full bg-black/60 text-white flex items-center justify-center text-xs pl-0.5 shadow-xs">
+                                                                ▶
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <img
+                                                        src={img.url}
+                                                        alt={img.name || "Thumbnail"}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                )
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center bg-slate-100">
                                                     <LordIcon name="Image 2" size={24} primaryColor="#94a3b8" />
@@ -837,13 +935,30 @@ export default function UploadFile({
                                 >
                                     <div className="flex items-center gap-3 min-w-0 flex-1 pr-3">
                                         {/* Thumbnail kecil */}
-                                        <div className="size-12 rounded-xl overflow-hidden bg-brand-background border border-white-80 shrink-0 flex items-center justify-center">
+                                        <div className="size-12 rounded-xl overflow-hidden bg-brand-background border border-white-80 shrink-0 flex items-center justify-center relative">
                                             {img.url ? (
-                                                <img
-                                                    src={img.url}
-                                                    alt={img.name || "Thumbnail"}
-                                                    className="size-full object-cover"
-                                                />
+                                                isVideoUrl(img.url, img.name) || (img.file && isVideoFile(img.file)) ? (
+                                                    <div className="relative size-full flex items-center justify-center bg-dark/10">
+                                                        <video
+                                                            src={`${img.url}#t=0.001`}
+                                                            className="size-full object-cover"
+                                                            muted
+                                                            preload="metadata"
+                                                            playsInline
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/25 flex items-center justify-center pointer-events-none">
+                                                            <span className="size-5 rounded-full bg-black/60 text-white flex items-center justify-center text-[9px] pl-0.5 shadow-xs">
+                                                                ▶
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <img
+                                                        src={img.url}
+                                                        alt={img.name || "Thumbnail"}
+                                                        className="size-full object-cover"
+                                                    />
+                                                )
                                             ) : (
                                                 <LordIcon name="Image 2" size={24} primaryColor="#0A9863" />
                                             )}
@@ -858,7 +973,7 @@ export default function UploadFile({
                                                 {img.name}
                                             </span>
                                             <span className="text-xs text-dark/60 font-medium font-sans mt-0.5">
-                                                {img.fileSize || "Gambar WebP • Tersimpan"}
+                                                {img.fileSize || (isVideoUrl(img.url, img.name) || (img.file && isVideoFile(img.file)) ? "Video • Tersimpan" : "Gambar WebP • Tersimpan")}
                                             </span>
                                         </div>
                                     </div>
@@ -870,10 +985,10 @@ export default function UploadFile({
                                             e.stopPropagation();
                                             handleRemoveImage(img, idx);
                                         }}
-                                        className="size-8 sm:size-9 rounded-full bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-600 flex items-center justify-center transition-all cursor-pointer shrink-0 active:scale-95 border border-red-100"
-                                        title="Hapus gambar"
+                                        className="size-8 sm:size-9 rounded-full bg-red-state hover:bg-red-state/90 border border-red-300 hover:border-red-400 text-white flex items-center justify-center transition-all duration-200 shadow-xs hover:shadow-md cursor-pointer shrink-0 active:scale-95"
+                                        title={isVideoUrl(img.url, img.name) || (img.file && isVideoFile(img.file)) ? "Hapus video" : "Hapus gambar"}
                                     >
-                                        <LordIcon name="Delete" size={16} primaryColor="#f94c4c" />
+                                        <LordIcon name="Delete" size={16} primaryColor="#FFFFFF" secondaryColor="#FFFFFF" />
                                     </button>
                                 </div>
                             ))}
@@ -896,11 +1011,11 @@ export default function UploadFile({
             </div>
 
             {/* Suggested size info under the box */}
-            {(descriptionPrefix || descriptionValue || fileTypesHint) && (
+            {(descriptionPrefix || descriptionValue || resolvedHint) && (
                 <p className="w-full text-center text-xs text-dark/60 font-normal font-sans pt-1">
-                    {fileTypesHint && (
+                    {resolvedHint && (
                         <>
-                            {renderEmphasizedHint(fileTypesHint)}
+                            {renderEmphasizedHint(resolvedHint)}
                             {", "}
                         </>
                     )}
@@ -919,6 +1034,7 @@ export default function UploadFile({
             <MediaSelectModal
                 isOpen={isMediaModalOpen}
                 onClose={() => setIsMediaModalOpen(false)}
+                allowedType={allowVideo ? "all" : "image"}
                 onSelect={(item) => {
                     handleMediaLibrarySelect(item);
                     setIsMediaModalOpen(false);

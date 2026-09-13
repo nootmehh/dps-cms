@@ -9,8 +9,19 @@ const openSans = Open_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "DPS CMS",
-  description: "DPS Content Management System",
+  title: {
+    default: "DPS CMS - Content Management System | PT Dua Putra Srikandi",
+    template: "%s | DPS CMS",
+  },
+  description:
+    "Portal Content Management System (CMS) resmi PT Dua Putra Srikandi untuk pengelolaan konten website, produk marka jalan, layanan konstruksi, galeri, artikel, dan optimasi SEO.",
+  icons: {
+    icon: [
+      { url: "/dps-logo-icon-white.png?v=2", type: "image/png" },
+    ],
+    shortcut: "/dps-logo-icon-white.png?v=2",
+    apple: "/dps-logo-icon-white.png?v=2",
+  },
 };
 
 export default function RootLayout({

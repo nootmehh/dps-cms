@@ -75,7 +75,7 @@ export default function Navbar({
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
             aria-label="Buka Menu Navigasi"
-            className="lg:hidden p-2 rounded-xl text-dark/80 hover:text-g1 hover:bg-white-90 transition-colors cursor-pointer flex items-center justify-center min-h-[44px] min-w-[44px]"
+            className="lg:hidden p-2 rounded-xl text-dark/80 hover:text-g1 hover:bg-white-90 transition-colors cursor-pointer flex items-center justify-center min-h-11 min-w-11"
           >
             <LordIcon name="Menu" size={24} primaryColor="#0A9863" />
           </button>
@@ -87,7 +87,7 @@ export default function Navbar({
           >
             {/* Full Logo on >= 420px */}
             <img
-              className="h-8 sm:h-9 w-auto object-contain transition-all aspect-[801/96] hidden min-[420px]:block"
+              className="h-8 sm:h-9 w-auto object-contain transition-all aspect-801/96 hidden min-[420px]:block"
               src={logoSrc || "/dps-logo-default.png"}
               alt={brandTitle || "DPS Logo"}
             />
@@ -105,7 +105,7 @@ export default function Navbar({
           {/* User Info & Avatar */}
           <div className="flex justify-start items-center gap-2 sm:gap-3 md:gap-4">
             <div className="hidden sm:inline-flex flex-col justify-start items-end">
-              <div className="self-stretch text-right justify-start text-g1 text-sm md:text-base font-bold font-sans truncate max-w-[140px] md:max-w-none">
+              <div className="self-stretch text-right justify-start text-g1 text-sm md:text-base font-bold font-sans truncate max-w-35 md:max-w-none">
                 {displayName}
               </div>
               <div className="text-right justify-start text-dark/75 text-xs md:text-sm font-normal font-sans">
@@ -137,7 +137,7 @@ export default function Navbar({
             onClick={handleLogout}
             title={logoutText}
             aria-label={logoutText}
-            className="sm:hidden size-10 rounded-full bg-red-state text-white flex items-center justify-center shrink-0 shadow-xs active:scale-95 transition-all cursor-pointer min-h-[44px] min-w-[44px]"
+            className="sm:hidden size-10 rounded-full bg-red-state text-white flex items-center justify-center shrink-0 shadow-xs active:scale-95 transition-all cursor-pointer min-h-11 min-w-11"
           >
             <LordIcon name="Logout" size={18} primaryColor="#FFFFFF" />
           </button>
@@ -160,7 +160,7 @@ export default function Navbar({
           />
 
           {/* Slide-over Drawer Panel */}
-          <div className="relative w-[300px] max-w-[85vw] h-full bg-white shadow-2xl z-10 flex flex-col justify-between overflow-y-auto p-5 animate-scale-in">
+          <div className="relative w-75 max-w-[85vw] h-full bg-white shadow-2xl z-10 flex flex-col justify-between overflow-y-auto p-5 animate-scale-in">
             {/* Drawer Header */}
             <div className="flex flex-col gap-5">
               <div className="flex items-center justify-between pb-3 border-b border-white-80">
@@ -181,7 +181,7 @@ export default function Navbar({
                 <button
                   type="button"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="size-9 rounded-full text-slate-400 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer min-h-[44px] min-w-[44px]"
+                  className="size-9 rounded-full text-slate-400 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer min-h-11 min-w-11"
                   title="Tutup Menu"
                 >
                   <LordIcon name="Cross" size={20} primaryColor="#666666" />
@@ -222,7 +222,7 @@ export default function Navbar({
                           text={item.label}
                           leftIcon={item.icon}
                           variant={isActive ? "fill" : "ghost-green"}
-                          className="w-full justify-start text-left px-4 min-h-[44px] cursor-pointer"
+                          className="w-full justify-start text-left px-4 min-h-11 cursor-pointer"
                         />
                       </Link>
                     );

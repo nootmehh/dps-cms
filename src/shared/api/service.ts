@@ -240,7 +240,14 @@ export async function getServiceById(id: string | number): Promise<ServicePayloa
   return found || null;
 }
 
-import { uploadFileToServer, deleteFileFromServer, isManualUploadUrl } from "@/shared/api/upload";
+import {
+  uploadFileToServer,
+  deleteFileFromServer,
+  isManualUploadUrl,
+  checkVpsHealth,
+  notifyUploadError,
+} from "@/shared/api/upload";
+import { convertImageFileToWebP } from "@/shared/api/media";
 
 export async function addService(
   data: Omit<ServicePayload, "id" | "createdAt">,
@@ -260,16 +267,19 @@ export async function addService(
     : [];
 
   if (imageFile) {
+    const isOnline = await checkVpsHealth();
+    if (!isOnline) {
+      const errorMsg = "Server VPS tidak aktif atau tidak merespons. Unggahan layanan dibatalkan.";
+      notifyUploadError(errorMsg);
+      throw new Error(errorMsg);
+    }
+
     const filesToUpload = Array.isArray(imageFile) ? imageFile : [imageFile];
     for (const f of filesToUpload) {
       if (f) {
-        try {
-          const url = await uploadFileToServer(f, "services");
-          finalImageUrls.push(url);
-        } catch (err) {
-          console.warn("Upload service image failed, falling back to blob:", err);
-          finalImageUrls.push(URL.createObjectURL(f));
-        }
+        const webpFile = await convertImageFileToWebP(f);
+        const url = await uploadFileToServer(webpFile, "services");
+        finalImageUrls.push(url);
       }
     }
   }
@@ -327,16 +337,19 @@ export async function editService(
 
   const uploadedUrls: string[] = [];
   if (imageFile) {
+    const isOnline = await checkVpsHealth();
+    if (!isOnline) {
+      const errorMsg = "Server VPS tidak aktif atau tidak merespons. Pembaruan layanan dibatalkan.";
+      notifyUploadError(errorMsg);
+      throw new Error(errorMsg);
+    }
+
     const filesToUpload = Array.isArray(imageFile) ? imageFile : [imageFile];
     for (const f of filesToUpload) {
       if (f) {
-        try {
-          const url = await uploadFileToServer(f, "services");
-          uploadedUrls.push(url);
-        } catch (err) {
-          console.warn("Upload service image failed, falling back to blob:", err);
-          uploadedUrls.push(URL.createObjectURL(f));
-        }
+        const webpFile = await convertImageFileToWebP(f);
+        const url = await uploadFileToServer(webpFile, "services");
+        uploadedUrls.push(url);
       }
     }
   }

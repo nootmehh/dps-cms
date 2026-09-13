@@ -15,8 +15,7 @@ import {
   uploadImage,
   deleteImage,
   processZipFile,
-  saveStoredMediaList,
-  getStoredMediaList,
+  fetchMediaList,
   formatBytes,
 } from "@/shared/api/media";
 
@@ -56,11 +55,11 @@ export default function KelolaMediaPage() {
   };
 
   // Load media items on mount
-  const loadMedia = useCallback(() => {
+  const loadMedia = useCallback(async () => {
     try {
       setLoading(true);
-      const items = getStoredMediaList();
-      setMediaList(items);
+      const res = await fetchMediaList();
+      setMediaList(res.data);
     } catch (err) {
       console.error("Failed to load media list:", err);
     } finally {
@@ -70,6 +69,18 @@ export default function KelolaMediaPage() {
 
   useEffect(() => {
     loadMedia();
+
+    const handleUploadErr = (e: Event) => {
+      const customEvent = e as CustomEvent<{ message?: string; type?: "success" | "error" | "default" }>;
+      if (customEvent.detail?.message) {
+        triggerNotif(customEvent.detail.message, customEvent.detail.type || "error");
+      }
+    };
+
+    window.addEventListener("dps-upload-error", handleUploadErr);
+    return () => {
+      window.removeEventListener("dps-upload-error", handleUploadErr);
+    };
   }, [loadMedia]);
 
   const handleUploadClick = () => {
@@ -93,7 +104,7 @@ export default function KelolaMediaPage() {
     }
 
     setUploading(true);
-    triggerNotif(`Mengunggah & mengonversi "${file.name}" ke WebP...`, "default");
+    triggerNotif(`Memeriksa VPS & mengonversi "${file.name}" ke WebP...`, "default");
 
     try {
       const uploadedUrl = await uploadImage(file, "media");
@@ -101,7 +112,7 @@ export default function KelolaMediaPage() {
       const webpFileName = `${baseName}.webp`;
 
       const newMedia: MediaItem = {
-        id: `${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        id: webpFileName,
         url: uploadedUrl,
         fileName: webpFileName,
         fileSize: formatBytes(file.size),
@@ -111,8 +122,7 @@ export default function KelolaMediaPage() {
 
       const updated = [newMedia, ...mediaList];
       setMediaList(updated);
-      saveStoredMediaList(updated);
-      triggerNotif(`Berkas "${webpFileName}" berhasil diunggah!`, "success");
+      triggerNotif(`Berkas "${webpFileName}" berhasil diunggah ke VPS!`, "success");
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Gagal mengunggah berkas.";
       triggerNotif(`Gagal mengunggah: ${errorMsg}`, "error");
@@ -135,7 +145,7 @@ export default function KelolaMediaPage() {
     }
 
     setUploadingBatch(true);
-    triggerNotif(`Mengekstrak dan memproses arsip ZIP "${zipFile.name}"...`, "default");
+    triggerNotif(`Memeriksa VPS & memproses arsip ZIP "${zipFile.name}"...`, "default");
 
     try {
       const uploadedItems = await processZipFile(zipFile, "media", (progress) => {
@@ -147,9 +157,8 @@ export default function KelolaMediaPage() {
 
       const updated = [...uploadedItems, ...mediaList];
       setMediaList(updated);
-      saveStoredMediaList(updated);
       triggerNotif(
-        `Berhasil mengunggah ${uploadedItems.length} foto dari "${zipFile.name}"!`,
+        `Berhasil mengunggah ${uploadedItems.length} foto dari "${zipFile.name}" ke VPS!`,
         "success"
       );
     } catch (err) {
@@ -170,8 +179,7 @@ export default function KelolaMediaPage() {
       await deleteImage(mediaToDelete.id);
       const updated = mediaList.filter((item) => item.id !== mediaToDelete.id);
       setMediaList(updated);
-      saveStoredMediaList(updated);
-      triggerNotif(`Berkas "${mediaToDelete.fileName}" berhasil dihapus!`, "success");
+      triggerNotif(`Berkas "${mediaToDelete.fileName}" berhasil dihapus dari VPS!`, "success");
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Gagal menghapus media.";
       triggerNotif(`Gagal menghapus: ${errorMsg}`, "error");

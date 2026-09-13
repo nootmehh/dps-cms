@@ -19,7 +19,13 @@ interface MediaSelectModalProps {
     selectedId?: string;
     itemsPerPage?: number;
     initialData?: MediaSelectModalItem[];
+    allowedType?: "all" | "image" | "video";
 }
+
+const isVideoUrl = (url?: string, name?: string): boolean => {
+    const target = `${url || ""} ${name || ""}`.toLowerCase();
+    return /\.(mp4|webm|ogg|mov|avi|mkv|wmv|m4v|flv|3gp)($|\?)/i.test(target);
+};
 
 export default function MediaSelectModal({
     isOpen,
@@ -28,6 +34,7 @@ export default function MediaSelectModal({
     selectedId,
     itemsPerPage = 12,
     initialData,
+    allowedType = "all",
 }: MediaSelectModalProps) {
     const [mediaList, setMediaList] = useState<MediaSelectModalItem[]>([]);
     const [loading, setLoading] = useState(false);
@@ -63,10 +70,19 @@ export default function MediaSelectModal({
     }, [isOpen, selectedId, initialData]);
 
     const filteredMedia = useMemo(() => {
-        return mediaList.filter((item) =>
-            item.fileName.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    }, [mediaList, searchQuery]);
+        return mediaList.filter((item) => {
+            const matchesQuery = item.fileName.toLowerCase().includes(searchQuery.toLowerCase());
+            if (!matchesQuery) return false;
+
+            if (allowedType === "image") {
+                return !isVideoUrl(item.url, item.fileName);
+            }
+            if (allowedType === "video") {
+                return isVideoUrl(item.url, item.fileName);
+            }
+            return true;
+        });
+    }, [mediaList, searchQuery, allowedType]);
 
     const totalItems = filteredMedia.length;
 

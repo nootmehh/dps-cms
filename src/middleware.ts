@@ -2,6 +2,16 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export function middleware(request: NextRequest) {
+  // Domain redirect: forward legacy Netlify subdomain to custom domain
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+  if (host === "dps-cms.netlify.app") {
+    const redirectUrl = new URL(
+      request.nextUrl.pathname + request.nextUrl.search,
+      "https://cms.dpsmarkajalan.com"
+    );
+    return NextResponse.redirect(redirectUrl, 301);
+  }
+
   const { pathname } = request.nextUrl;
 
   // Public paths: root login page (/), next assets, static files, uploads, favicon
