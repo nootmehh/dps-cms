@@ -9,9 +9,7 @@ import DescriptionBox from "@/components/ui/descriptionBox";
 import UploadFile from "@/components/ui/uploadFile";
 import Badge from "@/components/ui/badge";
 import SectionHeading from "@/components/ui/sectionHeading";
-import LordIcon from "@/components/common/lordIcon";
 import Notification, { type NotificationType } from "@/components/ui/notification";
-import ConnectGaModal from "@/components/modal/connectGaModal";
 import { uploadFileToServer } from "@/shared/api/upload";
 import {
   getSeoSettings,
@@ -32,9 +30,6 @@ export default function KelolaSeoPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Modal State for Google Analytics
-  const [gaModalOpen, setGaModalOpen] = useState(false);
 
   // Notification Toast State
   const [notification, setNotification] = useState<{
@@ -97,30 +92,6 @@ export default function KelolaSeoPage() {
     }
   };
 
-  // Save Google Analytics Connection
-  const handleSaveGaConnection = async (connected: boolean, measurementId: string | null) => {
-    try {
-      const updated = await updateSeoSettings(
-        {
-          ...settings,
-          ga_connected: connected,
-          ga_measurement_id: measurementId,
-        },
-        settings.id
-      );
-      setSettings(updated);
-      triggerNotif(
-        connected
-          ? `Google Analytics (${measurementId}) berhasil dihubungkan!`
-          : "Google Analytics berhasil diputuskan!",
-        "default"
-      );
-    } catch (err: any) {
-      console.error("Error updating GA connection:", err);
-      triggerNotif(`Gagal memperbarui koneksi: ${err.message || "Terjadi kesalahan"}`, "error");
-    }
-  };
-
   // Parse keywords into individual tags for visual chip display
   const parsedKeywords = useMemo(() => {
     if (!settings.keywords) return [];
@@ -154,7 +125,7 @@ export default function KelolaSeoPage() {
                 Kelola SEO
               </h1>
               <p className="text-dark text-xs sm:text-sm font-normal font-sans">
-                Kelola konfigurasi SEO situs, favicon, kata kunci, dan integrasi analitik di halaman ini.
+                Kelola konfigurasi SEO situs, favicon, dan kata kunci di halaman ini.
               </p>
             </div>
 
@@ -285,70 +256,9 @@ export default function KelolaSeoPage() {
                 )}
               </div>
             </div>
-
-            {/* Section 2: Integrasi Tools SEO */}
-            <div className="self-stretch flex flex-col gap-5 pt-4 border-t border-g1/10">
-              <SectionHeading
-                number={2}
-                title="Integrasi Tools SEO"
-                info="Hubungkan alat analisis web untuk memantau lalu lintas pengunjung dan performa pencarian website."
-              />
-
-              {/* Integration Item: Google Analytics */}
-              <div className="self-stretch px-4 sm:px-6 py-3.5 bg-white-90/60 border border-white-80 hover:border-g1 transition-colors rounded-2xl sm:rounded-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="flex items-center gap-3.5">
-                  <LordIcon
-                    name="Dashboard"
-                    size={26}
-                    trigger="hover"
-                    target="div"
-                    primaryColor="#0A9863"
-                    secondaryColor="#0A9863"
-                  />
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-sm font-semibold text-dark font-sans">
-                      Google Analytics 4 (GA4)
-                    </span>
-                    <span className="text-xs text-dark/60 font-sans">
-                      {settings.ga_connected
-                        ? `Terhubung dengan ID: ${settings.ga_measurement_id || "Aktif"}`
-                        : "Belum terhubung ke properti Google Analytics"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 self-end sm:self-auto">
-                  {/* Status Badge */}
-                  {settings.ga_connected ? (
-                    <Badge text="Aktif" variant="green" showDot={true} />
-                  ) : (
-                    <Badge text="Belum Terhubung" variant="orange" showDot={false} />
-                  )}
-
-                  {/* Connect / Edit Button */}
-                  <Button
-                    type="button"
-                    text={settings.ga_connected ? "Kelola Integrasi" : "Hubungkan"}
-                    leftIcon={settings.ga_connected ? "Setting" : "Global"}
-                    variant="ghost-green"
-                    onClick={() => setGaModalOpen(true)}
-                    className="cursor-pointer"
-                  />
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </main>
-
-      {/* Connect Google Analytics Modal */}
-      <ConnectGaModal
-        isOpen={gaModalOpen}
-        isConnected={settings.ga_connected}
-        measurementId={settings.ga_measurement_id}
-        onSave={handleSaveGaConnection}
-        onClose={() => setGaModalOpen(false)}
-      />
 
       {/* Toast Notification */}
       <Notification
