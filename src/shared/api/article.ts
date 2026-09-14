@@ -79,6 +79,7 @@ export async function getArticleById(id: string | number): Promise<ArticlePayloa
           category: row.category ? [row.category] : ["Umum"],
           categoryColor: [row.category_color?.toLowerCase() || "green"],
           content: row.content || "",
+          imageUrl: row.img_url || null,
           createdAt: row.created_at,
           author: "Admin",
         };
@@ -138,6 +139,7 @@ export async function addArticle(
       category: categoryString,
       category_color: categoryColorVal,
       content: data.content,
+      img_url: imageUrl,
     });
 
     const newArticle: ArticlePayload = {
@@ -240,6 +242,7 @@ export async function editArticle(
       category: categoryString,
       category_color: categoryColorVal,
       content: data.content,
+      img_url: targetArticle.imageUrl,
     });
   } catch (err: any) {
     const errorDetails = err?.message || err?.details || err?.hint || (typeof err === "string" ? err : JSON.stringify(err));

@@ -6,6 +6,7 @@ export interface SupabaseArticleRow {
   category: string | null;
   category_color: string | null;
   content: string | null;
+  img_url?: string | null;
   created_at: string;
   edited_at: string;
 }
@@ -22,6 +23,7 @@ export interface CreateArticlePayload {
   category?: string | null;
   category_color?: string | null;
   content?: string | null;
+  img_url?: string | null;
 }
 
 export interface EditArticlePayload {
@@ -29,6 +31,7 @@ export interface EditArticlePayload {
   category?: string | null;
   category_color?: string | null;
   content?: string | null;
+  img_url?: string | null;
 }
 
 const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
@@ -100,12 +103,16 @@ export async function getArticleById(id: string): Promise<SupabaseArticleRow | n
  * Add / Create a new article in Supabase `public.article` table
  */
 export async function addArticle(payload: CreateArticlePayload): Promise<SupabaseArticleRow> {
-  const insertData = {
+  const insertData: Record<string, any> = {
     title: payload.title,
     category: payload.category || null,
     category_color: payload.category_color || null,
     content: payload.content || null,
   };
+
+  if (payload.img_url !== undefined) {
+    insertData.img_url = payload.img_url;
+  }
 
   const { data, error } = await supabase
     .from("article")
@@ -141,6 +148,7 @@ export async function editArticle(
   if (payload.category !== undefined) updateData.category = payload.category;
   if (payload.category_color !== undefined) updateData.category_color = payload.category_color;
   if (payload.content !== undefined) updateData.content = payload.content;
+  if (payload.img_url !== undefined) updateData.img_url = payload.img_url;
 
   const { data, error } = await supabase
     .from("article")
