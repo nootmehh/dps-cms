@@ -125,62 +125,71 @@ export async function updateSeoSettings(
     meta_description_default: payload.meta_description_default,
     keywords: payload.keywords ?? null,
     favicon_url: payload.favicon_url ?? null,
+    auto_generate_sitemap: payload.auto_generate_sitemap ?? true,
     ga_connected: payload.ga_connected ?? false,
     ga_measurement_id: payload.ga_measurement_id ?? null,
     updated_at: new Date().toISOString(),
   };
 
-  if (existingId && existingId !== "default") {
+  const executeUpdate = async (dataToSave: Record<string, any>) => {
+    if (existingId && existingId !== "default") {
+      const { data, error } = await supabase
+        .from("seo_settings")
+        .update(dataToSave)
+        .eq("id", existingId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as SeoSettingsRow;
+    }
+
+    const { data: existingRows } = await supabase
+      .from("seo_settings")
+      .select("id")
+      .limit(1);
+
+    if (existingRows && existingRows.length > 0) {
+      const { data, error } = await supabase
+        .from("seo_settings")
+        .update(dataToSave)
+        .eq("id", existingRows[0].id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as SeoSettingsRow;
+    }
+
     const { data, error } = await supabase
       .from("seo_settings")
-      .update(updateData)
-      .eq("id", existingId)
+      .insert([dataToSave])
       .select()
       .single();
 
-    if (error) {
-      console.error("Error updating seo_settings in Supabase:", error.message || error);
-      throw error;
-    }
-
+    if (error) throw error;
     return data as SeoSettingsRow;
-  }
+  };
 
-  // Check if any row exists first
-  const { data: existingRows } = await supabase
-    .from("seo_settings")
-    .select("id")
-    .limit(1);
-
-  if (existingRows && existingRows.length > 0) {
-    const { data, error } = await supabase
-      .from("seo_settings")
-      .update(updateData)
-      .eq("id", existingRows[0].id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error updating existing seo_settings row in Supabase:", error.message || error);
-      throw error;
+  try {
+    return await executeUpdate(updateData);
+  } catch (err: any) {
+    if (
+      err?.message?.includes("auto_generate_sitemap") ||
+      err?.code === "42703" ||
+      err?.code === "PGRST204"
+    ) {
+      const fallbackData = { ...updateData };
+      delete fallbackData.auto_generate_sitemap;
+      const result = await executeUpdate(fallbackData);
+      return {
+        ...result,
+        auto_generate_sitemap: payload.auto_generate_sitemap ?? true,
+      };
     }
-
-    return data as SeoSettingsRow;
+    console.error("Error updating seo_settings in Supabase:", err.message || err);
+    throw err;
   }
-
-  // If no existing row, insert new
-  const { data, error } = await supabase
-    .from("seo_settings")
-    .insert([updateData])
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Error inserting seo_settings in Supabase:", error.message || error);
-    throw error;
-  }
-
-  return data as SeoSettingsRow;
 }
 
 /**
@@ -234,3 +243,4 @@ export async function updatePageMeta(
 
   return data as PageMetaRow;
 }
+

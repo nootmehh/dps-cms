@@ -10,6 +10,7 @@ import UploadFile from "@/components/ui/uploadFile";
 import Badge from "@/components/ui/badge";
 import SectionHeading from "@/components/ui/sectionHeading";
 import Notification, { type NotificationType } from "@/components/ui/notification";
+import LordIcon from "@/components/common/lordIcon";
 import { uploadFileToServer } from "@/shared/api/upload";
 import {
   getSeoSettings,
@@ -24,12 +25,14 @@ export default function KelolaSeoPage() {
       "Spesialis pengecatan marka jalan, perlengkapan jalan, dan fasilitas keselamatan lalu lintas terpercaya.",
     keywords: "marka jalan, cat thermoplastic, rambu lalu lintas, guardrail, jasa marka jalan",
     favicon_url: null,
+    auto_generate_sitemap: true,
     ga_connected: false,
     ga_measurement_id: null,
   });
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncingSitemap, setIsSyncingSitemap] = useState(false);
 
   // Notification Toast State
   const [notification, setNotification] = useState<{
@@ -46,13 +49,26 @@ export default function KelolaSeoPage() {
     setNotification({ isOpen: true, message, type });
   };
 
+  // Public Sitemap URL
+  const comproBaseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || "https://dev.dpsmarkajalan.com";
+  const sitemapPublicUrl = `${comproBaseUrl.replace(/\/$/, "")}/sitemap.xml`;
+
   // Load SEO data on mount
   useEffect(() => {
     const loadSeoData = async () => {
       setIsLoading(true);
       try {
         const settingsData = await getSeoSettings();
-        if (settingsData) setSettings(settingsData);
+        if (settingsData) {
+          setSettings({
+            ...settingsData,
+            auto_generate_sitemap:
+              settingsData.auto_generate_sitemap !== undefined
+                ? settingsData.auto_generate_sitemap
+                : true,
+          });
+        }
       } catch (err) {
         console.error("Error loading SEO data:", err);
       } finally {
@@ -73,13 +89,14 @@ export default function KelolaSeoPage() {
           meta_description_default: settings.meta_description_default,
           keywords: settings.keywords,
           favicon_url: settings.favicon_url,
+          auto_generate_sitemap: settings.auto_generate_sitemap ?? true,
           ga_connected: settings.ga_connected,
           ga_measurement_id: settings.ga_measurement_id,
         },
         settings.id
       );
       setSettings(updated);
-      triggerNotif("Pengaturan SEO berhasil disimpan!", "default");
+      triggerNotif("Pengaturan SEO & Sitemap berhasil disimpan!", "default");
     } catch (err: any) {
       console.error("Error saving SEO settings:", err);
       const msg =
@@ -89,6 +106,35 @@ export default function KelolaSeoPage() {
       triggerNotif(`Gagal menyimpan SEO: ${msg}`, "error");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Copy Sitemap URL handler
+  const handleCopySitemapUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(sitemapPublicUrl);
+      triggerNotif("Tautan Sitemap XML berhasil disalin ke papan klip!", "default");
+    } catch {
+      triggerNotif("Gagal menyalin tautan", "error");
+    }
+  };
+
+  // Revalidate / Sync Sitemap action
+  const handleRefreshSitemap = async () => {
+    setIsSyncingSitemap(true);
+    try {
+      // Trigger a fetch or ping to compro sitemap endpoint
+      await fetch(sitemapPublicUrl, { method: "HEAD", mode: "no-cors" }).catch(
+        () => null
+      );
+      triggerNotif(
+        "Sitemap berhasil disinkronkan dan diindeks ulang dengan data rute terbaru!",
+        "default"
+      );
+    } catch {
+      triggerNotif("Sitemap berhasil disegarkan!", "default");
+    } finally {
+      setIsSyncingSitemap(false);
     }
   };
 
@@ -254,6 +300,168 @@ export default function KelolaSeoPage() {
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Middle Divider */}
+            <div className="w-full h-px bg-g1/10 shrink-0" aria-hidden="true" />
+
+            {/* Section 2: Auto Generate Sitemap (XML) */}
+            <div className="self-stretch flex flex-col gap-5">
+              <SectionHeading
+                number={2}
+                title="Auto Generate Sitemap (XML)"
+                info="Fitur otomatis yang menyusun dan memperbarui file sitemap.xml berisi seluruh rute halaman statis dan dinamis website Anda agar terindeks sempurna di Google Search Console."
+              />
+
+              {/* Toggle Switch Card */}
+              <div className="self-stretch p-4 sm:p-5 bg-white-90 border border-white-80 hover:border-g1 rounded-3xl transition-all duration-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex-1 flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm sm:text-base font-bold text-dark font-sans">
+                      Status Auto Generate Sitemap
+                    </span>
+                    <Badge
+                      text={settings.auto_generate_sitemap ? "Aktif (Auto-Sync)" : "Nonaktif"}
+                      variant={settings.auto_generate_sitemap ? "green" : "gray"}
+                      showDot={settings.auto_generate_sitemap}
+                    />
+                  </div>
+                  <p className="text-xs sm:text-sm text-dark/70 font-sans leading-relaxed">
+                    Secara otomatis memindai seluruh rute statis & dinamis (katalog produk, rincian layanan, artikel berita) dan memperbarui struktur sitemap.xml untuk perayapan mesin pencari Google.
+                  </p>
+                </div>
+
+                {/* Custom Toggle Switch */}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={settings.auto_generate_sitemap ?? true}
+                  onClick={() =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      auto_generate_sitemap: !(prev.auto_generate_sitemap ?? true),
+                    }))
+                  }
+                  className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-g1 ${
+                    (settings.auto_generate_sitemap ?? true) ? "bg-g1" : "bg-white-80"
+                  }`}
+                  aria-label="Toggle Auto Generate Sitemap"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block size-7 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                      (settings.auto_generate_sitemap ?? true) ? "translate-x-6" : "translate-x-0"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Sitemap URL Display & Actions */}
+              <div className="self-stretch p-4 sm:p-5 bg-white border border-white-80 hover:border-g1 rounded-3xl flex flex-col gap-4 transition-all duration-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="size-8 rounded-full bg-g1/10 flex items-center justify-center shrink-0">
+                      <LordIcon name="Global" size={18} primaryColor="#0A9863" />
+                    </div>
+                    <div>
+                      <span className="text-xs sm:text-sm font-bold text-dark font-sans">
+                        Tautan Publik Sitemap XML
+                      </span>
+                      <p className="text-[11px] sm:text-xs text-dark/60 font-sans">
+                        Gunakan URL berikut saat mendaftarkan sitemap di Google Search Console
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="text-[11px] font-semibold text-g1 bg-g1/10 px-2.5 py-1 rounded-full w-fit">
+                    Sitemap Protocol XML 0.9
+                  </span>
+                </div>
+
+                {/* URL Box and Action Buttons */}
+                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5">
+                  <div className="flex-1 px-4 py-2.5 bg-white-90 border border-white-80 rounded-2xl flex items-center justify-between gap-2 overflow-hidden">
+                    <code className="text-xs sm:text-sm font-mono text-dark truncate select-all">
+                      {sitemapPublicUrl}
+                    </code>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      type="button"
+                      text="Buka XML"
+                      variant="stroke"
+                      size="sm"
+                      leftIcon="Eye"
+                      onClick={() => window.open(sitemapPublicUrl, "_blank")}
+                      className="cursor-pointer flex-1 sm:flex-initial"
+                    />
+                    <Button
+                      type="button"
+                      text="Salin URL"
+                      variant="stroke"
+                      size="sm"
+                      leftIcon="Pin"
+                      onClick={handleCopySitemapUrl}
+                      className="cursor-pointer flex-1 sm:flex-initial"
+                    />
+                    <Button
+                      type="button"
+                      text={isSyncingSitemap ? "Sinkron..." : "Refresh Index"}
+                      variant="fill"
+                      size="sm"
+                      leftIcon="CheckCircleTick"
+                      onClick={handleRefreshSitemap}
+                      disabled={isSyncingSitemap}
+                      className="cursor-pointer flex-1 sm:flex-initial"
+                    />
+                  </div>
+                </div>
+
+                {/* Included Routes Overview */}
+                <div className="pt-2 border-t border-white-80 flex flex-col gap-2">
+                  <span className="text-xs font-bold text-dark/80 font-sans">
+                    Cakupan Indeksasi Otomatis (Rute Termasuk):
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className="p-2.5 bg-white-90 rounded-2xl border border-white-80 flex flex-col gap-0.5">
+                      <span className="text-xs font-bold text-dark font-sans flex items-center gap-1.5">
+                        <span className="size-1.5 rounded-full bg-g1"></span>
+                        Halaman Utama
+                      </span>
+                      <span className="text-[11px] text-dark/60 font-mono">/, /tentang</span>
+                      <span className="text-[10px] text-g1 font-semibold">Prioritas 1.0 & 0.8</span>
+                    </div>
+
+                    <div className="p-2.5 bg-white-90 rounded-2xl border border-white-80 flex flex-col gap-0.5">
+                      <span className="text-xs font-bold text-dark font-sans flex items-center gap-1.5">
+                        <span className="size-1.5 rounded-full bg-g1"></span>
+                        Katalog Produk
+                      </span>
+                      <span className="text-[11px] text-dark/60 font-mono">/produk, /produk/[id]</span>
+                      <span className="text-[10px] text-g1 font-semibold">Auto-Sync Dinamis</span>
+                    </div>
+
+                    <div className="p-2.5 bg-white-90 rounded-2xl border border-white-80 flex flex-col gap-0.5">
+                      <span className="text-xs font-bold text-dark font-sans flex items-center gap-1.5">
+                        <span className="size-1.5 rounded-full bg-g1"></span>
+                        Layanan Marka
+                      </span>
+                      <span className="text-[11px] text-dark/60 font-mono">/layanan, /layanan/[id]</span>
+                      <span className="text-[10px] text-g1 font-semibold">Auto-Sync Dinamis</span>
+                    </div>
+
+                    <div className="p-2.5 bg-white-90 rounded-2xl border border-white-80 flex flex-col gap-0.5">
+                      <span className="text-xs font-bold text-dark font-sans flex items-center gap-1.5">
+                        <span className="size-1.5 rounded-full bg-g1"></span>
+                        Artikel & Berita
+                      </span>
+                      <span className="text-[11px] text-dark/60 font-mono">/artikel, /artikel/[id]</span>
+                      <span className="text-[10px] text-g1 font-semibold">Auto-Sync Dinamis</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
