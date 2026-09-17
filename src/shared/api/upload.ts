@@ -112,16 +112,21 @@ export function notifyUploadError(message: string = UPLOAD_TIMEOUT_MESSAGE): voi
  */
 export async function uploadFileToServer(
   file: File | Blob,
-  folder: string = "media"
+  folder: string = "media",
+  options?: { noConvert?: boolean }
 ): Promise<string> {
   const formData = new FormData();
 
   if (file instanceof File) {
     formData.append("file", file, file.name);
   } else {
-    formData.append("file", file, `upload_${Date.now()}.webp`);
+    formData.append("file", file, options?.noConvert ? `upload_${Date.now()}` : `upload_${Date.now()}.webp`);
   }
   formData.append("folder", folder);
+
+  if (options?.noConvert) {
+    formData.append("noConvert", "true");
+  }
 
   const endpoint = getUploadEndpoint();
   const controller = new AbortController();

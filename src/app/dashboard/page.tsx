@@ -55,7 +55,7 @@ function VisitorsBarChart({
   if (!trends || trends.length === 0) {
     return (
       <div className="w-full h-44 flex flex-col items-center justify-center gap-1 text-dark/40 text-xs font-sans">
-        <span>Belum ada riwayat tren kunjungan harian di Google Analytics.</span>
+        <span>Belum ada riwayat kunjungan harian.</span>
       </div>
     );
   }
@@ -137,7 +137,7 @@ function VisitorsBarChart({
                   y={y}
                   width={barWidth}
                   height={barH}
-                  rx={barWidth / 2}
+                  rx={3}
                   fill="#0A9863"
                   className={`transition-all duration-200 ${
                     isHovered ? "opacity-80" : "opacity-100"
@@ -185,7 +185,7 @@ function PageViewsAreaChart({
   if (!trends || trends.length === 0) {
     return (
       <div className="w-full h-44 flex flex-col items-center justify-center gap-1 text-dark/40 text-xs font-sans">
-        <span>Belum ada riwayat tren tayangan harian di Google Analytics.</span>
+        <span>Belum ada riwayat tayangan harian.</span>
       </div>
     );
   }
@@ -505,7 +505,7 @@ export default function DashboardPage() {
                   <h1 className="text-g1 text-xl sm:text-2xl md:text-3xl font-bold font-sans">
                     Dashboard Performa Website
                   </h1>
-                  <Badge text={periodLabel} variant="green" />
+                  <Badge text={periodLabel} variant="blue" />
                   {realtimeUsers > 0 && (
                     <div className="h-7 px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full inline-flex items-center gap-1.5 animate-pulse">
                       <div className="size-2 bg-emerald-500 rounded-full" />
@@ -516,7 +516,7 @@ export default function DashboardPage() {
                   )}
                 </div>
                 <p className="text-dark/70 text-xs sm:text-sm font-normal font-sans">
-                  Statistik performa kunjungan website periode {periodLabel.toLowerCase()} dari Google Analytics 4.
+                  Statistik dan performa kunjungan website
                 </p>
               </div>
 
@@ -526,7 +526,6 @@ export default function DashboardPage() {
                   type="button"
                   text={loading ? "Memuat..." : "Muat Ulang"}
                   variant="unique-stroke"
-                  leftIcon="Clock"
                   disabled={loading}
                   onClick={() => fetchAnalytics(true)}
                 />
@@ -541,13 +540,13 @@ export default function DashboardPage() {
                ============================================================== */}
             <div className="self-stretch grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 shrink-0">
               {/* KPI 1: Active Users */}
-              <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-linear-to-br from-g1/10 via-white to-white border border-g1/25 flex flex-col justify-between gap-3 shadow-2xs hover:shadow-xs transition-all duration-200">
+              <div className="p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-white border border-white-80 hover:border-g1/40 transition-colors shadow-2xs flex flex-col justify-between gap-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-dark/60 font-sans">
+                  <span className="text-xs font-semibold text-dark/70 font-sans">
                     Total Pengunjung ({periodLabel.split(" ")[0]})
                   </span>
-                  <div className="size-9 rounded-xl bg-g1/15 flex items-center justify-center shrink-0">
-                    <LordIcon name="User" size={22} primaryColor="#0a9863" secondaryColor="#06d07a" />
+                  <div className="size-8 rounded-full bg-g1/10 flex items-center justify-center shrink-0">
+                    <LordIcon name="User" size={18} primaryColor="#0a9863" secondaryColor="#06d07a" />
                   </div>
                 </div>
                 <div>
@@ -558,19 +557,19 @@ export default function DashboardPage() {
                     <span className="text-[11px] font-semibold text-g1 font-sans">
                       Hari ini: +{todayStats.users}
                     </span>
-                    <span className="text-[11px] text-dark/45 font-sans">• Pengunjung unik bulan ini</span>
+                    <span className="text-[11px] text-dark/45 font-sans">• Pengunjung bulan ini</span>
                   </div>
                 </div>
               </div>
 
               {/* KPI 2: Page Views */}
-              <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-linear-to-br from-blue-state/10 via-white to-white border border-blue-state/25 flex flex-col justify-between gap-3 shadow-2xs hover:shadow-xs transition-all duration-200">
+              <div className="p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-white border border-white-80 hover:border-blue-state/40 transition-colors shadow-2xs flex flex-col justify-between gap-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-dark/60 font-sans">
+                  <span className="text-xs font-semibold text-dark/70 font-sans">
                     Total Halaman Dilihat ({periodLabel.split(" ")[0]})
                   </span>
-                  <div className="size-9 rounded-xl bg-blue-state/15 flex items-center justify-center shrink-0">
-                    <LordIcon name="Eye" size={22} primaryColor="#4c94f9" secondaryColor="#0a9863" />
+                  <div className="size-8 rounded-full bg-blue-state/10 flex items-center justify-center shrink-0">
+                    <LordIcon name="Eye" size={18} primaryColor="#4c94f9" secondaryColor="#0a9863" />
                   </div>
                 </div>
                 <div>
@@ -581,28 +580,28 @@ export default function DashboardPage() {
                     <span className="text-[11px] font-semibold text-blue-state font-sans">
                       Hari ini: +{todayStats.views}
                     </span>
-                    <span className="text-[11px] text-dark/45 font-sans">• Akumulasi tayangan bulan ini</span>
+                    <span className="text-[11px] text-dark/45 font-sans">• Tayangan bulan ini</span>
                   </div>
                 </div>
               </div>
 
               {/* KPI 3: Engagement Ratio */}
-              <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-linear-to-br from-yellow-state/20 via-white to-white border border-yellow-state/35 flex flex-col justify-between gap-3 shadow-2xs hover:shadow-xs transition-all duration-200 col-span-1 sm:col-span-2 lg:col-span-1">
+              <div className="p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-white border border-white-80 hover:border-orange-500/40 transition-colors shadow-2xs flex flex-col justify-between gap-3 col-span-1 sm:col-span-2 lg:col-span-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-dark/60 font-sans">
+                  <span className="text-xs font-semibold text-dark/70 font-sans">
                     Rasio Tayangan / User
                   </span>
-                  <div className="size-9 rounded-xl bg-yellow-state/30 flex items-center justify-center shrink-0">
-                    <LordIcon name="Dashboard" size={22} primaryColor="#0a9863" secondaryColor="#ffd84a" />
+                  <div className="size-8 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
+                    <LordIcon name="Dashboard" size={18} primaryColor="#ea580c" secondaryColor="#f97316" />
                   </div>
                 </div>
                 <div>
-                  <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-dark font-sans tracking-tight">
+                  <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-orange-600 font-sans tracking-tight">
                     {loading ? "..." : avgViewsPerUser}
                     <span className="text-xs font-normal text-dark/50 ml-1.5 font-sans">views / user</span>
                   </div>
                   <p className="text-[11px] text-dark/50 mt-1 font-sans">
-                    Tingkat kedalaman eksplorasi halaman oleh pengunjung
+                    Rata-rata tayangan per pengunjung
                   </p>
                 </div>
               </div>
@@ -613,20 +612,15 @@ export default function DashboardPage() {
                ============================================================== */}
             <div className="self-stretch grid grid-cols-1 lg:grid-cols-2 gap-4 shrink-0">
               {/* Diagram 1: Tren Pengunjung */}
-              <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-white-80 hover:border-g1/40 transition-colors shadow-2xs flex flex-col gap-3">
+              <div className="p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-white border border-white-80 hover:border-g1/40 transition-colors shadow-2xs flex flex-col gap-3">
                 <div className="flex items-center justify-between border-b border-white-90 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="size-8 rounded-lg bg-g1/10 flex items-center justify-center text-g1">
-                      <LordIcon name="User" size={18} primaryColor="#0A9863" secondaryColor="#06D07A" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-dark font-sans">
-                        Tren Pengunjung Harian
-                      </h3>
-                      <p className="text-[11px] text-dark/50 font-sans">
-                        Fluktuasi pengunjung unik per hari ({periodLabel})
-                      </p>
-                    </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-dark font-sans">
+                      Tren Pengunjung Harian
+                    </h3>
+                    <p className="text-[11px] text-dark/50 font-sans">
+                      Tren jumlah pengunjung harian
+                    </p>
                   </div>
                   <Badge text="Pengunjung" variant="green" showDot={true} />
                 </div>
@@ -635,20 +629,15 @@ export default function DashboardPage() {
               </div>
 
               {/* Diagram 2: Tren Tayangan Halaman */}
-              <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-white-80 hover:border-blue-state/40 transition-colors shadow-2xs flex flex-col gap-3">
+              <div className="p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-white border border-white-80 hover:border-blue-state/40 transition-colors shadow-2xs flex flex-col gap-3">
                 <div className="flex items-center justify-between border-b border-white-90 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="size-8 rounded-lg bg-blue-state/10 flex items-center justify-center text-blue-state">
-                      <LordIcon name="Eye" size={18} primaryColor="#4C94F9" secondaryColor="#0A9863" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-dark font-sans">
-                        Tren Tayangan Halaman
-                      </h3>
-                      <p className="text-[11px] text-dark/50 font-sans">
-                        Total halaman dibuka per hari ({periodLabel})
-                      </p>
-                    </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-dark font-sans">
+                      Tren Tayangan Halaman
+                    </h3>
+                    <p className="text-[11px] text-dark/50 font-sans">
+                      Tren jumlah tayangan harian
+                    </p>
                   </div>
                   <Badge text="Tayangan" variant="blue" showDot={true} />
                 </div>
@@ -668,19 +657,19 @@ export default function DashboardPage() {
                     Konten Terpopuler
                   </h2>
                   <p className="text-xs text-dark/50 font-sans">
-                    Halaman produk, layanan, dan artikel yang paling banyak menarik minat calon klien
+                    Daftar halaman dengan kunjungan terbanyak
                   </p>
                 </div>
 
                 {/* Filter Category Tabs */}
-                <div className="flex flex-wrap items-center gap-1.5 p-1 bg-white-90 rounded-2xl border border-white-80">
+                <div className="flex flex-wrap items-center gap-1.5 p-1 bg-white-90 rounded-full border border-white-80">
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedCategory("all");
                       setCurrentPage(1);
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold font-sans transition-all cursor-pointer ${
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold font-sans transition-all cursor-pointer ${
                       selectedCategory === "all"
                         ? "bg-white text-g1 shadow-xs"
                         : "text-dark/60 hover:text-dark"
@@ -695,7 +684,7 @@ export default function DashboardPage() {
                       setSelectedCategory("produk");
                       setCurrentPage(1);
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold font-sans transition-all cursor-pointer ${
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold font-sans transition-all cursor-pointer ${
                       selectedCategory === "produk"
                         ? "bg-white text-blue-state shadow-xs"
                         : "text-dark/60 hover:text-dark"
@@ -710,7 +699,7 @@ export default function DashboardPage() {
                       setSelectedCategory("layanan");
                       setCurrentPage(1);
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold font-sans transition-all cursor-pointer ${
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold font-sans transition-all cursor-pointer ${
                       selectedCategory === "layanan"
                         ? "bg-white text-g1 shadow-xs"
                         : "text-dark/60 hover:text-dark"
@@ -725,7 +714,7 @@ export default function DashboardPage() {
                       setSelectedCategory("artikel");
                       setCurrentPage(1);
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold font-sans transition-all cursor-pointer ${
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold font-sans transition-all cursor-pointer ${
                       selectedCategory === "artikel"
                         ? "bg-white text-yellow-700 shadow-xs"
                         : "text-dark/60 hover:text-dark"
@@ -764,15 +753,15 @@ export default function DashboardPage() {
               </div>
 
               {/* Table Container */}
-              <div className="self-stretch bg-white rounded-2xl border border-white-80 overflow-x-auto min-h-60">
+              <div className="self-stretch flex-1 bg-white flex flex-col justify-start items-start gap-2 overflow-x-auto min-h-0 w-full pr-1">
                 {/* Table Header */}
-                <div className="self-stretch min-w-190 h-11 bg-white-90/80 rounded-t-2xl flex items-center px-4 select-none border-b border-white-80 text-xs font-semibold text-g1 font-sans">
-                  <div className="w-14">Rank</div>
-                  <div className="flex-1">Judul & URL Halaman</div>
-                  <div className="w-32">Kategori</div>
-                  <div className="w-32 text-right pr-4">Pengunjung</div>
-                  <div className="w-32 text-right pr-4">Tayangan</div>
-                  <div className="w-36 text-right">Popularitas</div>
+                <div className="self-stretch min-w-210 h-11 bg-white-90 rounded-xl flex items-center px-4 overflow-hidden select-none sticky top-0 z-10 shrink-0">
+                  <div className="w-14 text-g1 text-xs font-semibold font-sans">No.</div>
+                  <div className="flex-1 text-g1 text-xs font-semibold font-sans">Judul & URL Halaman</div>
+                  <div className="w-40 text-g1 text-xs font-semibold font-sans">Kategori</div>
+                  <div className="w-32 text-right pr-4 text-g1 text-xs font-semibold font-sans">Pengunjung</div>
+                  <div className="w-32 text-right pr-4 text-g1 text-xs font-semibold font-sans">Tayangan</div>
+                  <div className="w-36 text-right pr-2 text-g1 text-xs font-semibold font-sans">Popularitas</div>
                 </div>
 
                 {/* Table Body */}
@@ -780,20 +769,35 @@ export default function DashboardPage() {
                   <div className="w-full py-16 flex flex-col items-center justify-center gap-3 text-g1">
                     <div className="w-8 h-8 border-3 border-g1 border-t-transparent rounded-full animate-spin" />
                     <span className="text-xs font-semibold text-dark/60 font-sans">
-                      Memuat data performa website...
+                      Memuat data performa...
                     </span>
                   </div>
                 ) : filteredData.length === 0 ? (
-                  <div className="py-12">
-                    <EmptyState
-                      iconName="Dashboard"
-                      text={
-                        searchQuery || selectedCategory !== "all"
-                          ? "Tidak ada konten yang sesuai dengan filter atau pencarian Anda."
-                          : "Belum ada data kunjungan yang terekam dari Google Analytics."
-                      }
-                    />
-                  </div>
+                  <EmptyState
+                    text={
+                      searchQuery || selectedCategory !== "all"
+                        ? "Tidak ada konten yang sesuai dengan pencarian."
+                        : "Belum ada data kunjungan yang tersedia."
+                    }
+                  >
+                    {!searchQuery && selectedCategory === "all" && (
+                      <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                        <Button
+                          type="button"
+                          text="Muat Ulang Data"
+                          variant="unique-stroke"
+                          onClick={() => fetchAnalytics(true)}
+                        />
+                        <Button
+                          type="button"
+                          text="Pengaturan SEO"
+                          variant="fill"
+                          rightIcon="ArrowRight"
+                          onClick={() => router.push("/kelola-seo")}
+                        />
+                      </div>
+                    )}
+                  </EmptyState>
                 ) : (
                   paginatedData.map((item, index) => {
                     const rankNum = (currentPage - 1) * itemsPerPage + index + 1;
@@ -804,41 +808,25 @@ export default function DashboardPage() {
                     return (
                       <div
                         key={`${item.path}-${index}`}
-                        className="self-stretch min-w-190 min-h-14 border-b border-white-90 hover:bg-white-90/50 transition-colors flex items-center px-4 py-2.5"
+                        className="self-stretch min-w-210 min-h-13.5 border-b border-white-90 hover:bg-white-90/60 transition-colors flex items-center px-4 py-2"
                       >
-                        {/* Rank Badge */}
-                        <div className="w-14 flex items-center">
-                          {rankNum === 1 ? (
-                            <span className="size-6 rounded-full bg-yellow-400 text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                              1
-                            </span>
-                          ) : rankNum === 2 ? (
-                            <span className="size-6 rounded-full bg-slate-300 text-slate-700 font-bold text-xs flex items-center justify-center">
-                              2
-                            </span>
-                          ) : rankNum === 3 ? (
-                            <span className="size-6 rounded-full bg-amber-600/70 text-white font-bold text-xs flex items-center justify-center">
-                              3
-                            </span>
-                          ) : (
-                            <span className="text-xs font-medium text-dark/60 font-sans pl-1.5">
-                              #{rankNum}
-                            </span>
-                          )}
+                        {/* No. */}
+                        <div className="w-14 text-dark/90 text-xs font-normal font-sans">
+                          {rankNum}.
                         </div>
 
                         {/* Title & Path */}
-                        <div className="flex-1 flex flex-col justify-center min-w-0 pr-4">
-                          <span className="font-semibold text-xs sm:text-sm text-dark font-sans truncate">
+                        <div className="flex-1 flex flex-col justify-center pr-4 min-w-0">
+                          <span className="text-dark/90 text-xs font-semibold font-sans line-clamp-1">
                             {item.title || "Tanpa Judul"}
                           </span>
-                          <span className="text-[11px] text-dark/45 font-mono truncate mt-0.5">
+                          <span className="text-[11px] text-dark/50 font-mono truncate mt-0.5">
                             {item.path}
                           </span>
                         </div>
 
                         {/* Category Badge */}
-                        <div className="w-32 flex items-center">
+                        <div className="w-40 flex items-center pr-2">
                           <Badge
                             text={catInfo.label}
                             variant={catInfo.badgeVariant}
@@ -848,20 +836,20 @@ export default function DashboardPage() {
 
                         {/* Users */}
                         <div className="w-32 text-right pr-4">
-                          <span className="text-xs sm:text-sm font-semibold text-dark font-sans">
+                          <span className="text-dark/75 text-xs font-normal font-sans">
                             {item.users.toLocaleString("id-ID")}
                           </span>
                         </div>
 
                         {/* Views */}
                         <div className="w-32 text-right pr-4">
-                          <span className="text-xs sm:text-sm font-semibold text-g1 font-sans">
+                          <span className="text-g1 text-xs font-semibold font-sans">
                             {item.views.toLocaleString("id-ID")}
                           </span>
                         </div>
 
                         {/* Popularity Bar */}
-                        <div className="w-36 flex items-center justify-end gap-2.5">
+                        <div className="w-36 flex items-center justify-end gap-2.5 pr-2">
                           <div className="w-16 bg-white-80 rounded-full h-1.5 overflow-hidden">
                             <div
                               className="bg-g1 h-full rounded-full transition-all duration-300"
@@ -878,9 +866,12 @@ export default function DashboardPage() {
                 )}
               </div>
 
+              {/* Bottom Divider */}
+              <div className="w-full h-px bg-g1/10 shrink-0" aria-hidden="true" />
+
               {/* Pagination */}
-              {!loading && filteredData.length > itemsPerPage && (
-                <div className="self-stretch pt-2">
+              {!loading && filteredData.length > 0 && (
+                <div className="self-stretch shrink-0">
                   <Pagination
                     currentPage={currentPage}
                     totalItems={filteredData.length}

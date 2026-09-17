@@ -164,7 +164,7 @@ export default function TabContentBeranda({
           onFilesSelected={async (files) => {
             if (files[0]) {
               try {
-                const uploadedUrl = await uploadFileToServer(files[0], "site");
+                const uploadedUrl = await uploadFileToServer(files[0], "site", { noConvert: true });
                 onChange((prev) => ({ ...prev, hero_img_url: uploadedUrl }));
               } catch (err: any) {
                 onError?.(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.");

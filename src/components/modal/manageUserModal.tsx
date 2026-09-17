@@ -21,7 +21,6 @@ export interface ManageUserModalProps {
 }
 
 const ROLE_OPTIONS: DropdownOption[] = [
-  { value: "Super Admin", label: "Super Admin" },
   { value: "Admin", label: "Admin" },
 ];
 
