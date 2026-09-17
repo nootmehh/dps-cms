@@ -47,24 +47,50 @@ function saveStoredArticles(articles: ArticlePayload[]) {
   }
 }
 
-export async function getConsistingCategories(): Promise<string[]> {
-  const cats = new Set<string>();
+export async function getArticleCategoryColorMap(): Promise<Record<string, string>> {
+  const map: Record<string, string> = {};
   try {
     const supabaseArticles = await getSupabaseArticles();
     if (supabaseArticles && supabaseArticles.length > 0) {
       supabaseArticles.forEach((a) => {
-        if (a.category) cats.add(a.category);
+        if (a.category && a.category.trim()) {
+          a.category.split(",").forEach((c) => {
+            const trimmed = c.trim();
+            if (trimmed) {
+              const col = (a.category_color || "").trim().toLowerCase();
+              if (col && !map[trimmed]) {
+                map[trimmed] = col;
+              } else if (!map[trimmed]) {
+                map[trimmed] = "green";
+              }
+            }
+          });
+        }
       });
-      return Array.from(cats);
+      if (Object.keys(map).length > 0) {
+        return map;
+      }
     }
-  } catch {
-    // ignore
+  } catch (err) {
+    console.warn("Could not fetch article categories from Supabase:", err);
   }
+
   const articles = getStoredArticles();
   articles.forEach((a) => {
-    (a.category || []).forEach((c) => cats.add(c));
+    (a.category || []).forEach((c, idx) => {
+      const trimmed = c?.trim();
+      if (trimmed && !map[trimmed]) {
+        map[trimmed] = (a.categoryColor?.[idx] || a.categoryColor?.[0] || "green").toLowerCase();
+      }
+    });
   });
-  return Array.from(cats);
+
+  return map;
+}
+
+export async function getConsistingCategories(): Promise<string[]> {
+  const colorMap = await getArticleCategoryColorMap();
+  return Object.keys(colorMap);
 }
 
 export async function getArticleById(id: string | number): Promise<ArticlePayload | null> {
@@ -101,7 +127,13 @@ export async function getArticleById(id: string | number): Promise<ArticlePayloa
   return found || null;
 }
 
-import { uploadFileToServer, checkVpsHealth, notifyUploadError } from "@/shared/api/upload";
+import {
+  uploadFileToServer,
+  checkVpsHealth,
+  notifyUploadError,
+  deleteFileFromServer,
+  isManualUploadUrl,
+} from "@/shared/api/upload";
 import { convertImageFileToWebP } from "@/shared/api/media";
 
 export async function addArticle(
@@ -180,6 +212,9 @@ export async function editArticle(
     uploadedBannerUrl = await uploadFileToServer(webpFile, "articles");
   }
 
+  const existingArticle = articles.find((a) => String(a.id) === String(id));
+  const oldImageUrl = existingArticle?.imageUrl;
+
   const updated = articles.map((article) => {
     if (String(article.id) === String(id)) {
       let finalImageUrl = article.imageUrl;
@@ -190,6 +225,13 @@ export async function editArticle(
         finalImageUrl = uploadedBannerUrl;
       } else if (data.imageUrl !== undefined) {
         finalImageUrl = data.imageUrl;
+      }
+
+      // If previous banner is replaced or removed, purge it from VPS disk
+      if (oldImageUrl && finalImageUrl !== oldImageUrl && isManualUploadUrl(oldImageUrl)) {
+        deleteFileFromServer(oldImageUrl).catch((err) =>
+          console.warn(`Failed to delete obsolete article image: ${oldImageUrl}`, err)
+        );
       }
 
       updatedArticle = {
@@ -255,9 +297,18 @@ export async function editArticle(
 
 export async function deleteArticle(id: string | number): Promise<void> {
   const strId = String(id);
+  const articles = getStoredArticles();
+  const existing = articles.find((a) => String(a.id) === strId);
+
+  // Purge article image from VPS disk
+  if (existing?.imageUrl && isManualUploadUrl(existing.imageUrl)) {
+    deleteFileFromServer(existing.imageUrl).catch((err) =>
+      console.warn(`Failed to delete article image on deletion: ${existing.imageUrl}`, err)
+    );
+  }
+
   await deleteSupabaseArticle(strId);
 
-  const articles = getStoredArticles();
   const nextArticles = articles.filter((a) => String(a.id) !== strId);
   saveStoredArticles(nextArticles);
 }

@@ -16,6 +16,7 @@ import {
   addArticle,
   editArticle,
   getConsistingCategories,
+  getArticleCategoryColorMap,
 } from "../../shared/api/article";
 import { uploadFileToServer } from "@/shared/api/upload";
 
@@ -28,7 +29,7 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
 
   const [articleName, setArticleName] = useState("");
   const [articleNameIndonesia, setArticleNameIndonesia] = useState("");
-  const [categories, setCategories] = useState<string[]>([""]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [categoryColors, setCategoryColors] = useState<string[]>(["green"]);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
@@ -40,6 +41,7 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [loading, setLoading] = useState(false);
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [categoryColorMap, setCategoryColorMap] = useState<Record<string, string>>({});
 
   const [notification, setNotification] = useState<{
     isOpen: boolean;
@@ -75,11 +77,21 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const existing = await getConsistingCategories();
+        const [existing, colorMap] = await Promise.all([
+          getConsistingCategories(),
+          getArticleCategoryColorMap(),
+        ]);
+        setCategoryColorMap(colorMap);
         if (existing.length > 0) {
           setAvailableCategories(existing);
           if (!id) {
             setCategories([existing[0]]);
+            const matchedKey = Object.keys(colorMap).find(
+              (k) => k.toLowerCase() === existing[0].trim().toLowerCase()
+            );
+            if (matchedKey && colorMap[matchedKey]) {
+              setCategoryColors([colorMap[matchedKey]]);
+            }
           }
         }
       } catch (err) {
@@ -100,7 +112,7 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
         if (article) {
           setArticleName(article.title);
           setArticleNameIndonesia(article.titleIndonesia || article.title || "");
-          setCategories(article.category && article.category.length > 0 ? article.category : ["Keselamatan Jalan"]);
+          setCategories(article.category && article.category.length > 0 ? article.category : []);
           setCategoryColors(
             article.categoryColor && article.categoryColor.length > 0
               ? article.categoryColor.map((c) => c.toLowerCase())
@@ -276,44 +288,68 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
                 />
 
                 {/* Category & Badge Color */}
-                <div className="flex flex-col md:flex-row items-stretch gap-4 w-full">
-                  <Dropdown
-                    label={
-                      <span>
-                        Kategori Artikel <span className="text-red-state">*</span>
-                      </span>
-                    }
-                    placeholder="Pilih atau ketik kategori..."
-                    options={availableCategories.map((c) => ({ value: c, label: c }))}
-                    value={categories[0] || ""}
-                    onChange={(val) => setCategories([val])}
-                    multiple={false}
-                    allowCustomValues={true}
-                    containerClassName="flex-1 max-w-none"
-                  />
+                {(() => {
+                  const selectedCategory = categories[0] || "";
+                  const matchedCategoryKey = Object.keys(categoryColorMap).find(
+                    (k) => k.toLowerCase() === selectedCategory.trim().toLowerCase()
+                  );
+                  const isExistingCategory = Boolean(selectedCategory.trim() && matchedCategoryKey);
 
-                  <Dropdown
-                    label={
-                      <span>
-                        Warna Badge Kategori <span className="text-red-state">*</span>
-                      </span>
-                    }
-                    placeholder="Pilih Warna"
-                    options={[
-                      { value: "green", label: <Badge variant="green" text="Green" />, searchLabel: "Green" },
-                      { value: "blue", label: <Badge variant="blue" text="Blue" />, searchLabel: "Blue" },
-                      { value: "red", label: <Badge variant="red" text="Red" />, searchLabel: "Red" },
-                      { value: "yellow", label: <Badge variant="yellow" text="Yellow" />, searchLabel: "Yellow" },
-                      { value: "purple", label: <Badge variant="purple" text="Purple" />, searchLabel: "Purple" },
-                      { value: "orange", label: <Badge variant="orange" text="Orange" />, searchLabel: "Orange" },
-                    ]}
-                    value={categoryColors[0]?.toLowerCase() || "green"}
-                    onChange={(val) => setCategoryColors([val])}
-                    multiple={false}
-                    containerClassName="w-full max-w-none md:w-60 shrink-0"
-                    selectClassName="bg-white"
-                  />
-                </div>
+                  return (
+                    <div className="flex flex-col md:flex-row items-stretch gap-4 w-full">
+                      <Dropdown
+                        label={
+                          <span>
+                            Kategori Artikel <span className="text-red-state">*</span>
+                          </span>
+                        }
+                        placeholder="Pilih atau ketik kategori..."
+                        options={availableCategories.map((c) => ({ value: c, label: c }))}
+                        value={selectedCategory}
+                        onChange={(val) => {
+                          setCategories([val]);
+                          const matched = Object.keys(categoryColorMap).find(
+                            (k) => k.toLowerCase() === val.trim().toLowerCase()
+                          );
+                          if (matched && categoryColorMap[matched]) {
+                            setCategoryColors([categoryColorMap[matched]]);
+                          }
+                        }}
+                        multiple={false}
+                        allowCustomValues={true}
+                        containerClassName="flex-1 max-w-none"
+                      />
+
+                      <Dropdown
+                        label={
+                          <span className="flex items-center gap-1.5">
+                            Warna Badge Kategori <span className="text-red-state">*</span>
+                            {isExistingCategory && (
+                              <span className="text-[10px] text-dark/40 font-normal">
+                                (Terkunci otomatis)
+                              </span>
+                            )}
+                          </span>
+                        }
+                        placeholder="Pilih Warna"
+                        options={[
+                          { value: "green", label: <Badge variant="green" text="Green" />, searchLabel: "Green" },
+                          { value: "blue", label: <Badge variant="blue" text="Blue" />, searchLabel: "Blue" },
+                          { value: "red", label: <Badge variant="red" text="Red" />, searchLabel: "Red" },
+                          { value: "yellow", label: <Badge variant="yellow" text="Yellow" />, searchLabel: "Yellow" },
+                          { value: "purple", label: <Badge variant="purple" text="Purple" />, searchLabel: "Purple" },
+                          { value: "orange", label: <Badge variant="orange" text="Orange" />, searchLabel: "Orange" },
+                        ]}
+                        value={categoryColors[0]?.toLowerCase() || "green"}
+                        onChange={(val) => setCategoryColors([val])}
+                        multiple={false}
+                        disabled={isExistingCategory}
+                        containerClassName="flex-1 max-w-none"
+                        selectClassName="bg-white"
+                      />
+                    </div>
+                  );
+                })()}
 
                 {/* Article Content Editor */}
                 <ArticleEditor

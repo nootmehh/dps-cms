@@ -40,38 +40,17 @@ export interface ProductPayload {
 
 const STORAGE_KEY = "dps_products_data";
 
-export const DEFAULT_PRODUCT_CATEGORIES = [
-  "Material Marka Jalan – Bahan Campuran Cat",
-  "Perlengkapan Keselamatan Jalan – Rambu Petunjuk Arah",
-  "Perlengkapan Keselamatan Jalan – Alat Bantu Pandang Pengemudi",
-  "Perlengkapan Pengaturan Lalu Lintas Sementara",
-  "Material Marka Jalan – Reflektor Jalan",
-  "Perlengkapan Pengendali Kecepatan Kendaraan",
-  "Perlengkapan Jalan – Signage/Papan Informasi",
-  "Perlengkapan Pengaturan Lalu Lintas Sementara/Fleksibel",
-  "Perlengkapan Pembatas Jalan/Pengaman Area Kerja",
-  "Perlengkapan Pengaman Jalan – Pagar Pengaman",
-  "Material Marka Jalan – Cat Marka Jalan (Solvent Based)",
-  "Perlengkapan Elektrikal Jalan – Pencahayaan",
-  "Material Perawatan & Perbaikan Jalan",
-  "Perlengkapan Area Parkir",
-];
+export const DEFAULT_PRODUCT_CATEGORIES: string[] = [];
 
 export const CATEGORY_VARIANT_MAP: Record<string, string> = {
-  "Material Marka Jalan – Bahan Campuran Cat": "green",
-  "Perlengkapan Keselamatan Jalan – Rambu Petunjuk Arah": "blue",
-  "Perlengkapan Keselamatan Jalan – Alat Bantu Pandang Pengemudi": "yellow",
-  "Perlengkapan Pengaturan Lalu Lintas Sementara": "orange",
-  "Material Marka Jalan – Reflektor Jalan": "green",
-  "Perlengkapan Pengendali Kecepatan Kendaraan": "purple",
-  "Perlengkapan Jalan – Signage/Papan Informasi": "blue",
-  "Perlengkapan Pengaturan Lalu Lintas Sementara/Fleksibel": "orange",
-  "Perlengkapan Pembatas Jalan/Pengaman Area Kerja": "red",
-  "Perlengkapan Pengaman Jalan – Pagar Pengaman": "purple",
-  "Material Marka Jalan – Cat Marka Jalan (Solvent Based)": "green",
-  "Perlengkapan Elektrikal Jalan – Pencahayaan": "yellow",
-  "Material Perawatan & Perbaikan Jalan": "blue",
-  "Perlengkapan Area Parkir": "purple",
+  "Material Marka Jalan": "green",
+  "Perlengkapan Jalan": "blue",
+  "Perlengkapan Elektrikal Jalan": "yellow",
+  "Perlengkapan Lalu Lintas": "orange",
+  "Keselamatan Jalan": "red",
+  "Perlengkapan Pengaman Jalan": "purple",
+  "Material Perawatan Jalan": "blue",
+  "Peralatan Marka Jalan": "green",
 };
 
 export const INITIAL_PRODUCTS_DATA: ProductPayload[] = [];
@@ -97,22 +76,42 @@ export function saveStoredProducts(products: ProductPayload[]): void {
   }
 }
 
-export async function getConsistingProductCategories(): Promise<string[]> {
-  const cats = new Set<string>();
-  DEFAULT_PRODUCT_CATEGORIES.forEach((c) => cats.add(c));
+export async function getProductCategoryColorMap(): Promise<Record<string, string>> {
+  const colorMap: Record<string, string> = {};
   try {
     const supabaseProducts = await getSupabaseProducts();
-    supabaseProducts.forEach((p) => {
-      if (p.category) cats.add(p.category);
-    });
-  } catch {
-    // ignore
+    if (supabaseProducts && supabaseProducts.length > 0) {
+      supabaseProducts.forEach((p) => {
+        if (p.category && p.category.trim()) {
+          const cat = p.category.trim();
+          if (!colorMap[cat] && p.category_color) {
+            colorMap[cat] = p.category_color.toLowerCase().trim();
+          }
+        }
+      });
+      if (Object.keys(colorMap).length > 0) {
+        return colorMap;
+      }
+    }
+  } catch (err) {
+    console.warn("Could not fetch product category colors from Supabase:", err);
   }
+
   const products = getStoredProducts();
   products.forEach((p) => {
-    if (p.category) cats.add(p.category);
+    if (p.category && p.category.trim()) {
+      const cat = p.category.trim();
+      if (!colorMap[cat] && p.categoryVariant) {
+        colorMap[cat] = p.categoryVariant.toLowerCase().trim();
+      }
+    }
   });
-  return Array.from(cats);
+  return colorMap;
+}
+
+export async function getConsistingProductCategories(): Promise<string[]> {
+  const map = await getProductCategoryColorMap();
+  return Object.keys(map);
 }
 
 export async function getProductById(id: string | number): Promise<ProductPayload | null> {

@@ -357,8 +357,8 @@ export default function KelolaSeoPage() {
                 </button>
               </div>
 
-              {/* Sitemap URL Display & Actions */}
-              <div className="self-stretch p-4 sm:p-5 bg-white border border-white-80 hover:border-g1 rounded-3xl flex flex-col gap-4 transition-all duration-200">
+              {/* Sitemap URL Display & Actions (Hidden from UI) */}
+              <div className="hidden self-stretch p-4 sm:p-5 bg-white border border-white-80 hover:border-g1 rounded-3xl flex flex-col gap-4 transition-all duration-200">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <div className="size-8 rounded-full bg-g1/10 flex items-center justify-center shrink-0">

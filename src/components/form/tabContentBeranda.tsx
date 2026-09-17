@@ -11,7 +11,7 @@ import type {
   GalleryItem,
   TestimonialItem,
 } from "@/services/siteContentApi";
-import { uploadFileToServer } from "@/shared/api/upload";
+import { uploadFileToServer, deleteFileFromServer, isManualUploadUrl } from "@/shared/api/upload";
 import MediaSelectModal, { MediaSelectModalItem } from "@/components/modal/mediaSelectModal";
 import SectionHeading from "@/components/ui/sectionHeading";
 import GalleryCard from "@/components/card/galleryCard";
@@ -84,6 +84,10 @@ export default function TabContentBeranda({
   };
 
   const handleRemovePartner = (index: number) => {
+    const targetUrl = (data.partner_img_url || [])[index];
+    if (targetUrl && isManualUploadUrl(targetUrl)) {
+      deleteFileFromServer(targetUrl).catch((e) => console.warn("Failed to delete partner logo from VPS:", e));
+    }
     onChange((prev) => ({
       ...prev,
       partner_img_url: (prev.partner_img_url || []).filter((_, i) => i !== index),
@@ -108,6 +112,10 @@ export default function TabContentBeranda({
   };
 
   const handleRemoveGallery = (index: number) => {
+    const item = (data.gallery || [])[index];
+    if (item?.url && isManualUploadUrl(item.url)) {
+      deleteFileFromServer(item.url).catch((e) => console.warn("Failed to delete gallery image from VPS:", e));
+    }
     onChange((prev) => ({
       ...prev,
       gallery: (prev.gallery || []).filter((_, i) => i !== index),
@@ -158,22 +166,34 @@ export default function TabContentBeranda({
           allowVideo={true}
           accept="image/*,video/*"
           defaultImageUrl={data.hero_img_url && data.hero_img_url.trim() ? data.hero_img_url.trim() : undefined}
-          onSelectMediaUrl={(url) =>
-            onChange((prev) => ({ ...prev, hero_img_url: url }))
-          }
+          onSelectMediaUrl={(url) => {
+            const oldHero = data.hero_img_url;
+            if (oldHero && oldHero !== url && isManualUploadUrl(oldHero)) {
+              deleteFileFromServer(oldHero).catch((e) => console.warn("Failed to delete replaced hero file from VPS:", e));
+            }
+            onChange((prev) => ({ ...prev, hero_img_url: url }));
+          }}
           onFilesSelected={async (files) => {
             if (files[0]) {
               try {
+                const oldHero = data.hero_img_url;
                 const uploadedUrl = await uploadFileToServer(files[0], "site", { noConvert: true });
+                if (oldHero && oldHero !== uploadedUrl && isManualUploadUrl(oldHero)) {
+                  deleteFileFromServer(oldHero).catch((e) => console.warn("Failed to delete replaced hero file from VPS:", e));
+                }
                 onChange((prev) => ({ ...prev, hero_img_url: uploadedUrl }));
               } catch (err: any) {
                 onError?.(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.");
               }
             }
           }}
-          onRemoveDefaultImage={() =>
-            onChange((prev) => ({ ...prev, hero_img_url: null }))
-          }
+          onRemoveDefaultImage={() => {
+            const oldHero = data.hero_img_url;
+            if (oldHero && isManualUploadUrl(oldHero)) {
+              deleteFileFromServer(oldHero).catch((e) => console.warn("Failed to delete removed hero file from VPS:", e));
+            }
+            onChange((prev) => ({ ...prev, hero_img_url: null }));
+          }}
         />
       </section>
 
@@ -194,6 +214,9 @@ export default function TabContentBeranda({
           maxFiles={30}
           existingImageUrls={data.partner_img_url || []}
           onRemoveExistingImage={(removedUrl) => {
+            if (removedUrl && isManualUploadUrl(removedUrl)) {
+              deleteFileFromServer(removedUrl).catch((e) => console.warn("Failed to delete partner logo from VPS:", e));
+            }
             onChange((prev) => ({
               ...prev,
               partner_img_url: (prev.partner_img_url || []).filter((u) => u !== removedUrl),

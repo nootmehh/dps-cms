@@ -242,10 +242,11 @@ export async function uploadMultipleFilesToServer(
 }
 
 /**
- * Check if an image URL was a manual upload (e.g. products, services, articles)
- * and NOT an asset managed by the Media Library or external URL.
+ * Check if a file URL is hosted on the VPS uploads directory
+ * (includes manual uploads in site, products, services, articles, as well as media library items).
+ * Ignores browser blob URLs, base64 data URLs, and external placeholder links.
  */
-export function isManualUploadUrl(fileUrl?: string | null): boolean {
+export function isVpsUploadedUrl(fileUrl?: string | null): boolean {
   if (!fileUrl) return false;
   const trimmed = fileUrl.trim();
 
@@ -253,24 +254,22 @@ export function isManualUploadUrl(fileUrl?: string | null): boolean {
   if (
     trimmed.startsWith("blob:") ||
     trimmed.startsWith("data:") ||
-    trimmed.includes("images.unsplash.com")
+    trimmed.includes("images.unsplash.com") ||
+    trimmed.includes("placehold.co") ||
+    trimmed.includes("via.placeholder.com")
   ) {
     return false;
   }
 
-  // Never delete media library items when unlinked from products or services
-  if (trimmed.includes("/uploads/media/") || trimmed.includes("/media/")) {
-    return false;
-  }
-
-  // Dedicated manual upload folders
+  // Any URL that points to our VPS uploads directory or folder structure
   if (
-    trimmed.includes("/uploads/products/") ||
-    trimmed.includes("/uploads/services/") ||
-    trimmed.includes("/uploads/articles/") ||
+    trimmed.includes("/uploads/") ||
+    trimmed.includes("103.127.135.206") ||
+    trimmed.includes("/site/") ||
     trimmed.includes("/products/") ||
     trimmed.includes("/services/") ||
-    trimmed.includes("/articles/")
+    trimmed.includes("/articles/") ||
+    trimmed.includes("/media/")
   ) {
     return true;
   }
@@ -279,22 +278,33 @@ export function isManualUploadUrl(fileUrl?: string | null): boolean {
 }
 
 /**
- * Delete uploaded file from server disk.
+ * Check if an image URL is a VPS-hosted asset that should be purged when replaced.
+ * Supports all uploads on the VPS, whether uploaded directly in a form or chosen from the Media Library.
+ */
+export function isManualUploadUrl(fileUrl?: string | null): boolean {
+  return isVpsUploadedUrl(fileUrl);
+}
+
+/**
+ * Delete uploaded file from VPS server disk permanently.
+ * Passes the target URL via both URL query parameter and JSON body for maximum reliability.
  */
 export async function deleteFileFromServer(fileUrl: string): Promise<boolean> {
   if (!fileUrl) return false;
 
-  // Don't attempt to delete blob: or external placeholder URLs from disk
-  if (fileUrl.startsWith("blob:") || fileUrl.startsWith("data:") || fileUrl.includes("images.unsplash.com")) {
+  // Don't attempt to delete external URLs or local blob/data URLs
+  if (!isVpsUploadedUrl(fileUrl)) {
     return true;
   }
 
-  const endpoint = getUploadEndpoint();
+  const baseEndpoint = getUploadEndpoint();
+  const endpoint = `${baseEndpoint}?url=${encodeURIComponent(fileUrl.trim())}`;
+
   try {
     const res = await fetch(endpoint, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: fileUrl }),
+      body: JSON.stringify({ url: fileUrl.trim() }),
     });
     return res.ok;
   } catch (err) {

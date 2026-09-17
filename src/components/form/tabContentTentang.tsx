@@ -7,7 +7,7 @@ import Button from "@/components/ui/button";
 import LordIcon from "@/components/common/lordIcon";
 import UploadFile from "@/components/ui/uploadFile";
 import type { SiteContentRow, LegalityItem } from "@/services/siteContentApi";
-import { uploadFileToServer } from "@/shared/api/upload";
+import { uploadFileToServer, deleteFileFromServer, isManualUploadUrl } from "@/shared/api/upload";
 
 interface TabContentTentangProps {
   data: SiteContentRow;
@@ -108,22 +108,34 @@ export default function TabContentTentang({
           allowVideo={true}
           accept="image/*,video/*"
           defaultImageUrl={data.about_image_url || undefined}
-          onSelectMediaUrl={(url) =>
-            onChange((prev) => ({ ...prev, about_image_url: url }))
-          }
+          onSelectMediaUrl={(url) => {
+            const oldAbout = data.about_image_url;
+            if (oldAbout && oldAbout !== url && isManualUploadUrl(oldAbout)) {
+              deleteFileFromServer(oldAbout).catch((e) => console.warn("Failed to delete replaced about image from VPS:", e));
+            }
+            onChange((prev) => ({ ...prev, about_image_url: url }));
+          }}
           onFilesSelected={async (files) => {
             if (files[0]) {
               try {
+                const oldAbout = data.about_image_url;
                 const uploadedUrl = await uploadFileToServer(files[0], "site");
+                if (oldAbout && oldAbout !== uploadedUrl && isManualUploadUrl(oldAbout)) {
+                  deleteFileFromServer(oldAbout).catch((e) => console.warn("Failed to delete replaced about image from VPS:", e));
+                }
                 onChange((prev) => ({ ...prev, about_image_url: uploadedUrl }));
               } catch (err: any) {
                 onError?.(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.");
               }
             }
           }}
-          onRemoveDefaultImage={() =>
-            onChange((prev) => ({ ...prev, about_image_url: null }))
-          }
+          onRemoveDefaultImage={() => {
+            const oldAbout = data.about_image_url;
+            if (oldAbout && isManualUploadUrl(oldAbout)) {
+              deleteFileFromServer(oldAbout).catch((e) => console.warn("Failed to delete removed about image from VPS:", e));
+            }
+            onChange((prev) => ({ ...prev, about_image_url: null }));
+          }}
         />
 
         <DescriptionBox
@@ -173,22 +185,34 @@ export default function TabContentTentang({
           allowVideo={false}
           accept="image/*"
           defaultImageUrl={data.vision_img_url || undefined}
-          onSelectMediaUrl={(url) =>
-            onChange((prev) => ({ ...prev, vision_img_url: url }))
-          }
+          onSelectMediaUrl={(url) => {
+            const oldVision = data.vision_img_url;
+            if (oldVision && oldVision !== url && isManualUploadUrl(oldVision)) {
+              deleteFileFromServer(oldVision).catch((e) => console.warn("Failed to delete replaced vision image from VPS:", e));
+            }
+            onChange((prev) => ({ ...prev, vision_img_url: url }));
+          }}
           onFilesSelected={async (files) => {
             if (files[0]) {
               try {
+                const oldVision = data.vision_img_url;
                 const uploadedUrl = await uploadFileToServer(files[0], "site");
+                if (oldVision && oldVision !== uploadedUrl && isManualUploadUrl(oldVision)) {
+                  deleteFileFromServer(oldVision).catch((e) => console.warn("Failed to delete replaced vision image from VPS:", e));
+                }
                 onChange((prev) => ({ ...prev, vision_img_url: uploadedUrl }));
               } catch (err: any) {
                 onError?.(err?.message || "Upload gagal: koneksi terlalu lama, coba lagi.");
               }
             }
           }}
-          onRemoveDefaultImage={() =>
-            onChange((prev) => ({ ...prev, vision_img_url: null }))
-          }
+          onRemoveDefaultImage={() => {
+            const oldVision = data.vision_img_url;
+            if (oldVision && isManualUploadUrl(oldVision)) {
+              deleteFileFromServer(oldVision).catch((e) => console.warn("Failed to delete removed vision image from VPS:", e));
+            }
+            onChange((prev) => ({ ...prev, vision_img_url: null }));
+          }}
         />
 
         <DescriptionBox

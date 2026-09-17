@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { deleteFileFromServer, isManualUploadUrl } from "@/shared/api/upload";
 
 export interface GalleryItem {
   id?: string;
@@ -147,6 +148,70 @@ export async function updateSiteContent(
   }
   if ("value_years_experience" in cleanPayload) {
     cleanPayload.value_years_experience = sanitizeInteger(cleanPayload.value_years_experience);
+  }
+
+  // Check and purge obsolete media files from VPS disk
+  try {
+    const { data: currentDb } = await supabase
+      .from("site_content")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (currentDb) {
+      // Obsolete Hero Image/Video
+      if (
+        cleanPayload.hero_img_url !== undefined &&
+        currentDb.hero_img_url &&
+        currentDb.hero_img_url !== cleanPayload.hero_img_url &&
+        isManualUploadUrl(currentDb.hero_img_url)
+      ) {
+        deleteFileFromServer(currentDb.hero_img_url).catch((err) =>
+          console.warn("Failed to delete obsolete hero file from VPS:", err)
+        );
+      }
+
+      // Obsolete Partner Logos
+      if (Array.isArray(cleanPayload.partner_img_url) && Array.isArray(currentDb.partner_img_url)) {
+        const removedPartners = currentDb.partner_img_url.filter(
+          (u: string) => !cleanPayload.partner_img_url.includes(u)
+        );
+        for (const u of removedPartners) {
+          if (isManualUploadUrl(u)) {
+            deleteFileFromServer(u).catch((err) =>
+              console.warn("Failed to delete obsolete partner logo from VPS:", err)
+            );
+          }
+        }
+      }
+
+      // Obsolete About Image
+      if (
+        cleanPayload.about_image_url !== undefined &&
+        currentDb.about_image_url &&
+        currentDb.about_image_url !== cleanPayload.about_image_url &&
+        isManualUploadUrl(currentDb.about_image_url)
+      ) {
+        deleteFileFromServer(currentDb.about_image_url).catch((err) =>
+          console.warn("Failed to delete obsolete about image from VPS:", err)
+        );
+      }
+
+      // Obsolete Vision Image
+      if (
+        cleanPayload.vision_img_url !== undefined &&
+        currentDb.vision_img_url &&
+        currentDb.vision_img_url !== cleanPayload.vision_img_url &&
+        isManualUploadUrl(currentDb.vision_img_url)
+      ) {
+        deleteFileFromServer(currentDb.vision_img_url).catch((err) =>
+          console.warn("Failed to delete obsolete vision image from VPS:", err)
+        );
+      }
+    }
+  } catch (purgeErr) {
+    console.warn("Could not check previous site_content for VPS media purge:", purgeErr);
   }
 
   const executeSave = async (dataToSave: Record<string, any>): Promise<SiteContentRow> => {

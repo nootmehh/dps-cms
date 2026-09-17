@@ -41,12 +41,7 @@ export interface ServicePayload {
 
 const STORAGE_KEY = "dps_services_data";
 
-export const DEFAULT_SERVICE_CATEGORIES = [
-  "Jasa Marka Jalan",
-  "Jasa Perlengkapan Jalan",
-  "Jasa Elektrikal Jalan",
-  "Jasa Perlengkapan Area Parkir",
-];
+export const DEFAULT_SERVICE_CATEGORIES: string[] = [];
 
 export const SERVICE_CATEGORY_VARIANT_MAP: Record<string, string> = {
   "Jasa Marka Jalan": "green",
@@ -100,24 +95,41 @@ export function saveStoredServices(services: ServicePayload[]) {
   }
 }
 
-export async function getConsistingServiceCategories(): Promise<string[]> {
-  const cats = new Set<string>();
+export async function getServiceCategoryColorMap(): Promise<Record<string, string>> {
+  const colorMap: Record<string, string> = {};
   try {
     const supabaseServices = await getSupabaseServices();
     if (supabaseServices && supabaseServices.length > 0) {
       supabaseServices.forEach((s) => {
-        if (s.category) cats.add(s.category);
+        if (s.category && s.category.trim()) {
+          const cat = s.category.trim();
+          if (!colorMap[cat] && s.category_color) {
+            colorMap[cat] = s.category_color.toLowerCase().trim();
+          }
+        }
       });
-      return Array.from(cats);
+      if (Object.keys(colorMap).length > 0) {
+        return colorMap;
+      }
     }
-  } catch {
-    // ignore
+  } catch (err) {
+    console.warn("Could not fetch service category colors from Supabase:", err);
   }
   const services = getStoredServices();
   services.forEach((s) => {
-    if (s.category) cats.add(s.category);
+    if (s.category && s.category.trim()) {
+      const cat = s.category.trim();
+      if (!colorMap[cat] && s.categoryVariant) {
+        colorMap[cat] = s.categoryVariant.toLowerCase().trim();
+      }
+    }
   });
-  return Array.from(cats);
+  return colorMap;
+}
+
+export async function getConsistingServiceCategories(): Promise<string[]> {
+  const map = await getServiceCategoryColorMap();
+  return Object.keys(map);
 }
 
 export async function getServiceById(id: string | number): Promise<ServicePayload | null> {

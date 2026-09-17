@@ -17,7 +17,7 @@ import {
   addService,
   editService,
   getConsistingServiceCategories,
-  DEFAULT_SERVICE_CATEGORIES,
+  getServiceCategoryColorMap,
   SERVICE_CATEGORY_VARIANT_MAP,
   type ServiceKeunggulanItem,
   type ServiceMaterialItem,
@@ -36,7 +36,7 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
 
   // Basic Info
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<string>(DEFAULT_SERVICE_CATEGORIES[0]);
+  const [category, setCategory] = useState<string>("");
   const [categoryVariant, setCategoryVariant] = useState<string>("green");
   const [description, setDescription] = useState("");
   const [_imageUrl, setImageUrl] = useState<string | null>(null);
@@ -69,7 +69,8 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [availableCategories, setAvailableCategories] = useState<string[]>(DEFAULT_SERVICE_CATEGORIES);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [categoryColorMap, setCategoryColorMap] = useState<Record<string, string>>({});
 
   const [notification, setNotification] = useState<{
     isOpen: boolean;
@@ -139,11 +140,21 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
   useEffect(() => {
     const loadCategories = async () => {
       try {
-        const existing = await getConsistingServiceCategories();
+        const [existing, colorMap] = await Promise.all([
+          getConsistingServiceCategories(),
+          getServiceCategoryColorMap(),
+        ]);
+        setCategoryColorMap(colorMap);
         if (existing.length > 0) {
           setAvailableCategories(existing);
           if (!id) {
             setCategory(existing[0]);
+            const matchedKey = Object.keys(colorMap).find(
+              (k) => k.toLowerCase() === existing[0].trim().toLowerCase()
+            );
+            if (matchedKey && colorMap[matchedKey]) {
+              setCategoryVariant(colorMap[matchedKey]);
+            }
           }
         }
       } catch (err) {
@@ -163,7 +174,12 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
         const service = await getServiceById(id);
         if (service) {
           setTitle(service.title || "");
-          setCategory(service.category || DEFAULT_SERVICE_CATEGORIES[0]);
+          setCategory(service.category || "");
+          if (service.category) {
+            setAvailableCategories((prev) =>
+              prev.includes(service.category) ? prev : [service.category, ...prev]
+            );
+          }
           setCategoryVariant(
             service.categoryVariant || SERVICE_CATEGORY_VARIANT_MAP[service.category] || "green"
           );
@@ -491,49 +507,69 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
                   />
 
                   {/* Category & Badge Variant */}
-                  <div className="flex flex-col md:flex-row items-stretch gap-4 w-full">
-                    <Dropdown
-                      label={
-                        <span>
-                          Kategori Layanan <span className="text-red-state">*</span>
-                        </span>
-                      }
-                      placeholder="Pilih atau ketik kategori layanan..."
-                      options={availableCategories.map((c) => ({ value: c, label: c }))}
-                      value={category}
-                      onChange={(val) => {
-                        setCategory(val);
-                        if (SERVICE_CATEGORY_VARIANT_MAP[val]) {
-                          setCategoryVariant(SERVICE_CATEGORY_VARIANT_MAP[val]);
-                        }
-                      }}
-                      multiple={false}
-                      allowCustomValues={true}
-                      containerClassName="flex-1 max-w-none"
-                    />
+                  {(() => {
+                    const matchedCategoryKey = Object.keys(categoryColorMap).find(
+                      (k) => k.toLowerCase() === category.trim().toLowerCase()
+                    );
+                    const isExistingCategory = Boolean(category.trim() && matchedCategoryKey);
 
-                    <Dropdown
-                      label={
-                        <span>
-                          Warna Badge Kategori <span className="text-red-state">*</span>
-                        </span>
-                      }
-                      placeholder="Pilih Warna"
-                      options={[
-                        { value: "green", label: <Badge variant="green" text="Green" />, searchLabel: "Green" },
-                        { value: "blue", label: <Badge variant="blue" text="Blue" />, searchLabel: "Blue" },
-                        { value: "yellow", label: <Badge variant="yellow" text="Yellow" />, searchLabel: "Yellow" },
-                        { value: "orange", label: <Badge variant="orange" text="Orange" />, searchLabel: "Orange" },
-                        { value: "purple", label: <Badge variant="purple" text="Purple" />, searchLabel: "Purple" },
-                        { value: "red", label: <Badge variant="red" text="Red" />, searchLabel: "Red" },
-                      ]}
-                      value={categoryVariant}
-                      onChange={(val) => setCategoryVariant(val)}
-                      multiple={false}
-                      containerClassName="w-full max-w-none md:w-60 shrink-0"
-                      selectClassName="bg-white"
-                    />
-                  </div>
+                    return (
+                      <div className="flex flex-col md:flex-row items-stretch gap-4 w-full">
+                        <Dropdown
+                          label={
+                            <span>
+                              Kategori Layanan <span className="text-red-state">*</span>
+                            </span>
+                          }
+                          placeholder="Pilih atau ketik kategori layanan..."
+                          options={availableCategories.map((c) => ({ value: c, label: c }))}
+                          value={category}
+                          onChange={(val) => {
+                            setCategory(val);
+                            const matched = Object.keys(categoryColorMap).find(
+                              (k) => k.toLowerCase() === val.trim().toLowerCase()
+                            );
+                            if (matched && categoryColorMap[matched]) {
+                              setCategoryVariant(categoryColorMap[matched]);
+                            } else if (SERVICE_CATEGORY_VARIANT_MAP[val]) {
+                              setCategoryVariant(SERVICE_CATEGORY_VARIANT_MAP[val]);
+                            }
+                          }}
+                          multiple={false}
+                          allowCustomValues={true}
+                          containerClassName="flex-1 max-w-none"
+                        />
+
+                        <Dropdown
+                          label={
+                            <span className="flex items-center gap-1.5">
+                              Warna Badge Kategori <span className="text-red-state">*</span>
+                              {isExistingCategory && (
+                                <span className="text-[10px] text-dark/40 font-normal">
+                                  (Terkunci otomatis)
+                                </span>
+                              )}
+                            </span>
+                          }
+                          placeholder="Pilih Warna"
+                          options={[
+                            { value: "green", label: <Badge variant="green" text="Green" />, searchLabel: "Green" },
+                            { value: "blue", label: <Badge variant="blue" text="Blue" />, searchLabel: "Blue" },
+                            { value: "yellow", label: <Badge variant="yellow" text="Yellow" />, searchLabel: "Yellow" },
+                            { value: "orange", label: <Badge variant="orange" text="Orange" />, searchLabel: "Orange" },
+                            { value: "purple", label: <Badge variant="purple" text="Purple" />, searchLabel: "Purple" },
+                            { value: "red", label: <Badge variant="red" text="Red" />, searchLabel: "Red" },
+                          ]}
+                          value={categoryVariant}
+                          onChange={(val) => setCategoryVariant(val)}
+                          multiple={false}
+                          disabled={isExistingCategory}
+                          containerClassName="flex-1 max-w-none"
+                          selectClassName="bg-white"
+                        />
+                      </div>
+                    );
+                  })()}
 
                   {/* Service Description */}
                   <DescriptionBox
