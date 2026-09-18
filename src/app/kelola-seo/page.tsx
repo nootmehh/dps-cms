@@ -101,8 +101,8 @@ export default function KelolaSeoPage() {
       console.error("Error saving SEO settings:", err);
       const msg =
         err?.code === "PGRST205"
-          ? "Tabel public.seo_settings belum ada di Supabase. Silakan jalankan query SQL terlebih dahulu."
-          : err?.message || "Terjadi kesalahan saat menyimpan ke Supabase";
+          ? "Tabel public.seo_settings belum ada di Database. Silakan jalankan query SQL terlebih dahulu."
+          : err?.message || "Terjadi kesalahan saat menyimpan ke Database";
       triggerNotif(`Gagal menyimpan SEO: ${msg}`, "error");
     } finally {
       setIsSaving(false);

@@ -101,8 +101,8 @@ export default function KelolaPenggunaPage() {
         const data = await getUsers();
         setUsers(data);
       } catch (err: any) {
-        console.error("Error loading users from Supabase:", err);
-        triggerNotif(`Gagal memuat pengguna dari Supabase: ${err.message || "Terjadi kesalahan"}`, "error");
+        console.error("Error loading users from Database:", err);
+        triggerNotif(`Gagal memuat pengguna dari Database: ${err.message || "Terjadi kesalahan"}`, "error");
         setUsers([]);
       } finally {
         setIsLoading(false);
@@ -132,7 +132,7 @@ export default function KelolaPenggunaPage() {
     setFormModal({ isOpen: true, mode: "edit", user });
   };
 
-  // Save Add / Edit User directly to Supabase
+  // Save Add / Edit User directly to Database
   const handleSaveUser = async (data: {
     username: string;
     email: string;
@@ -166,14 +166,14 @@ export default function KelolaPenggunaPage() {
         err?.message?.toLowerCase().includes("row-level security") ||
         err?.code === "42501";
       const msg = isRls
-        ? "Gagal menyimpan: Policy RLS tabel 'users' belum diizinkan. Silakan aktifkan policy INSERT/UPDATE di Supabase SQL Editor."
-        : err?.message || "Terjadi kesalahan saat menyimpan ke Supabase";
+        ? "Gagal menyimpan: Policy RLS tabel 'users' belum diizinkan. Silakan aktifkan policy INSERT/UPDATE di Database SQL Editor."
+        : err?.message || "Terjadi kesalahan saat menyimpan ke Database";
       triggerNotif(msg, "error");
       throw err;
     }
   };
 
-  // Confirm Delete User directly from Supabase
+  // Confirm Delete User directly from Database
   const confirmDelete = async () => {
     if (!deleteModal.user) return;
 
@@ -194,8 +194,8 @@ export default function KelolaPenggunaPage() {
         err?.message?.toLowerCase().includes("row-level security") ||
         err?.code === "42501";
       const msg = isRls
-        ? "Gagal menghapus: Policy RLS tabel 'users' belum mengizinkan DELETE di Supabase."
-        : err?.message || "Gagal menghapus pengguna dari Supabase";
+        ? "Gagal menghapus: Policy RLS tabel 'users' belum mengizinkan DELETE di Database."
+        : err?.message || "Gagal menghapus pengguna dari Database";
       triggerNotif(msg, "error");
     } finally {
       setDeleteModal({ isOpen: false });
@@ -220,10 +220,13 @@ export default function KelolaPenggunaPage() {
       if (selectedSort === "z-a") {
         return b.username.localeCompare(a.username);
       }
+      const timeA = a.created_at || a.createdAt ? new Date((a.created_at || a.createdAt)!).getTime() : 0;
+      const timeB = b.created_at || b.createdAt ? new Date((b.created_at || b.createdAt)!).getTime() : 0;
       if (selectedSort === "terlama") {
-        return String(a.id).localeCompare(String(b.id));
+        return timeA - timeB;
       }
-      return String(b.id).localeCompare(String(a.id));
+      // default "terbaru"
+      return timeB - timeA;
     });
 
   const paginatedUsers = filteredUsers.slice(
@@ -232,7 +235,7 @@ export default function KelolaPenggunaPage() {
   );
 
   return (
-    <AuthGuard>
+    <AuthGuard allowedRoles={["Super Admin", "superadmin"]}>
       <div className="min-h-screen lg:h-screen lg:max-h-screen bg-white-90 flex flex-col items-center lg:overflow-hidden">
       {/* Top Navbar */}
       <Navbar

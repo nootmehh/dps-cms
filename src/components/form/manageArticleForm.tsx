@@ -84,15 +84,6 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
         setCategoryColorMap(colorMap);
         if (existing.length > 0) {
           setAvailableCategories(existing);
-          if (!id) {
-            setCategories([existing[0]]);
-            const matchedKey = Object.keys(colorMap).find(
-              (k) => k.toLowerCase() === existing[0].trim().toLowerCase()
-            );
-            if (matchedKey && colorMap[matchedKey]) {
-              setCategoryColors([colorMap[matchedKey]]);
-            }
-          }
         }
       } catch (err) {
         console.error("Error loading categories", err);
@@ -303,7 +294,7 @@ export default function ManageArticleForm({ id }: ManageArticleFormProps) {
                             Kategori Artikel <span className="text-red-state">*</span>
                           </span>
                         }
-                        placeholder="Pilih atau ketik kategori..."
+                        placeholder="Add New Category"
                         options={availableCategories.map((c) => ({ value: c, label: c }))}
                         value={selectedCategory}
                         onChange={(val) => {

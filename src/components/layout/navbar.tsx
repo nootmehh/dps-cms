@@ -209,9 +209,14 @@ export default function Navbar({
                   Menu Utama
                 </span>
                 <nav className="flex flex-col gap-1 w-full">
-                  {DEFAULT_SIDEBAR_ITEMS.map((item: SidebarMenuItem) => {
-                    const isActive = pathname?.startsWith(item.href || "");
-                    return (
+                  {(() => {
+                    const isSuperAdmin =
+                      (displayRole || "").toLowerCase().replace(/[\s_-]/g, "") === "superadmin";
+                    return DEFAULT_SIDEBAR_ITEMS.filter(
+                      (item) => isSuperAdmin || item.id !== "users"
+                    ).map((item: SidebarMenuItem) => {
+                      const isActive = pathname?.startsWith(item.href || "");
+                      return (
                       <Link
                         key={item.id}
                         href={item.href || "#"}
@@ -226,7 +231,8 @@ export default function Navbar({
                         />
                       </Link>
                     );
-                  })}
+                    });
+                  })()}
                 </nav>
               </div>
             </div>

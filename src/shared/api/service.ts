@@ -482,8 +482,8 @@ export async function editService(
     });
   } catch (err: any) {
     const errorDetails = err?.message || err?.details || err?.hint || (typeof err === "string" ? err : JSON.stringify(err));
-    console.error(`Supabase editService failed for ID ${id}:`, errorDetails);
-    throw new Error(`Supabase Error: ${errorDetails}`);
+    console.error(`Database editService failed for ID ${id}:`, errorDetails);
+    throw new Error(`Database Error: ${errorDetails}`);
   }
 
   return targetService;

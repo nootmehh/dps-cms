@@ -6,9 +6,10 @@ import { checkAuthSession, clearAuthSession, type AuthSession } from "@/services
 
 export interface AuthGuardProps {
   children: ReactNode;
+  allowedRoles?: string[];
 }
 
-export default function AuthGuard({ children }: AuthGuardProps) {
+export default function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
   const router = useRouter();
   const [_session, setSession] = useState<AuthSession | null>(null);
   const [checked, setChecked] = useState(false);
@@ -26,6 +27,18 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         router.replace("/?login_required=1");
         return;
       }
+
+      if (allowedRoles && allowedRoles.length > 0) {
+        const userRole = (activeSession.user.role || "").toLowerCase().replace(/[\s_-]/g, "");
+        const isAllowed = allowedRoles.some(
+          (r) => r.toLowerCase().replace(/[\s_-]/g, "") === userRole
+        );
+        if (!isAllowed) {
+          router.replace("/dashboard?unauthorized=1");
+          return;
+        }
+      }
+
       setSession(activeSession);
       setChecked(true);
     };
@@ -35,7 +48,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     // Periodic check every 15 seconds to ensure 30-minute security timeout is strictly enforced
     const interval = setInterval(verifyAuth, 15000);
     return () => clearInterval(interval);
-  }, [router]);
+  }, [router, allowedRoles]);
 
   if (!checked) {
     return (
