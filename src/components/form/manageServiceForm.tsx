@@ -147,15 +147,6 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
         setCategoryColorMap(colorMap);
         if (existing.length > 0) {
           setAvailableCategories(existing);
-          if (!id) {
-            setCategory(existing[0]);
-            const matchedKey = Object.keys(colorMap).find(
-              (k) => k.toLowerCase() === existing[0].trim().toLowerCase()
-            );
-            if (matchedKey && colorMap[matchedKey]) {
-              setCategoryVariant(colorMap[matchedKey]);
-            }
-          }
         }
       } catch (err) {
         console.error("Error loading service categories", err);
@@ -521,7 +512,7 @@ export default function ManageServiceForm({ id }: ManageServiceFormProps) {
                               Kategori Layanan <span className="text-red-state">*</span>
                             </span>
                           }
-                          placeholder="Pilih atau ketik kategori layanan..."
+                          placeholder="Add New Category"
                           options={availableCategories.map((c) => ({ value: c, label: c }))}
                           value={category}
                           onChange={(val) => {

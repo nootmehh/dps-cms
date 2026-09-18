@@ -26,6 +26,7 @@ export interface ProductItem {
   category: string;
   categoryVariant: BadgeVariant;
   createdAt: string;
+  createdAtTimestamp?: number;
   editedAt?: string;
   description?: string;
   imageUrl?: string | null;
@@ -85,6 +86,7 @@ export default function KelolaProdukPage() {
               createdAt: item.created_at
                 ? new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
                 : "Baru saja",
+              createdAtTimestamp: item.created_at ? new Date(item.created_at).getTime() : 0,
               editedAt: (item as any).edited_at || (item as any).updated_at
                 ? new Date((item as any).edited_at || (item as any).updated_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
                 : item.created_at
@@ -107,7 +109,7 @@ export default function KelolaProdukPage() {
           return;
         }
       } catch (err) {
-        console.error("Error loading products from Supabase", err);
+        console.error("Error loading products from Database", err);
       }
 
       const stored = getStoredProducts();
@@ -119,6 +121,7 @@ export default function KelolaProdukPage() {
           category: cat,
           categoryVariant: (item.categoryVariant || CATEGORY_VARIANT_MAP[cat] || "green") as BadgeVariant,
           createdAt: item.createdAt || "Baru saja",
+          createdAtTimestamp: item.createdAt ? new Date(item.createdAt).getTime() : 0,
           editedAt: (item as any).editedAt || (item as any).updatedAt || item.createdAt || "Baru saja",
           description: item.description || "",
           imageUrl: item.imageUrl,
@@ -150,8 +153,8 @@ export default function KelolaProdukPage() {
         setProducts((prev) => prev.filter((p) => String(p.id) !== String(target.id)));
         triggerNotif(`Produk "${target.name}" berhasil dihapus`, "default");
       } catch (err: any) {
-        const msg = err?.message || err?.details || "Gagal menghapus produk dari Supabase";
-        console.error("Error deleting product from Supabase:", err);
+        const msg = err?.message || err?.details || "Gagal menghapus produk dari Database";
+        console.error("Error deleting product from Database:", err);
         triggerNotif(`Gagal menghapus produk: ${msg}`, "error");
       } finally {
         setDeleteModal({ isOpen: false });
@@ -178,9 +181,10 @@ export default function KelolaProdukPage() {
         return b.name.localeCompare(a.name);
       }
       if (selectedSort === "terlama") {
-        return String(a.createdAt).localeCompare(String(b.createdAt));
+        return (a.createdAtTimestamp || 0) - (b.createdAtTimestamp || 0);
       }
-      return 0;
+      // default "terbaru"
+      return (b.createdAtTimestamp || 0) - (a.createdAtTimestamp || 0);
     });
 
   const paginatedProducts = filteredProducts.slice(

@@ -121,12 +121,6 @@ export default function ManageProductForm({ id }: ManageProductFormProps) {
         const existing = Object.keys(colorMap);
         if (existing.length > 0) {
           setAvailableCategories(existing);
-          if (!id) {
-            setCategory(existing[0]);
-            if (colorMap[existing[0]]) {
-              setCategoryVariant(colorMap[existing[0]]);
-            }
-          }
         }
       } catch (err) {
         console.error("Error loading product categories", err);
@@ -471,7 +465,7 @@ export default function ManageProductForm({ id }: ManageProductFormProps) {
                               Kategori Produk <span className="text-red-state">*</span>
                             </span>
                           }
-                          placeholder="Pilih atau ketik kategori produk..."
+                          placeholder="Add New Category"
                           options={availableCategories.map((c) => ({ value: c, label: c }))}
                           value={category}
                           onChange={(val) => {

@@ -50,7 +50,7 @@ export default function KelolaKontenPage() {
         }
       } catch (err) {
         console.error("Error loading site_content:", err);
-        triggerNotif("Menggunakan data cache lokal (Supabase offline/belum siap)", "default");
+        triggerNotif("Menggunakan data cache lokal (Database offline/belum siap)", "default");
       } finally {
         setIsLoading(false);
       }
@@ -71,17 +71,17 @@ export default function KelolaKontenPage() {
     return () => window.removeEventListener("dps-upload-error", handleUploadError);
   }, []);
 
-  // Save changes to Supabase
+  // Save changes to Database
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const saved = await updateSiteContent(siteContent, siteContent.id);
       setSiteContent(saved);
-      triggerNotif("Konten situs berhasil diperbarui ke Supabase!", "default");
+      triggerNotif("Konten situs berhasil diperbarui ke Database!", "default");
     } catch (err: any) {
       console.error("Error saving site_content:", err);
       triggerNotif(
-        `Gagal menyimpan: ${err.message || "Terjadi kesalahan di Supabase"}`,
+        `Gagal menyimpan: ${err.message || "Terjadi kesalahan di Database"}`,
         "error"
       );
     } finally {

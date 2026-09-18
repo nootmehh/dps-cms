@@ -288,8 +288,8 @@ export async function editArticle(
     });
   } catch (err: any) {
     const errorDetails = err?.message || err?.details || err?.hint || (typeof err === "string" ? err : JSON.stringify(err));
-    console.error(`Supabase editArticle failed for ID ${id}:`, errorDetails);
-    throw new Error(`Supabase Error: ${errorDetails}`);
+    console.error(`Database editArticle failed for ID ${id}:`, errorDetails);
+    throw new Error(`Database Error: ${errorDetails}`);
   }
 
   return targetArticle;

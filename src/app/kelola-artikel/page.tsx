@@ -22,6 +22,7 @@ export interface ArticleItem {
   category: string;
   categoryVariant: BadgeVariant;
   createdAt: string;
+  createdAtTimestamp?: number;
   editedAt: string;
   excerpt?: string;
 }
@@ -92,6 +93,7 @@ export default function KelolaArtikelPage() {
               createdAt: item.created_at
                 ? new Date(item.created_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
                 : "Baru saja",
+              createdAtTimestamp: item.created_at ? new Date(item.created_at).getTime() : 0,
               editedAt: item.edited_at
                 ? new Date(item.edited_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
                 : item.created_at
@@ -114,7 +116,7 @@ export default function KelolaArtikelPage() {
           return;
         }
       } catch (e) {
-        console.error("Error loading articles from Supabase:", e);
+        console.error("Error loading articles from Database:", e);
       }
 
       try {
@@ -131,6 +133,7 @@ export default function KelolaArtikelPage() {
               category: mainCat,
               categoryVariant: (item.categoryColor?.[0]?.toLowerCase() as BadgeVariant) || CATEGORY_VARIANT_MAP[mainCat] || "green",
               createdAt: item.createdAt || "Baru saja",
+              createdAtTimestamp: item.createdAt ? new Date(item.createdAt).getTime() : 0,
               editedAt: item.editedAt || item.createdAt || "Baru saja",
               excerpt: item.content ? item.content.replace(/<[^>]*>?/gm, "").slice(0, 80) : "",
             };
@@ -168,8 +171,8 @@ export default function KelolaArtikelPage() {
       setArticles((prev) => prev.filter((a) => String(a.id) !== String(target.id)));
       triggerNotif(`Artikel "${target.title}" berhasil dihapus!`, "default");
     } catch (err: any) {
-      const msg = err?.message || err?.details || "Gagal menghapus artikel dari Supabase";
-      console.error("Error deleting article from Supabase:", err);
+      const msg = err?.message || err?.details || "Gagal menghapus artikel dari Database";
+      console.error("Error deleting article from Database:", err);
       triggerNotif(`Gagal menghapus artikel: ${msg}`, "error");
     } finally {
       setDeleteModal({ isOpen: false });
@@ -194,9 +197,10 @@ export default function KelolaArtikelPage() {
         return b.title.localeCompare(a.title);
       }
       if (selectedSort === "terlama") {
-        return String(a.createdAt).localeCompare(String(b.createdAt));
+        return (a.createdAtTimestamp || 0) - (b.createdAtTimestamp || 0);
       }
-      return 0;
+      // default "terbaru"
+      return (b.createdAtTimestamp || 0) - (a.createdAtTimestamp || 0);
     });
 
   const paginatedArticles = filteredArticles.slice(

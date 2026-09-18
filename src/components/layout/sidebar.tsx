@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import Button from "../ui/button";
+import { getAuthSession } from "@/services/authApi";
 
 export interface SidebarMenuItem {
   id: string;
@@ -39,7 +40,16 @@ export default function Sidebar({
   className = "",
 }: SidebarProps) {
   const [internalActiveId, setInternalActiveId] = useState<string>("services");
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(true);
   const activeId = controlledActiveId !== undefined ? controlledActiveId : internalActiveId;
+
+  useEffect(() => {
+    const session = getAuthSession();
+    if (session) {
+      const normalizedRole = (session.user.role || "").toLowerCase().replace(/[\s_-]/g, "");
+      setIsSuperAdmin(normalizedRole === "superadmin");
+    }
+  }, []);
 
   const handleItemClick = (item: SidebarMenuItem) => {
     if (controlledActiveId === undefined) {
@@ -52,6 +62,8 @@ export default function Sidebar({
       item.onClick();
     }
   };
+
+  const visibleItems = items.filter((item) => isSuperAdmin || item.id !== "users");
 
   return (
     <aside
@@ -66,7 +78,7 @@ export default function Sidebar({
 
       {/* Navigation Buttons List */}
       <nav className="self-stretch flex flex-col justify-start items-center lg:items-start gap-2 w-full">
-        {items.map((item) => {
+        {visibleItems.map((item) => {
           const isActive = item.id === activeId;
           const btn = (
             <Button
