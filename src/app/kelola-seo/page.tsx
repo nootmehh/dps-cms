@@ -217,7 +217,7 @@ export default function KelolaSeoPage() {
                   onFilesSelected={async (files) => {
                     if (files[0]) {
                       try {
-                        const uploadedUrl = await uploadFileToServer(files[0], "site");
+                        const uploadedUrl = await uploadFileToServer(files[0], "favicon", { isFavicon: true });
                         setSettings((prev) => ({ ...prev, favicon_url: uploadedUrl }));
                         triggerNotif("Favicon berhasil diunggah!", "default");
                       } catch {

@@ -113,7 +113,7 @@ export function notifyUploadError(message: string = UPLOAD_TIMEOUT_MESSAGE): voi
 export async function uploadFileToServer(
   file: File | Blob,
   folder: string = "media",
-  options?: { noConvert?: boolean }
+  options?: { noConvert?: boolean; isFavicon?: boolean }
 ): Promise<string> {
   const formData = new FormData();
 
@@ -126,6 +126,9 @@ export async function uploadFileToServer(
 
   if (options?.noConvert) {
     formData.append("noConvert", "true");
+  }
+  if (options?.isFavicon) {
+    formData.append("isFavicon", "true");
   }
 
   const endpoint = getUploadEndpoint();
