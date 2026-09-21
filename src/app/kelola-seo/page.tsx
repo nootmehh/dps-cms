@@ -51,7 +51,7 @@ export default function KelolaSeoPage() {
 
   // Public Sitemap URL
   const comproBaseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://dev.dpsmarkajalan.com";
+    process.env.NEXT_PUBLIC_SITE_URL || "https://dpsmarkajalan.com";
   const sitemapPublicUrl = `${comproBaseUrl.replace(/\/$/, "")}/sitemap.xml`;
 
   // Load SEO data on mount
