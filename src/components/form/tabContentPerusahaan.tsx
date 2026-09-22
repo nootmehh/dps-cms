@@ -39,6 +39,7 @@ export default function TabContentPerusahaan({
       "youtube",
       "tiktok",
       "twitter",
+      "shopee",
     ];
 
     const currentMap: Record<string, string> = {};
@@ -124,7 +125,7 @@ export default function TabContentPerusahaan({
         <SectionHeading
           number={2}
           title="Social Media"
-          info="Tautan akun profil media sosial resmi Dua Putra Srikandi di berbagai platform: Instagram, Threads, LinkedIn, Facebook, YouTube, TikTok, dan X/Twitter."
+          info="Tautan akun profil media sosial dan toko resmi Dua Putra Srikandi di berbagai platform: Instagram, Threads, LinkedIn, Facebook, YouTube, TikTok, X/Twitter, dan Shopee."
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -181,6 +182,14 @@ export default function TabContentPerusahaan({
             placeholder="https://x.com/duaputrasrikandi"
             value={getSocialLink("twitter")}
             onChange={(e) => updateSocialMedia("twitter", e.target.value)}
+            containerClassName="max-w-none w-full"
+          />
+
+          <InputBox
+            label="Shopee URL"
+            placeholder="https://shopee.co.id/duaputrasrikandi"
+            value={getSocialLink("shopee")}
+            onChange={(e) => updateSocialMedia("shopee", e.target.value)}
             containerClassName="max-w-none w-full"
           />
         </div>
