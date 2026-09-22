@@ -6,12 +6,10 @@ import Sidebar from "@/components/layout/sidebar";
 import Button from "@/components/ui/button";
 import InputBox from "@/components/ui/inputBox";
 import DescriptionBox from "@/components/ui/descriptionBox";
-import UploadFile from "@/components/ui/uploadFile";
 import Badge from "@/components/ui/badge";
 import SectionHeading from "@/components/ui/sectionHeading";
 import Notification, { type NotificationType } from "@/components/ui/notification";
 import LordIcon from "@/components/common/lordIcon";
-import { uploadFileToServer } from "@/shared/api/upload";
 import {
   getSeoSettings,
   updateSeoSettings,
@@ -171,7 +169,7 @@ export default function KelolaSeoPage() {
                 Kelola SEO
               </h1>
               <p className="text-dark text-xs sm:text-sm font-normal font-sans">
-                Kelola konfigurasi SEO situs, favicon, dan kata kunci di halaman ini.
+                Kelola konfigurasi SEO situs, metadata, dan kata kunci di halaman ini.
               </p>
             </div>
 
@@ -199,39 +197,6 @@ export default function KelolaSeoPage() {
                 title="Pengaturan Umum"
                 info="Informasi dasar metadata yang akan dibaca oleh peramban browser dan mesin pencari seperti Google dan Bing."
               />
-
-              {/* Favicon Upload */}
-              <div className="self-stretch">
-                <UploadFile
-                  label="Favicon Situs *"
-                  info="Ikon kecil situs web yang ditampilkan pada tab browser dan daftar bookmark pengguna."
-                  descriptionPrefix="Format Disarankan"
-                  descriptionValue="(ICO, PNG, SVG - Rasio 1:1, Maks 2MB)"
-                  fileTypesHint="(ICO, PNG, SVG)"
-                  accept="image/x-icon,image/png,image/svg+xml,image/vnd.microsoft.icon,image/webp,image/jpeg"
-                  previewLayout="compact"
-                  defaultImageUrl={settings.favicon_url || undefined}
-                  onSelectMediaUrl={(url) =>
-                    setSettings((prev) => ({ ...prev, favicon_url: url }))
-                  }
-                  onFilesSelected={async (files) => {
-                    if (files[0]) {
-                      try {
-                        const uploadedUrl = await uploadFileToServer(files[0], "favicon", { isFavicon: true });
-                        setSettings((prev) => ({ ...prev, favicon_url: uploadedUrl }));
-                        triggerNotif("Favicon berhasil diunggah!", "default");
-                      } catch {
-                        const blobUrl = URL.createObjectURL(files[0]);
-                        setSettings((prev) => ({ ...prev, favicon_url: blobUrl }));
-                        triggerNotif("Favicon disimpan secara lokal", "default");
-                      }
-                    }
-                  }}
-                  onRemoveDefaultImage={() =>
-                    setSettings((prev) => ({ ...prev, favicon_url: null }))
-                  }
-                />
-              </div>
 
               {/* Site Title Default - Full Width */}
               <div className="self-stretch">
