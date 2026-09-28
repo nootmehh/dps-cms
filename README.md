@@ -186,6 +186,37 @@ dps-cms/
 - Node.js (v18.17.0 or higher recommended)
 - npm, yarn, or pnpm package manager
 
+---
+
+## Environment Variables
+
+Create a `.env.local` file in the root directory before running the CMS application:
+
+```env
+# Supabase Configuration (Authentication & Database CRUD)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+
+# Media Server Upload API Endpoint (VPS Backend)
+NEXT_PUBLIC_API_URL=https://api.dpsmarkajalan.com/api/upload
+
+# Google Analytics (GA4) Integration (Optional - for dashboard analytics)
+GA_PROPERTY_ID=your-ga4-property-id
+GA_CLIENT_EMAIL=your-service-account@project.iam.gserviceaccount.com
+GA_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nyour-private-key\n-----END PRIVATE KEY-----\n"
+```
+
+| Variable | Required | Description |
+| :--- | :---: | :--- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project API endpoint URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | Public Supabase anon/publishable key |
+| `NEXT_PUBLIC_API_URL` | Yes | VPS Media Server upload endpoint (`https://api.dpsmarkajalan.com/api/upload`) |
+| `GA_PROPERTY_ID` | Optional | Google Analytics 4 Property ID for dashboard metrics |
+| `GA_CLIENT_EMAIL` | Optional | Google Service Account client email for GA4 Data API |
+| `GA_PRIVATE_KEY` | Optional | Google Service Account private key in PEM string format |
+
+---
+
 ### Installation
 
 1. Install project dependencies:
@@ -193,7 +224,9 @@ dps-cms/
    npm install
    ```
 
-2. Run the local development server:
+2. Configure environment variables by creating `.env.local` as described above.
+
+3. Run the local development server:
    ```bash
    npm run dev
    ```
