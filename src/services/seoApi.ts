@@ -42,10 +42,11 @@ export interface UpdatePageMetaPayload {
 }
 
 const DEFAULT_SETTINGS: SeoSettingsRow = {
-  site_title_default: "Dua Putra Srikandi - Jasa & Produk Marka Jalan",
+  site_title_default: "PT. Dua Putra Srikandi - Jasa & Produk Marka Jalan (DPS)",
   meta_description_default:
-    "Spesialis pengecatan marka jalan, perlengkapan jalan, dan fasilitas keselamatan lalu lintas terpercaya.",
-  keywords: "marka jalan, cat thermoplastic, rambu lalu lintas, guardrail, jasa marka jalan",
+    "PT. Dua Putra Srikandi (DPS) adalah kontraktor terpercaya spesialis pengecatan marka jalan, produsen bahan cat thermoplastic, rambu lalu lintas, dan perlengkapan fasilitas keselamatan jalan di Indonesia.",
+  keywords:
+    "dua putra srikandi, pt dua putra srikandi, pt. dua putra srikandi, dps dua putra srikandi, dps marka jalan, marka jalan dps, kontraktor marka jalan, jasa marka jalan, material marka jalan, cat thermoplastic, cat coldplastic, alat marka jalan, glass beads marka, paku marka jalan, road stud, rambu lalu lintas, deliniator besi, deliniator plastik, cermin tikung, convex mirror, traffic cone, stick cone, water barrier, guardrail jalan, penerangan jalan umum, PJU, speed bump, polisi tidur, joint sealant, perlengkapan jalan, keselamatan lalu lintas, wheel stopper, lem epoxy paku marka, cat marka DPS",
   favicon_url: null,
   auto_generate_sitemap: true,
   ga_connected: false,
